@@ -1,0 +1,51 @@
+{
+  "name": "@dcdr/contracts",
+  "version": "1.2.1",
+  "description": "Interfaces for Dcdr Platform",
+  "private": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prepare": "npm run build",
+    "check": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && jest",
+    "test:ci": "npm run build && jest --runInBand"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.3.0",
+    "jest-junit": "^16.0.0",
+    "ts-jest": "^29.4.9",
+    "typescript": "^5.7.2"
+  },
+  "volta": {
+    "node": "22.22.0"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./runtime.client": "./dist/runtime.client.js",
+    "./capabilities.contract": "./dist/capabilities.contract.js",
+    "./control.contract": "./dist/control.contract.js",
+    "./credentials.contract": "./dist/credentials.contract.js",
+    "./http.contract": "./dist/http.contract.js",
+    "./entitlements.contract": "./dist/entitlements.contract.js",
+    "./errors.contract": "./dist/errors.contract.js",
+    "./execution.contract": "./dist/execution.contract.js",
+    "./implementations.contract": "./dist/implementations.contract.js",
+    "./intent.contract": "./dist/intent.contract.js",
+    "./logs.contract": "./dist/logs.contract.js",
+    "./messages.contract": "./dist/messages.contract.js",
+    "./policies.contract": "./dist/policies.contract.js",
+    "./prompts.contract": "./dist/prompts.contract.js",
+    "./provider.contract": "./dist/provider.contract.js",
+    "./service-tokens.contract": "./dist/service-tokens.contract.js",
+    "./session.contract": "./dist/session.contract.js"
+  },
+  "dependencies": {
+    "class-validator": "^0.15.1"
+  }
+}

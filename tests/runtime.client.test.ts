@@ -1,0 +1,179 @@
+import { DcdrRuntimeClient } from "../src/runtime.client";
+
+function makeMockResponse(args: {
+  ok: boolean;
+  status: number;
+  json: object;
+  contentType?: string;
+}): Response {
+  const body = JSON.stringify(args.json);
+  const headers = new Headers({
+    "content-type": args.contentType ?? "application/json",
+  });
+
+  return {
+    ok: args.ok,
+    status: args.status,
+    headers,
+    text: async () => body,
+  } as unknown as Response;
+}
+
+function makeMockTextResponse(args: { ok: boolean; status: number; text: string; contentType?: string }): Response {
+  const headers = new Headers({
+    "content-type": args.contentType ?? "text/plain; version=0.0.4",
+  });
+
+  return {
+    ok: args.ok,
+    status: args.status,
+    headers,
+    text: async () => args.text,
+  } as unknown as Response;
+}
+
+describe("DcdrRuntimeClient", () => {
+  it("sends Authorization Bearer when bearerToken is configured", async () => {
+    const fetchFn = jest.fn(async (_url: string, init?: RequestInit) => {
+      const headers = init?.headers as Record<string, string>;
+      expect(headers["Authorization"]).toBe("Bearer TOKEN");
+      return makeMockResponse({ ok: true, status: 200, json: { status: "OK" } });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      bearerToken: "TOKEN",
+      fetchFn,
+    });
+
+    const res = await client.healthcheck();
+    expect(res.status).toBe("OK");
+  });
+
+  it("sends token + x-session-bypass when apiToken and sessionBypassToken are configured", async () => {
+    const fetchFn = jest.fn(async (_url: string, init?: RequestInit) => {
+      const headers = init?.headers as Record<string, string>;
+      expect(headers["token"]).toBe("API");
+      expect(headers["x-session-bypass"]).toBe("BYPASS");
+      return makeMockResponse({ ok: true, status: 200, json: { status: "OK" } });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      sessionBypassToken: "BYPASS",
+      fetchFn,
+    });
+
+    const res = await client.healthcheck();
+    expect(res.status).toBe("OK");
+  });
+
+  it("calls /api/execution/run/:intent for executeIntent", async () => {
+    const fetchFn = jest.fn(async (url: string) => {
+      expect(url).toBe("https://example.invalid/api/execution/run/MY_INTENT");
+      return makeMockResponse({ ok: true, status: 200, json: { status: "OK", input: [], output: {}, report: { attempts: [], timing: { startedAt: "", endedAt: "", latencyMs: 0 }, sessionId: "", appId: "", gatewayRequestId: "", intent: "MY_INTENT", prompt: { id: "", version: "", sha256: "" }, finalImplementation: { provider: "RULES", model: "", implementationId: "", latencyMs: 0 } } } });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.executeIntent("MY_INTENT", { vars: { a: 1 } });
+    expect(res.status).toBe("OK");
+  });
+
+  it("calls /api/system/metrics for metrics()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/system/metrics");
+      expect(init?.method).toBe("GET");
+      return makeMockTextResponse({ ok: true, status: 200, text: "# HELP x y\n" });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const text = await client.metrics();
+    expect(text).toContain("# HELP");
+  });
+
+  it("calls /api/execution/dry-run/:intent for dryRun()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/execution/dry-run/MY_INTENT");
+      expect(init?.method).toBe("POST");
+      return makeMockResponse({ ok: true, status: 200, json: { status: "OK" } });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.dryRun("MY_INTENT", { name: "Jose" });
+    expect(res.status).toBe("OK");
+  });
+
+  it("calls /api/execution/eval/:intent for eval()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/execution/eval/MY_INTENT");
+      expect(init?.method).toBe("POST");
+      return makeMockResponse({ ok: true, status: 200, json: { intent: "MY_INTENT", total: 0, results: [] } });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.eval("MY_INTENT", { name: "Jose" });
+    expect(res.intent).toBe("MY_INTENT");
+  });
+
+  it("calls /api/execution/circuit-breakers for circuitBreakerStatus()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/execution/circuit-breakers?tenantCid=CUST_X&provider=OPEN_AI&model=gpt-4");
+      expect(init?.method).toBe("GET");
+      return makeMockResponse({ ok: true, status: 200, json: { tenantCid: "CUST_X", provider: "OPEN_AI", model: "gpt-4", failures: 0, blocked: false } });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.circuitBreakerStatus("OPEN_AI", "gpt-4", "CUST_X");
+    expect(res.tenantCid).toBe("CUST_X");
+    expect(res.provider).toBe("OPEN_AI");
+    expect(res.blocked).toBe(false);
+  });
+
+  it("calls PUT /api/execution/circuit-breakers/reset for resetCircuitBreaker()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/execution/circuit-breakers/reset");
+      expect(init?.method).toBe("PUT");
+
+      const bodyRaw = String(init?.body ?? "");
+      expect(bodyRaw).toContain("\"tenantCid\":\"CUST_X\"");
+      expect(bodyRaw).toContain("\"provider\":\"OPEN_AI\"");
+      expect(bodyRaw).toContain("\"model\":\"gpt-4\"");
+      return makeMockResponse({ ok: true, status: 200, json: { ok: true } });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.resetCircuitBreaker("OPEN_AI", "gpt-4", "CUST_X");
+    expect(res.ok).toBe(true);
+  });
+});
