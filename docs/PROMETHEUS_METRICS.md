@@ -2,6 +2,24 @@
 
 This document describes the Prometheus metrics exported by **DCDR Runtime**.
 
+Quick navigation:
+
+- [What should I monitor first?](#-what-should-i-monitor-first)
+- [Scrape endpoint](#scrape-endpoint)
+- [Metric namespaces](#metric-namespaces)
+- [DCDR runtime metrics](#dcdr-runtime-metrics-dcdr_runtime_)
+
+## 📌 What should I monitor first?
+
+- Request latency (p95): track end-to-end gateway latency; alert on regressions.
+- Error rate: ratio of failed executions to total executions.
+- Retry count: increase usually indicates upstream instability or timeouts.
+- Circuit breaker events: opens/half-opens are early signals of provider issues.
+- Gateway overhead vs provider duration: separate time spent in the gateway vs provider calls.
+- Cache hit ratio: validates caching impact and catches cache misconfiguration.
+
+---
+
 ## Scrape endpoint
 
 - Endpoint: `GET /api/system/metrics`
@@ -9,6 +27,8 @@ This document describes the Prometheus metrics exported by **DCDR Runtime**.
 - Notes:
   - By default, runtime mounts `/api/system/*` without API token middleware. If you want to restrict access, do it at your ingress / reverse proxy.
   - The TypeScript client method `DcdrRuntimeClient.metrics()` calls this endpoint and returns the raw text.
+
+---
 
 ## Metric namespaces
 
@@ -20,6 +40,8 @@ The runtime exports two namespaces:
 All metrics include a default label:
 
 - `host`: the container/host hostname
+
+---
 
 ## DCDR runtime metrics (`dcdr_runtime_*`)
 
@@ -62,7 +84,7 @@ These metrics are intentionally designed to keep label cardinality bounded.
   - Value: number of tenant entries currently present in memory (includes internal tenant)
 
 - `dcdr_runtime_tenants_with_registry_total` (Gauge)
-  - Value: number of tenants that currently have a registry snapshot loaded in memory
+  - Value: number of tenants that currently have a Registry snapshot loaded in memory
 
 - `dcdr_runtime_entitlements_cache_entries_total` (Gauge)
   - Value: number of entitlements cache entries in memory
@@ -111,7 +133,7 @@ These metrics provide a stable overview of runtime HTTP traffic.
 
 ### Registry model / implementation metrics
 
-These metrics track the **in-memory registry** and model call outcomes.
+These metrics track the **in-memory Registry** and model call outcomes.
 
 #### Registry synchronization
 
@@ -119,7 +141,7 @@ These metrics track the **in-memory registry** and model call outcomes.
   - Value: `1` if this implementation is currently active, otherwise `0`
 
 - `dcdr_runtime_model_last_seen_timestamp{intent,model,provider}` (Gauge)
-  - Value: Unix timestamp (seconds) for last time the implementation was seen during a backend registry sync
+  - Value: Unix timestamp (seconds) for last time the implementation was seen during a backend Registry sync
 
 #### End-to-end (logical) model calls
 

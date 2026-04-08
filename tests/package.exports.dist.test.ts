@@ -1,5 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { createRequire } from "node:module";
+
+const nodeLoader = createRequire(__filename);
 
 /**
  * Minimal shape we need from the contracts package.json.
@@ -7,6 +10,15 @@ import path from "path";
 interface ContractsPackageJson {
   main?: string;
   exports?: Record<string, string>;
+}
+
+/**
+ * Load result for a dist module target.
+ */
+interface ModuleLoadResult {
+  absolutePath: string;
+  ok: boolean;
+  error?: string;
 }
 
 /**
@@ -24,33 +36,44 @@ function resolveFromPackageRoot(packageRoot: string, packageRelativePath: string
 }
 
 /**
- * Requires a CommonJS module path and asserts it loads.
+ * Loads a dist module path and captures any error for assertion.
  * @param absoluteModulePath Absolute path to a .js file.
  */
-function expectRequireWorks(absoluteModulePath: string): void {
-  const mod = require(absoluteModulePath);
-  expect(mod).toBeTruthy();
+function loadDistModule(absoluteModulePath: string): ModuleLoadResult {
+  try {
+    const mod = nodeLoader(absoluteModulePath);
+    return { absolutePath: absoluteModulePath, ok: Boolean(mod) };
+  } catch (e) {
+    return {
+      absolutePath: absoluteModulePath,
+      ok: false,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
 }
+
+const packageRoot = path.resolve(__dirname, "..");
+const packageJsonPath = path.join(packageRoot, "package.json");
+const rawPackageJson = fs.readFileSync(packageJsonPath, "utf8");
+const pkg = JSON.parse(rawPackageJson) as ContractsPackageJson;
+
+const distIndex = path.join(packageRoot, "dist", "index.js");
+const exportsMap = pkg.exports || {};
+const exportTargets = Object.values(exportsMap);
+
+const loadTargets: ModuleLoadResult[] = [
+  loadDistModule(distIndex),
+  ...exportTargets
+    .filter((t): t is string => typeof t === "string")
+    .map((target) => loadDistModule(resolveFromPackageRoot(packageRoot, target))),
+];
 
 describe("@dcdr/contracts dist/ exports", () => {
   it("package.json exports point to real dist/ files", () => {
-    const packageRoot = path.resolve(__dirname, "..");
-    const packageJsonPath = path.join(packageRoot, "package.json");
-
-    const raw = fs.readFileSync(packageJsonPath, "utf8");
-    const pkg = JSON.parse(raw) as ContractsPackageJson;
-
     expect(pkg).toBeTruthy();
     expect(pkg.exports).toBeTruthy();
 
-    const distIndex = path.join(packageRoot, "dist", "index.js");
     expect(fs.existsSync(distIndex)).toBe(true);
-
-    // Ensure the built entrypoint is require()-able.
-    expectRequireWorks(distIndex);
-
-    const exportsMap = pkg.exports || {};
-    const exportTargets = Object.values(exportsMap);
 
     expect(exportTargets.length).toBeGreaterThan(0);
 
@@ -60,8 +83,13 @@ describe("@dcdr/contracts dist/ exports", () => {
 
       const abs = resolveFromPackageRoot(packageRoot, target);
       expect(fs.existsSync(abs)).toBe(true);
+    }
 
-      expectRequireWorks(abs);
+    for (const r of loadTargets) {
+      expect(r.ok).toBe(true);
+      if (!r.ok) {
+        throw new Error(`Failed to load dist module: ${r.absolutePath}: ${r.error ?? "unknown"}`);
+      }
     }
   });
 });

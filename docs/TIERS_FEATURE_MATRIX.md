@@ -1,19 +1,21 @@
-# 🌟 DCDR Tiers & Feature Matrix
+# 🌟 DCDR Execution Modes & Feature Matrix
 
 This document summarizes what you get with DCDR depending on how you operate it.
 
 DCDR has two parts:
 
 - ⚙️ **DCDR Runtime** (Docker): the execution engine that runs intents
-- 🧠 **DCDR Cloud (dcdr.ai)**: the control plane (versioning, rollouts, credentials, logs, quality workflows)
+- 🧠 **DCDR Cloud (dcdr.ai)**: managed configuration (versioning, rollouts, credentials, logs, quality workflows)
 
 ---
 
-## 🧩 Tiers
+## 🧩 Execution modes
 
-- 🧰 **runtime** — freeware / self-hosted, operated from a **DCDR Registry** file (JSON)
-- ☁️ **cloud** — runtime + managed control plane + UI
-- 🚀 **cloud-pro** — cloud + advanced quality & operations
+This matrix is organized by execution mode:
+
+- ⚙️ **Runtime (self-hosted)** — you run the runtime yourself from a **Registry** file (`registry.json`)
+- ☁️ **Cloud** — managed runtime + managed configuration
+- 🚀 **Cloud Pro** — Cloud + advanced quality & operations
 
 ### Legend
 
@@ -21,14 +23,20 @@ DCDR has two parts:
 - ❌ not available
 - 🚧 roadmap (planned / coming soon)
 
+Roadmap notes:
+
+- 🚧 items are directional and do not imply guaranteed timelines.
+- Availability can depend on product decisions and may change.
+
 ---
 
 ## 🚀 Deployment & Operations
 
-| Feature | runtime | cloud | cloud-pro |
+| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
 |---|---:|---:|---:|
-| Self-hosted runtime (Docker) | ✅ | ✅ | ✅ |
-| Managed cloud control plane (dcdr.ai) | ❌ | ✅ | ✅ |
+| Self-hosted runtime (Docker) | ✅ | ❌ | ❌ |
+| Managed runtime | ❌ | ✅ | ✅ |
+| Managed configuration (dcdr.ai) | ❌ | ✅ | ✅ |
 | Tenant admin UI | ❌ | ✅ | ✅ |
 | Billing / subscriptions | ❌ | ✅ | ✅ |
 
@@ -36,7 +44,7 @@ DCDR has two parts:
 
 ## ⚙️ Runtime execution
 
-| Feature | runtime | cloud | cloud-pro |
+| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
 |---|---:|---:|---:|
 | Intent execution | ✅ | ✅ | ✅ |
 | Retry policy (retries, backoff, fallback) | ✅ | ✅ | ✅ |
@@ -45,18 +53,17 @@ DCDR has two parts:
 | Weighted routing | Basic/manual | ✅ | ✅ |
 | Execution windows (per implementation) | ❌ | ✅ | ✅ |
 | Response caching (cost saver) | ❌ | ✅ (short TTL) | ✅ (configurable) |
-| Runtime registry source | JSON/manual | ✅ (managed) | ✅ (managed) |
-| Intelligent routing (quality/cost aware) | ❌ | 🚧 (limited) | 🚧 |
-| Policy-based execution (quality/latency/cost) | ❌ | ❌ | 🚧 |
-| Chained provider fallbacks | ❌ | ❌ | 🚧 |
+| Runtime Registry source | JSON/manual | ✅ (managed) | ✅ (managed) |
+| Advanced routing (quality/cost aware) | ❌ | 🚧 (limited) | 🚧 |
+| Policy-based execution (quality/latency/cost) + chained fallbacks | ❌ | ❌ | 🚧 |
 
 ---
 
 ## 🧠 Intents & Prompting
 
-| Feature | runtime | cloud | cloud-pro |
+| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
 |---|---:|---:|---:|
-| Intent registry | JSON/manual | ✅ | ✅ |
+| Intent Registry | JSON/manual | ✅ | ✅ |
 | Intent admin UI | ❌ | ✅ | ✅ |
 | Prompt templates | JSON/manual | ✅ | ✅ |
 | Prompt parameters control | JSON/manual | ✅ | ✅ |
@@ -70,12 +77,11 @@ DCDR has two parts:
 
 ## 🔌 Providers & Implementations
 
-| Feature | runtime | cloud | cloud-pro |
+| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
 |---|---:|---:|---:|
 | OpenAI-compatible chat providers (OpenAI, vLLM) | ✅ | ✅ | ✅ |
-| Embeddings | 🚧 | 🚧 | 🚧 |
-| Vision / multimodal | 🚧 | 🚧 | 🚧 |
-| Implementation registry UI | ❌ | ✅ | ✅ |
+| Additional intent types (embeddings, vision, multimodal) | 🚧 | 🚧 | 🚧 |
+| Implementation Registry UI | ❌ | ✅ | ✅ |
 | Shared provider credentials | ❌ | ✅ | ✅ |
 | Tracking probability (I/O sampling) | ❌ | ✅ | ✅ |
 | Implementation health status | ❌ | ❌ | 🚧 |
@@ -84,7 +90,7 @@ DCDR has two parts:
 
 ## 🔐 Credentials
 
-| Feature | runtime | cloud | cloud-pro |
+| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
 |---|---:|---:|---:|
 | Encrypted credentials store | ❌ | ✅ | ✅ |
 | Reusable credentials | ❌ | ✅ | ✅ |
@@ -94,7 +100,7 @@ DCDR has two parts:
 
 ## 🔎 Observability
 
-| Feature | runtime | cloud | cloud-pro |
+| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
 |---|---:|---:|---:|
 | Execution reports (attempts, latency, usage) | ✅ | ✅ | ✅ |
 | Centralized logs & search | ❌ | ✅ | ✅ |
@@ -106,7 +112,7 @@ DCDR has two parts:
 
 ## ✅ Quality workflows
 
-| Feature | runtime | cloud | cloud-pro |
+| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
 |---|---:|---:|---:|
 | Accuracy reports | ❌ | ✅ | ✅ |
 | Drift detection & alerts | ❌ | ✅ | ✅ |
@@ -117,8 +123,8 @@ DCDR has two parts:
 
 ---
 
-## 🤝 Which tier should I start with?
+## 🤝 Which execution mode should I start with?
 
-- If you want to **evaluate quickly** and you're OK managing a JSON registry: start with **runtime**.
-- If you want to avoid maintaining prompts/versions/routing/credentials by hand: use **cloud**.
-- If you care about quality operations (QC, annotations, datasets): use **cloud-pro**.
+- If you want to evaluate quickly and you're OK managing a JSON Registry (`registry.json`): start with **Runtime (self-hosted)**.
+- If you want managed configuration: start with **Cloud**.
+- If you need advanced quality operations (QC, annotations, datasets): start with **Cloud Pro**.
