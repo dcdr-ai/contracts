@@ -1,0 +1,128 @@
+{
+  "generatedAt": "2026-04-08T00:00:00.000Z",
+  "credentials": [
+    {
+      "id": "cred_openai",
+      "name": "OpenAI API Key",
+      "description": "OpenAI Bearer token used by the OpenAI implementations",
+      "provider": "OPEN_AI",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer REPLACE_ME_OPENAI_API_KEY"
+        }
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "id": "intent_hello_world",
+      "intent": "HELLO_WORLD",
+      "type": "CHAT",
+      "name": "Hello World",
+      "active": true,
+      "description": "Minimal intent that greets the user and returns a short response.",
+      "inputSchema": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "The name of the person saying hi!"
+        }
+      },
+      "outputSchema": {
+        "result": {
+          "type": "string",
+          "required": true,
+          "description": "The Hi message from the provider"
+        }
+      },
+      "defaultPrompt": {
+        "id": "prompt_hello_world_v1",
+        "name": "hello_world_v1",
+        "version": "1.0",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "semanticHash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "variablesInterpolationType": "MUSTACHE",
+        "params": {
+          "top_k": 50,
+          "top_p": 0.8,
+          "max_tokens": 256,
+          "temperature": 0.7,
+          "enable_thinking": false,
+          "response_format": "json_schema",
+          "presence_penalty": 0,
+          "frequency_penalty": 0
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are DCDR AI. Reply exactly with JSON like: {\"result\":\"...\"}. Do not add extra keys."
+          },
+          {
+            "role": "user",
+            "content": "Say hello to {{name}} in one short sentence."
+          }
+        ],
+        "meta": {
+          "demo": true
+        }
+      },
+      "executionPolicy": {
+        "type": "WEIGHTED"
+      },
+      "retryPolicy": {
+        "retryOn": [
+          "TIMEOUT",
+          "RATE_LIMIT",
+          "UPSTREAM_5XX",
+          "NETWORK",
+          "PARSE_FAIL",
+          "SCHEMA_FAIL"
+        ],
+        "maxAttempts": 3,
+        "allowFallback": true,
+        "retryJitterMs": 150,
+        "retryBackoffMs": 250,
+        "maxPerCandidate": 2,
+        "attemptTimeoutMs": 10000,
+        "repairOnParseFail": true,
+        "retryBackoffCapMs": 5000,
+        "retryBackoffStrategy": "exponential"
+      },
+      "implementations": [
+        {
+          "id": "impl_openai_fast",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (fast/cheap)",
+          "version": "1.0",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "semanticHash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "model": "gpt-4.1-mini",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.7,
+          "credentialRef": "cred_openai",
+          "runtimeConfig": {
+            "timeoutMs": 12000
+          }
+        },
+        {
+          "id": "impl_openai_quality",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (higher quality)",
+          "version": "1.0",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "semanticHash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "model": "gpt-4.1",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.3,
+          "credentialRef": "cred_openai",
+          "runtimeConfig": {
+            "timeoutMs": 15000
+          }
+        }
+      ]
+    }
+  ]
+}
