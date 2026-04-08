@@ -4,12 +4,13 @@ DCDR runs AI capabilities as stable, versioned Intents (with configurable routin
 
 ## Why DCDR
 
-Most applications hardcode model calls, prompts, and retry logic directly in code.
+Most applications hardcode model calls, prompts, and retry logic directly in code — making changes slow and risky.
 
 DCDR moves this into a versioned, configurable layer so you can:
 - change models without redeploying
 - iterate prompts safely
 - control routing and fallback centrally
+- use execution logs + QC workflows to review, annotate, and correct outputs, enabling fast iteration on prompts and models based on real traffic
 
 Project site: https://dcdr.ai
 
@@ -69,10 +70,6 @@ DCDR does not replace model providers (OpenAI, local models, etc.). It orchestra
 Run a working intent in seconds, no API key required:
 
 1) Run runtime container:
-
-```powershell
-docker run --rm -p 8000:8000 -e API_TOKEN='dev-token' dcdr.ai/dcdr-runtime:latest --demo
-```
 
 ```bash
 docker run --rm -p 8000:8000 -e API_TOKEN='dev-token' dcdr.ai/dcdr-runtime:latest --demo
@@ -344,6 +341,7 @@ See full feature matrix: [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRI
 
 - TypeScript client: [docs/CLIENT.md](docs/CLIENT.md)
 - CLI: [docs/CLI.md](docs/CLI.md)
+- Runtime advanced configuration: [docs/RUNTIME_ADVANCED_CONFIG.md](docs/RUNTIME_ADVANCED_CONFIG.md)
 
 ### Integrations
 
