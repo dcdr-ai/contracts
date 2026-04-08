@@ -17,9 +17,9 @@ DCDR moves this into a versioned, configurable layer so you can:
 - change models without redeploying
 - iterate prompts safely
 - control routing and fallback centrally
-- use execution logs + QC workflows to review, annotate, and correct outputs, enabling fast iteration on prompts and models based on real traffic
+- use execution logs + QC workflows to review and correct outputs, enabling fast iteration on prompts and models based on real traffic
 
-Project site: https://dcdr.ai
+Learn more: https://dcdr.ai
 
 ## What this package provides
 

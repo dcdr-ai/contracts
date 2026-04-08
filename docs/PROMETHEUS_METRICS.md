@@ -28,7 +28,46 @@ Quick navigation:
   - By default, runtime mounts `/api/system/*` without API token middleware. If you want to restrict access, do it at your ingress / reverse proxy.
   - The TypeScript client method `DcdrRuntimeClient.metrics()` calls this endpoint and returns the raw text.
 
----
+
+## 📊 Observability (Prometheus + Grafana example)
+
+DCDR Runtime exposes Prometheus metrics out of the box, allowing you to monitor:
+
+- intent traffic and distribution
+- model latency and success rates
+- retry behavior and error classes
+- cache efficiency (L1/L2)
+- cluster health (CPU, memory, availability)
+
+Example Prometheus scrape configuration:
+
+If in your stack the service is named `dcdr-runtime`, a Prometheus job could look like:
+
+```yaml
+# 🧠 dcdr-runtime
+- job_name: "dcdr-runtime"
+  scrape_interval: 10s
+  scrape_timeout: 5s
+  scheme: https
+  metrics_path: /api/system/metrics
+  dns_sd_configs:
+    - names: ["tasks.dcdr-runtime"]
+      type: A
+      port: 5000
+  tls_config:
+    insecure_skip_verify: true  # skip verification when using self-signed certs
+```
+
+Example Grafana dashboard (real cluster):
+
+Typical use cases:
+
+- detect model latency spikes or provider instability
+- evaluate routing strategies across models
+- monitor retry/fallback behavior under load
+- validate caching efficiency in production
+
+![DCDR Grafana Dashboard](images/grafana_dashboard.png)
 
 ## Metric namespaces
 
