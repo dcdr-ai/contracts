@@ -1,7 +1,5 @@
 # Generate SDKs (Python/C#/Java) from OpenAPI
 
-This content is moved from the README to keep the package entry point scannable.
-
 The runtime publishes a canonical OpenAPI spec. This is the best way to generate SDKs for other languages.
 
 ## 1) Get the OpenAPI JSON

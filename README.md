@@ -31,7 +31,7 @@ Project site: https://dcdr.ai
 
 ---
 
-## ⚡ When should I use DCDR?
+## ⚡ When should I use DCDR?https://chatgpt.com/c/69d6407d-04c0-8391-a9d0-60a9740cc26a
 
 ### Use DCDR if:
 
@@ -72,15 +72,22 @@ Run a working intent in seconds, no API key required:
 1) Run runtime container:
 
 ```bash
-docker run --rm -p 8000:8000 -e API_TOKEN='dev-token' dcdr.ai/dcdr-runtime:latest --demo
+docker run --rm -p 8000:8000 dcdr.ai/dcdr-runtime:latest --demo
 ```
 
 2) Call a built-in demo Intent:
 
 ```bash
-curl -sS -H 'Content-Type: application/json' -X POST http://localhost:8000/api/execution/demo/DCDR_LOCAL_DEMO -d '{"vars":{"name":"Ada"}}'
+curl -sS 
+-H 'Content-Type: application/json' 
+-X POST http://localhost:8000/api/execution/demo/DCDR_LOCAL_DEMO 
+-d '{"vars":{"name":"Ada"}}'
+
 # Optional: remote demo (calls dcdr.ai; falls back to local if blocked)
-curl -sS -H 'Content-Type: application/json' -X POST http://localhost:8000/api/execution/demo/DCDR_REMOTE_DEMO -d '{"vars":{"name":"Ada"}}'
+curl -sS 
+-H 'Content-Type: application/json' 
+-X POST http://localhost:8000/api/execution/demo/DCDR_REMOTE_DEMO 
+-d '{"vars":{"name":"Ada"}}'
 ```
 
 ---

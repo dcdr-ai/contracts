@@ -1,7 +1,5 @@
 # CLI (`dcdr`)
 
-This content is moved from the README to keep the package entry point scannable.
-
 The runtime repository includes a small CLI called `dcdr`.
 
 Where it lives:

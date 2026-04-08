@@ -1,7 +1,5 @@
 # Contracts reference (Registry, Intent, Implementation)
 
-This content is moved from the README to keep the package entry point scannable.
-
 This section focuses on the package-level contract types used to author registries and intent definitions.
 
 ## DCDR Registry (DcdrRegistry) reference

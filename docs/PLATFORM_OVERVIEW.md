@@ -1,7 +1,5 @@
 # Platform overview
 
-This content is moved from the README to keep the package entry point scannable.
-
 ## ⚙️ Execution modes
 
 DCDR has exactly three execution modes from an operator/user perspective:
