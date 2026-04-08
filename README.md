@@ -1,5 +1,11 @@
 # @dcdr/contracts
 
+> ⚙️ Intent-based AI runtime + control plane for production systems
+
+[![version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![typescript](https://img.shields.io/badge/language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
+
 DCDR runs AI capabilities as stable, versioned Intents (with configurable routing/retries) instead of hardcoding model calls in application code.
 
 ## Why DCDR
@@ -7,6 +13,7 @@ DCDR runs AI capabilities as stable, versioned Intents (with configurable routin
 Most applications hardcode model calls, prompts, and retry logic directly in code — making changes slow and risky.
 
 DCDR moves this into a versioned, configurable layer so you can:
+
 - change models without redeploying
 - iterate prompts safely
 - control routing and fallback centrally
@@ -31,7 +38,7 @@ Project site: https://dcdr.ai
 
 ---
 
-## ⚡ When should I use DCDR?https://chatgpt.com/c/69d6407d-04c0-8391-a9d0-60a9740cc26a
+## ⚡ When should I use DCDR?
 
 ### Use DCDR if:
 
@@ -78,16 +85,14 @@ docker run --rm -p 8000:8000 dcdr.ai/dcdr-runtime:latest --demo
 2) Call a built-in demo Intent:
 
 ```bash
-curl -sS 
--H 'Content-Type: application/json' 
--X POST http://localhost:8000/api/execution/demo/DCDR_LOCAL_DEMO 
--d '{"vars":{"name":"Ada"}}'
+curl -sS -H 'Content-Type: application/json' \
+  -X POST http://localhost:8000/api/execution/demo/DCDR_LOCAL_DEMO \
+  -d '{"vars":{"name":"Ada"}}'
 
 # Optional: remote demo (calls dcdr.ai; falls back to local if blocked)
-curl -sS 
--H 'Content-Type: application/json' 
--X POST http://localhost:8000/api/execution/demo/DCDR_REMOTE_DEMO 
--d '{"vars":{"name":"Ada"}}'
+curl -sS -H 'Content-Type: application/json' \
+  -X POST http://localhost:8000/api/execution/demo/DCDR_REMOTE_DEMO \
+  -d '{"vars":{"name":"Ada"}}'
 ```
 
 ---
@@ -147,7 +152,6 @@ This example includes:
 
 ```powershell
 docker pull dcdr.ai/dcdr-runtime:latest
-
 docker run --rm -p 8000:8000 `
 	-e API_TOKEN='dev-token' `
 	-v "${PWD}/registry.json:/data/registry.json:ro" `
@@ -158,7 +162,6 @@ docker run --rm -p 8000:8000 `
 
 ```bash
 docker pull dcdr.ai/dcdr-runtime:latest
-
 docker run --rm -p 8000:8000 \
 	-e API_TOKEN='dev-token' \
 	-v "$PWD/registry.json:/data/registry.json:ro" \
@@ -341,16 +344,18 @@ See full feature matrix: [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRI
 
 ### Core concepts
 
-- Contracts: [docs/CONTRACTS.md](docs/CONTRACTS.md)
-- Platform overview: [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md)
+- [docs/CONTRACTS.md](docs/CONTRACTS.md) — How Registries, Intents, implementations, policies, and capabilities fit together.
+- [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md) — Runtime (self-hosted) vs Cloud vs Cloud Pro (what runs where, who owns what).
+- [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRIX.md) — One-page feature/tier reference.
 
 ### Development
 
-- TypeScript client: [docs/CLIENT.md](docs/CLIENT.md)
-- CLI: [docs/CLI.md](docs/CLI.md)
-- Runtime advanced configuration: [docs/RUNTIME_ADVANCED_CONFIG.md](docs/RUNTIME_ADVANCED_CONFIG.md)
+- [docs/CLIENT.md](docs/CLIENT.md) — Full `DcdrRuntimeClient` reference (methods, auth options, errors).
+- [docs/CLI.md](docs/CLI.md) — CLI usage patterns (healthcheck, run, demo, dry-run).
+- [docs/RUNTIME_ADVANCED_CONFIG.md](docs/RUNTIME_ADVANCED_CONFIG.md) — Runtime (self-hosted) env vars (SSL/HTTPS, networking, auth, logs, metrics).
 
 ### Integrations
 
-- OpenAPI SDKs: [docs/OPENAPI_SDKS.md](docs/OPENAPI_SDKS.md)
-- Examples: [docs/EXAMPLES.md](docs/EXAMPLES.md)
+- [docs/OPENAPI_SDKS.md](docs/OPENAPI_SDKS.md) — Generate Python/C#/Java SDKs from `openapi.runtime.json`.
+- [docs/PROMETHEUS_METRICS.md](docs/PROMETHEUS_METRICS.md) — Metrics endpoint + the Prometheus gauges/counters we expose.
+- [docs/EXAMPLES.md](docs/EXAMPLES.md) — End-to-end examples and small recipes.
