@@ -21,6 +21,18 @@ DCDR moves this into a versioned, configurable layer so you can:
 
 Learn more: https://dcdr.ai
 
+## 💣 What problem does this solve?
+
+Shipping AI to production hurts because:
+
+- Models drift and outputs change without warning.
+- Prompts and retries live in app code, so every fix needs a redeploy.
+- Failures are hard to reproduce, diagnose, and roll back.
+
+DCDR pulls this into a versioned runtime + Registry layer so you can change prompts/models/routing safely, add fallbacks, and debug real executions — without touching application deploys.
+
+On top of that, every failure can be reviewed, corrected, and turned into training data for continuous improvement.
+
 ## What this package provides
 
 - **Public TypeScript contracts** (interfaces/enums) for DCDR Registries and runtime API payloads.
