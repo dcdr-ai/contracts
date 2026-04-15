@@ -377,10 +377,23 @@ export class DcdrRuntimeClient {
     }
   }
 
+
   /**
-   * Performs an HTTP request and returns raw text.
-   * @param args Request parameters.
-   * @returns Response text.
+   * Performs an HTTP request and returns the response body as plain text.
+   *
+   * @remarks
+   * Builds the request URL by concatenating {@link DcdrRuntimeClient.baseUrl} with {@link RequestTextArgs.path}.
+   * Merges {@link DcdrRuntimeClient.extraHeaders} into the request headers and applies authentication:
+   * - If {@link DcdrRuntimeClient.bearerToken} is set, adds an `Authorization: Bearer <token>` header.
+   * - Otherwise, if {@link DcdrRuntimeClient.apiToken} is set, adds a `token: <token>` header and, if present,
+   *   adds `x-session-bypass: <token>` from {@link DcdrRuntimeClient.sessionBypassToken}.
+   *
+   * Uses an {@link AbortController} to abort the request after {@link RequestTextArgs.timeoutMs} milliseconds.
+   *
+   * @param args - Request configuration including method, path, and timeout.
+   * @returns The response body as text.
+   * @throws {@link Error} If the response status is not OK (`resp.ok === false`). The error message includes the
+   * HTTP method, path, status code, and up to the first 4000 characters of the response body as a preview.
    */
   private async requestText(args: RequestTextArgs): Promise<string> {
     const url = `${this.baseUrl}${args.path}`;
@@ -421,3 +434,4 @@ export class DcdrRuntimeClient {
     }
   }
 }
+

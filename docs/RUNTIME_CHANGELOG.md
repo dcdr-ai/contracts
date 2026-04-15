@@ -5,21 +5,9 @@
 > Each section below contains the *delta* (new Unreleased entries) since the previous mirrored build.
 > Runtime images are released using the CI build number (Azure Pipelines Build.BuildNumber) in the form `YYYYMMDD.N`.
 
-## [20260415.26] - 2026-04-15
+## [20260415.2] - 2026-04-15
 
-Source commit: ca3399cdd18e49230cfec04239cc7fef18582ef7
+Source commit: 480624eff64489821f75e09f544e311cd260c011
 
+(No user-facing changes since previous build.)
 
-### Added
-
-- Runtime circuit breaker tuning via `DCDR_CB_*` env vars.
-- System diagnostic endpoint `GET /api/system/version` for build/runtime info.
-
-### Changed
-
-- Circuit breaker now uses half-open probes and capped exponential backoff (default cap: 60s).
-- Cache hits are served even when the circuit is OPEN.
-
-### Fixed
-
-- Upstream provider 401/403 is mapped to `INVALID_CREDENTIALS` (HTTP 401) instead of `502`.
