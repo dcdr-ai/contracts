@@ -8,6 +8,7 @@
 export interface ExecutionError {
   code:
     | "BAD_REQUEST"
+    | "INVALID_CREDENTIALS"
     | "NO_CONFIG"
     | "NO_ACTIVE_MODEL"
     | "NO_ELIGIBLE_IMPLEMENTATION"

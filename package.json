@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Interfaces for Dcdr Platform",
   "private": false,
   "license": "Apache-2.0",

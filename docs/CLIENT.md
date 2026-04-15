@@ -30,6 +30,12 @@ Common error patterns (all methods):
 - Network/timeout errors: thrown as `Error` by the client.
 - HTTP errors (non-2xx): thrown as `Error` with method/path/status and a body preview.
 
+Runtime error codes (not exhaustive)
+
+- `INVALID_CREDENTIALS`: returned when the upstream provider rejects credentials (typically HTTP 401/403).
+	- Runtime HTTP: `401`
+	- Response: `ExecuteIntentResponse.status="ERROR"` with `error.code="INVALID_CREDENTIALS"`
+
 ### `healthcheck()`
 
 - Returns a minimal `DcdrRuntimeHealthcheckResponse` so you can probe readiness/liveness.
