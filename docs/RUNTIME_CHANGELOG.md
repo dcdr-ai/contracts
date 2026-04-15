@@ -1,7 +1,9 @@
-> This file is automatically synced from the runtime repository `CHANGELOG.md`.
+# Runtime Changelog
+
+> This file is automatically synced from the runtime repository CHANGELOG.md.
 >
 > Runtime releases are identified by the CI build number (e.g. `YYYYMMDD.N`).
-# Runtime Changelog
+
 
 This project follows the principles of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
@@ -21,5 +23,4 @@ Runtime images are released using the CI build number (Azure Pipelines `Build.Bu
 ### Fixed
 
 - Upstream provider 401/403 is mapped to `INVALID_CREDENTIALS` (HTTP 401) instead of `502`.
-
 
