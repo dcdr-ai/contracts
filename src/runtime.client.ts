@@ -15,6 +15,24 @@ export interface DcdrRuntimeHealthcheckResponse {
 }
 
 /**
+ * Runtime version/build response shape.
+ *
+ * Notes
+ * - Only exposes a small allowlist of diagnostic fields.
+ */
+export interface DcdrRuntimeVersionResponse {
+  buildNumber?: string;
+  buildDate?: string;
+  gitSha?: string;
+
+  /** Present in runtime mode (--registry). Intentionally omitted in cloud mode. */
+  nodeVersion?: string;
+
+  /** Present in runtime mode (--registry). Intentionally omitted in cloud mode. */
+  uptimeSeconds?: number;
+}
+
+/**
  * Minimal dry-run response shape.
  *
  * Notes
@@ -184,6 +202,18 @@ export class DcdrRuntimeClient {
     return this.requestJson<DcdrRuntimeHealthcheckResponse>({
       method: "GET",
       path: "/api/system/healthcheck",
+      timeoutMs: this.timeoutMs,
+    });
+  }
+
+  /**
+   * Calls `GET /api/system/version`.
+   * @returns Runtime version/build info.
+   */
+  async version(): Promise<DcdrRuntimeVersionResponse> {
+    return this.requestJson<DcdrRuntimeVersionResponse>({
+      method: "GET",
+      path: "/api/system/version",
       timeoutMs: this.timeoutMs,
     });
   }
