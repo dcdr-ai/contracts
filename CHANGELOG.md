@@ -6,21 +6,17 @@
 > Entries are prefixed with `[RUNTIME]` or `[CONTRACTS]` to indicate the affected area.
 > Runtime images are released using the CI build number (Azure Pipelines Build.BuildNumber) in the form `YYYYMMDD.N`.
 
-## [20260416.2] - 2026-04-16
+## [20260416.5] - 2026-04-16
 
-Source commit: 1c783bda4fb019f5db1ee8b7f54c3a7ad425d63a
-
+Source commit: fab7f776a26597e517c45f4a04cde7e96f37e8e0
 
 ### Added
-
-- Runtime circuit breaker tuning via `DCDR_CB_*` env vars.
-- System diagnostic endpoint `GET /api/system/version` for build/runtime info.
-
+- [RUNTIME] Circuit breaker tuning via `DCDR_CB_*` env vars.
+- [RUNTIME] System diagnostic endpoint `GET /api/system/version` for build/runtime info.
 ### Changed
-
-- Circuit breaker now uses half-open probes and capped exponential backoff (default cap: 60s).
-- Cache hits are served even when the circuit is OPEN.
-
+- [CONTRACTS] Updated `@dcdr/contracts` submodule to include the runtime system version surface (`DcdrRuntimeClient.version()` + `DcdrRuntimeVersionResponse`).
+- [RUNTIME] Circuit breaker now uses half-open probes and capped exponential backoff (default cap: 60s).
+- [RUNTIME] Cache hits are served even when the circuit is OPEN.
 ### Fixed
+- [RUNTIME] Upstream provider 401/403 is mapped to `INVALID_CREDENTIALS` (HTTP 401) instead of `502`.
 
-- Upstream provider 401/403 is mapped to `INVALID_CREDENTIALS` (HTTP 401) instead of `502`.
