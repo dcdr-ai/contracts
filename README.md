@@ -371,4 +371,4 @@ See full feature matrix: [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRI
 - [docs/OPENAPI_SDKS.md](docs/OPENAPI_SDKS.md) — Generate Python/C#/Java SDKs from `openapi.runtime.json`.
 - [docs/PROMETHEUS_METRICS.md](docs/PROMETHEUS_METRICS.md) — Metrics endpoint + the Prometheus gauges/counters we expose.
 - [docs/EXAMPLES.md](docs/EXAMPLES.md) — End-to-end examples and small recipes.
-- [CHANGELOG.md](CHANGELOG.md) — Release notes (synced from the runtime repo changelog; entries are prefixed with `[RUNTIME]` / `[CONTRACTS]`).
+- [CHANGELOG.md](CHANGELOG.md) — Release notes (synced from the runtime repo changelog; entries start with <kbd>RUNTIME</kbd> / <kbd>CONTRACTS</kbd>).
