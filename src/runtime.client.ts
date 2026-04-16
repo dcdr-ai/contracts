@@ -118,12 +118,43 @@ interface RequestTextArgs {
   timeoutMs: number;
 }
 
+
 /**
- * Minimal, strongly-typed client for the Dcdr Runtime HTTP API.
+ * HTTP client for interacting with the DCDR Runtime REST API.
  *
- * Auth modes
- * - Customer mode (cloud): `bearerToken` -> `Authorization: Bearer <token>`
- * - Internal mode (dev/ops): `apiToken` -> `token: <token>` and optional `x-session-bypass`
+ * @remarks
+ * `DcdrRuntimeClient` wraps a `fetch` implementation and provides typed convenience methods for common runtime endpoints
+ * (execution, system info, health, metrics, circuit breaker inspection/reset). It supports request timeouts via
+ * {@link AbortController} and can be configured with additional headers.
+ *
+ * ## Authentication
+ * Exactly one of the following auth modes should be used:
+ * - **Bearer token**: sets `Authorization: Bearer <token>`
+ * - **API token**: sets `token: <token>` and optionally `x-session-bypass: <token>` when `sessionBypassToken` is provided
+ *
+ * If both `bearerToken` and `apiToken` are provided, construction throws.
+ *
+ * ## Timeouts
+ * Requests are aborted after `timeoutMs` (default: `10_000`) using `AbortController`.
+ *
+ * ## Response handling
+ * - JSON endpoints are parsed and validated against `content-type: application/json`.
+ * - Text endpoints return raw text (e.g., Prometheus metrics).
+ * - Non-OK responses throw an {@link Error} that includes method, path, status, and up to 4000 characters of body preview.
+ *
+ * @example
+ * ```ts
+ * const client = new DcdrRuntimeClient({
+ *   baseUrl: "https://runtime.example.com",
+ *   bearerToken: process.env.RUNTIME_TOKEN,
+ *   timeoutMs: 15_000,
+ * });
+ *
+ * const hc = await client.healthcheck();
+ * const result = await client.executeIntent("MY_INTENT", { vars: { name: "Ada" } });
+ * ```
+ *
+ * @public
  */
 export class DcdrRuntimeClient {
   private readonly baseUrl: string;
@@ -434,4 +465,3 @@ export class DcdrRuntimeClient {
     }
   }
 }
-
