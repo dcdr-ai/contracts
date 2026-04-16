@@ -6,6 +6,18 @@
 > Entries start with <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd> to indicate the affected area.
 > Runtime images are released using the CI build number (Azure Pipelines Build.BuildNumber) in the form `YYYYMMDD.N`.
 
+## [20260416.10] - 2026-04-16
+
+Source commit: e6237869a7180690c1f91ded3cb2a1e12a026025  
+Previous source commit: 8e546bea0eebb37e5d20decc9982dce51d4225ab  
+Previous mirrored build: 20260416.9 (2026-04-16)  
+
+Delta basis: runtime CHANGELOG.md [Unreleased] at 8e546bea0eebb37e5d20decc9982dce51d4225ab -> e6237869a7180690c1f91ded3cb2a1e12a026025  
+
+### Changed
+- <kbd>CONTRACTS</kbd> Expanded documentation for `DcdrRuntimeClient` (auth modes, error behavior, and version diagnostics).
+- <kbd>RUNTIME</kbd> Public mirror changelog now preserves historical build sections and formats build metadata with stable Markdown line breaks.
+
 ## [20260416.9] - 2026-04-16
 
 Source commit: 8e546bea0eebb37e5d20decc9982dce51d4225ab
@@ -17,4 +29,3 @@ Delta basis: runtime CHANGELOG.md [Unreleased] at 2d912fdd0accec2398a1f9577d0d17
 
 ### Changed
 - <kbd>CONTRACTS</kbd> Expanded documentation for `DcdrRuntimeClient` (auth modes, error behavior, and version diagnostics). 
-
