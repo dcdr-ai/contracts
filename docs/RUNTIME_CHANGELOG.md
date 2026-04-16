@@ -5,7 +5,7 @@
 > Each section below contains the *delta* (new Unreleased entries) since the previous mirrored build.
 > Runtime images are released using the CI build number (Azure Pipelines Build.BuildNumber) in the form `YYYYMMDD.N`.
 
-## [20260415.3] - 2026-04-15
+## [20260416.1] - 2026-04-16
 
 Source commit: 0a47dd56009f30685d3e0872f57ede6c0d540e0a
 
