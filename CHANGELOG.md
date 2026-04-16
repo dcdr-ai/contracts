@@ -6,6 +6,17 @@
 > Entries start with <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd> to indicate the affected area.
 > Runtime images are released using the CI build number (Azure Pipelines Build.BuildNumber) in the form `YYYYMMDD.N`.
 
+## [20260416.11] - 2026-04-16
+
+Source commit: 69a82d39f9fafe8c1930910201ea73126d268e3b  
+Previous source commit: e6237869a7180690c1f91ded3cb2a1e12a026025  
+Previous mirrored build: 20260416.10 (2026-04-16)  
+
+Delta basis: runtime CHANGELOG.md [Unreleased] at e6237869a7180690c1f91ded3cb2a1e12a026025 -> 69a82d39f9fafe8c1930910201ea73126d268e3b  
+
+### Fixed
+- <kbd>RUNTIME</kbd> Public mirror changelog delta computation now ignores whitespace-only changes to avoid repeating existing entries across builds.
+
 ## [20260416.10] - 2026-04-16
 
 Source commit: e6237869a7180690c1f91ded3cb2a1e12a026025  
