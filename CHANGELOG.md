@@ -6,22 +6,15 @@
 > Entries start with <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd> to indicate the affected area.
 > Runtime images are released using the CI build number (Azure Pipelines Build.BuildNumber) in the form `YYYYMMDD.N`.
 
-## [20260416.7] - 2026-04-16
+## [20260416.9] - 2026-04-16
 
-Source commit: 2d912fdd0accec2398a1f9577d0d175990786df5
-Previous source commit: fab7f776a26597e517c45f4a04cde7e96f37e8e0
-Previous mirrored build: 20260416.5 (2026-04-16)
-Contracts submodule: 42b224f52648..c0b65a0e293c
+Source commit: 8e546bea0eebb37e5d20decc9982dce51d4225ab
+Previous source commit: 2d912fdd0accec2398a1f9577d0d175990786df5
+Previous mirrored build: 20260416.7 (2026-04-16)
+Contracts submodule: c0b65a0e293c..06a7faa5e861
 
-Delta basis: runtime CHANGELOG.md [Unreleased] at fab7f776a26597e517c45f4a04cde7e96f37e8e0 -> 2d912fdd0accec2398a1f9577d0d175990786df5
+Delta basis: runtime CHANGELOG.md [Unreleased] at 2d912fdd0accec2398a1f9577d0d175990786df5 -> 8e546bea0eebb37e5d20decc9982dce51d4225ab
 
-### Added
-- <kbd>RUNTIME</kbd> Circuit breaker tuning via `DCDR_CB_*` env vars.
-- <kbd>RUNTIME</kbd> System diagnostic endpoint `GET /api/system/version` for build/runtime info.
 ### Changed
-- <kbd>CONTRACTS</kbd> Updated `@dcdr/contracts` submodule to include the runtime system version surface (`DcdrRuntimeClient.version()` + `DcdrRuntimeVersionResponse`).
-- <kbd>RUNTIME</kbd> Circuit breaker now uses half-open probes and capped exponential backoff (default cap: 60s).
-- <kbd>RUNTIME</kbd> Cache hits are served even when the circuit is OPEN.
-### Fixed
-- <kbd>RUNTIME</kbd> Upstream provider 401/403 is mapped to `INVALID_CREDENTIALS` (HTTP 401) instead of `502`.
+- <kbd>CONTRACTS</kbd> Expanded documentation for `DcdrRuntimeClient` (auth modes, error behavior, and version diagnostics). 
 

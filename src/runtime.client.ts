@@ -18,17 +18,24 @@ export interface DcdrRuntimeHealthcheckResponse {
  * Runtime version/build response shape.
  *
  * Notes
- * - Only exposes a small allowlist of diagnostic fields.
+ * - This is intended for diagnostics and supportability.
+ * - The runtime may add fields over time; consumers should treat unknown fields as ignorable.
+ * - Some fields are intentionally omitted in cloud mode (multi-tenant) to avoid leaking host details.
  */
 export interface DcdrRuntimeVersionResponse {
+  /** CI build identifier (Azure Pipelines `Build.BuildNumber`), e.g. `20260416.1`. */
   buildNumber?: string;
+
+  /** Build date (typically ISO 8601), e.g. `2026-04-16` or `2026-04-16T12:34:56Z`. */
   buildDate?: string;
+
+  /** Source revision identifier (short or full SHA), e.g. `42b224f5`. */
   gitSha?: string;
 
-  /** Present in runtime mode (--registry). Intentionally omitted in cloud mode. */
+  /** Present in runtime mode (`--registry`). Intentionally omitted in cloud mode. */
   nodeVersion?: string;
 
-  /** Present in runtime mode (--registry). Intentionally omitted in cloud mode. */
+  /** Present in runtime mode (`--registry`). Intentionally omitted in cloud mode. */
   uptimeSeconds?: number;
 }
 
@@ -127,6 +134,10 @@ interface RequestTextArgs {
  * (execution, system info, health, metrics, circuit breaker inspection/reset). It supports request timeouts via
  * {@link AbortController} and can be configured with additional headers.
  *
+ * This client is intentionally small and dependency-free:
+ * - It does not attempt retries or circuit breaking (those are runtime concerns).
+ * - It does not validate payload schemas beyond basic response shape parsing.
+ *
  * ## Authentication
  * Exactly one of the following auth modes should be used:
  * - **Bearer token**: sets `Authorization: Bearer <token>`
@@ -137,21 +148,38 @@ interface RequestTextArgs {
  * ## Timeouts
  * Requests are aborted after `timeoutMs` (default: `10_000`) using `AbortController`.
  *
- * ## Response handling
- * - JSON endpoints are parsed and validated against `content-type: application/json`.
- * - Text endpoints return raw text (e.g., Prometheus metrics).
- * - Non-OK responses throw an {@link Error} that includes method, path, status, and up to 4000 characters of body preview.
+ * ## Error behavior
+ * - Non-OK HTTP responses throw an {@link Error} including method, path, status, and a short body preview.
+ * - JSON endpoints require `content-type: application/json` (runtime should set this).
+ * - Abort/timeout failures surface as a thrown {@link Error} from the underlying `fetch` implementation.
+ *
+ * ## Version / build info
+ * The {@link DcdrRuntimeClient.version} method calls `GET /api/system/version` and returns a {@link DcdrRuntimeVersionResponse}
+ * intended for support diagnostics (build number/date/SHA and, in runtime mode only, node version + uptime).
  *
  * @example
  * ```ts
+ * // Customer mode (cloud)
  * const client = new DcdrRuntimeClient({
- *   baseUrl: "https://runtime.example.com",
- *   bearerToken: process.env.RUNTIME_TOKEN,
- *   timeoutMs: 15_000,
+ *   baseUrl: "https://dcdr.my-company.com",
+ *   bearerToken: process.env.DCDR_SESSION_TOKEN,
  * });
  *
  * const hc = await client.healthcheck();
- * const result = await client.executeIntent("MY_INTENT", { vars: { name: "Ada" } });
+ * const res = await client.executeIntent("MY_INTENT", { vars: { name: "Ada" } });
+ * const ver = await client.version();
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Internal mode (dev/ops)
+ * const client = new DcdrRuntimeClient({
+ *   baseUrl: "http://localhost:8000",
+ *   apiToken: "dev-token",
+ *   sessionBypassToken: "bypass-token",
+ * });
+ *
+ * const ver = await client.version();
  * ```
  *
  * @public
@@ -302,11 +330,12 @@ export class DcdrRuntimeClient {
    * Calls `GET /api/execution/circuit-breakers?provider=...&model=...`.
    *
    * Notes
-  * - Breakers are tenant-scoped server-side based on auth.
-  * - In internal mode, you may optionally pass `tenantCid` to inspect a specific tenant.
+   * - Breakers are tenant-scoped server-side based on auth.
+   * - In internal mode, you may optionally pass `tenantCid` to inspect a specific tenant.
    *
    * @param provider Provider name.
    * @param model Optional model.
+   * @param tenantCid Optional tenant/customer identifier (internal mode only).
    * @returns Circuit breaker snapshot.
    */
   async circuitBreakerStatus(provider: string, model?: string, tenantCid?: string): Promise<DcdrRuntimeCircuitBreakerStatusSnapshot> {
@@ -331,11 +360,12 @@ export class DcdrRuntimeClient {
    *
    * Notes
    * - Internal-only endpoint.
-  * - Breakers are tenant-scoped server-side.
-  * - In internal mode, you may optionally pass `tenantCid` to reset a specific tenant.
+   * - Breakers are tenant-scoped server-side.
+   * - In internal mode, you may optionally pass `tenantCid` to reset a specific tenant.
    *
    * @param provider Provider name.
    * @param model Optional model.
+   * @param tenantCid Optional tenant/customer identifier (internal mode only).
    * @returns Reset operation result.
    */
   async resetCircuitBreaker(provider: string, model?: string, tenantCid?: string): Promise<DcdrRuntimeCircuitBreakerResetResponse> {
@@ -353,8 +383,16 @@ export class DcdrRuntimeClient {
 
   /**
    * Performs an HTTP request and parses a JSON response.
+   *
+   * @remarks
+   * - Requires `content-type: application/json` on successful responses.
+   * - Allows an empty response body and treats it as `{}` (for endpoints that may return no content).
+   * - Applies auth headers based on the configured auth mode.
+   * - Aborts the request after `timeoutMs` via {@link AbortController}.
+   *
    * @param args Request parameters.
    * @returns Parsed JSON body.
+   * @throws {@link Error} If the HTTP response is not OK, if the response is not JSON, or if JSON parsing fails.
    */
   private async requestJson<T>(args: RequestJsonArgs): Promise<T> {
     const url = `${this.baseUrl}${args.path}`;
