@@ -6,6 +6,16 @@
 > Entries start with <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd> to indicate the affected area.
 > Runtime images are released using the CI build number (Azure Pipelines Build.BuildNumber) in the form `YYYYMMDD.N`.
 
+## [20260416.12] - 2026-04-16
+
+<!--
+sourceCommit: 48d5b7f3b2b295655c1f674dfca14ddbd13e929e
+previousMirroredBuild: 20260416.11 (2026-04-16)
+-->
+
+### Changed
+- <kbd>RUNTIME</kbd> Public mirror changelog hides build traceability metadata (commit/build/submodule) in an HTML comment for a cleaner user-facing view.
+
 ## [20260416.11] - 2026-04-16
 
 Source commit: 69a82d39f9fafe8c1930910201ea73126d268e3b  
