@@ -26,6 +26,7 @@ Quick navigation:
 - Content-Type: Prometheus text exposition format
 - Notes:
   - By default, runtime mounts `/api/system/*` without API token middleware. If you want to restrict access, do it at your ingress / reverse proxy.
+  - Optional token gate: if `DCDR_SYSTEM_METRICS_TOKEN` is set, callers must provide `?token=...` matching that value.
   - The TypeScript client method `DcdrRuntimeClient.metrics()` calls this endpoint and returns the raw text.
 
 
@@ -145,10 +146,50 @@ These metrics are intentionally designed to keep label cardinality bounded.
   - Labels:
     - `status`: fetch outcome (bounded set)
 
+- `dcdr_runtime_entitlements_fetch_total{status}` (Counter)
+  - Value: total entitlements fetch outcomes from backend
+  - Labels:
+    - `status`: `ok | not_modified | error`
+
+- `dcdr_runtime_entitlements_enforcement_total{action}` (Counter)
+  - Value: total entitlements enforcement outcomes
+  - Labels:
+    - `action`: bounded set (e.g. `quota_exceeded`, `rate_limit_exceeded_hour`, `backend_unavailable_blocked`, ...)
+
 - `dcdr_runtime_service_token_allowlist_total{result}` (Counter)
   - Value: total allowlist decisions for service token validation
   - Labels:
     - `result`: allow/deny reason (bounded set)
+
+### Circuit breaker + in-memory counters footprint
+
+These metrics expose a small, bounded footprint of internal caches used for reliability.
+
+- `dcdr_runtime_circuit_breaker_state_keys_total` (Gauge)
+  - Value: number of L1 circuit breaker state keys currently held in memory
+
+- `dcdr_runtime_circuit_breaker_known_keys_total` (Gauge)
+  - Value: number of circuit breaker keys known to this process (best-effort bookkeeping)
+
+- `dcdr_runtime_usage_delta_entries_total` (Gauge)
+  - Value: number of in-memory usage delta counter entries (used when Redis is disabled/unavailable)
+
+### Tenant cache evictions / memory pressure
+
+- `dcdr_runtime_tenant_cache_evictions_total{store,reason}` (Counter)
+  - Value: total number of tenant cache evictions/purges in in-memory stores
+  - Labels:
+    - `store`: `configuration | entitlements`
+    - `reason`: `ttl | memory`
+
+- `dcdr_runtime_tenant_cache_memory_purge_last_used_pct{store}` (Gauge)
+  - Value: used memory fraction at last tenant cache memory-pressure purge (best-effort)
+
+- `dcdr_runtime_tenant_cache_memory_purge_last_removed{store}` (Gauge)
+  - Value: number of entries removed in the last tenant cache memory-pressure purge
+
+- `dcdr_runtime_tenant_cache_memory_purge_last_at_unix_seconds{store}` (Gauge)
+  - Value: unix timestamp (seconds) of the last tenant cache memory-pressure purge
 
 ### HTTP request metrics
 
@@ -241,6 +282,20 @@ These help separate **gateway overhead** from **provider time**.
 
 - `dcdr_runtime_provider_total_duration_seconds{intent}` (Histogram)
   - Sum of provider execution durations across attempts (includes retries/fallback)
+
+### Execution planning / exploration
+
+These metrics are only emitted when exploration is applied (candidate re-ordering).
+
+- `dcdr_runtime_execution_exploration_activations_total{mode}` (Counter)
+  - Value: number of times exploration was applied
+  - Labels:
+    - `mode`: exploration mode (bounded set)
+
+- `dcdr_runtime_execution_exploration_picked_index_total{mode,index_bucket}` (Counter)
+  - Value: chosen index bucket within the ordered candidate list
+  - Labels:
+    - `index_bucket`: `0 | 1 | 2 | 3 | 4 | 5_plus`
 
 ## Node.js default metrics (`dcdr_runtime_node_*`)
 
