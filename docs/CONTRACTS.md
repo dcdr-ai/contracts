@@ -64,8 +64,9 @@ Prompting + schemas:
 Routing + retries:
 
 - `RetryPolicy`: [../src/policies.contract.ts](../src/policies.contract.ts#L12)
-- `ExecutionPolicyType`: [../src/policies.contract.ts](../src/policies.contract.ts#L183)
-- `ExecutionPolicy`: [../src/policies.contract.ts](../src/policies.contract.ts#L258)
+- `ExecutionPolicyType`: [../src/policies.contract.ts](../src/policies.contract.ts)
+- `ExecutionPolicy`: [../src/policies.contract.ts](../src/policies.contract.ts)
+- `ExplorationMode` / `ExplorationPolicy`: [../src/policies.contract.ts](../src/policies.contract.ts)
 
 Provider execution:
 
@@ -157,6 +158,17 @@ The simplest and most common policy is:
 
 - `type: WEIGHTED` — use each implementation's `weight` for selection.
 
+Optional exploration (Cloud/Cloud Pro)
+
+- `executionPolicy.exploration` is an explicit opt-in mechanism to explore alternative candidates *after* deterministic ordering.
+- V1 rule: exploration is not supported with `type: WEIGHTED`.
+
+Epsilon-greedy Top-K sampling
+
+- `mode: EPSILON_GREEDY_TOP_K`
+- `epsilon: 0..1` probability of exploring
+- `topK: >= 1` number of top candidates to sample within
+
 ### Retry policy (retries & fallback)
 
 `retryPolicy` defines what happens when providers fail.
@@ -185,7 +197,7 @@ Key fields:
 - `provider` — e.g. `OPEN_AI`, `OFFICE`
 - `model` — e.g. `gpt-4.1-mini`, `Qwen3-4B-Instruct-2507`
 - `endpoint` — base URL. For OpenAI it should be `https://api.openai.com/v1`.
-- `weight` — selection weight for `WEIGHTED` policy. Conventionally use 0..1 (e.g. 0.7 / 0.3).
+- `weight` — selection weight for `WEIGHTED` policy. Conventionally use 0..1 (e.g. 0.7 / 0.3), but any positive numbers work.
 - `credentialRef` — reference a credential object by id (recommended; avoids duplicating secrets)
 - `runtimeConfig.timeoutMs` — provider attempt timeout override
 

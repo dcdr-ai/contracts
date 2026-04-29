@@ -14,4 +14,5 @@ export * from "./http.contract";
 export * from "./entitlements.contract";
 export * from "./service-tokens.contract";
 export * from "./capabilities.contract";
+export * from "./subscription.contract";
 export * from "./runtime.client";

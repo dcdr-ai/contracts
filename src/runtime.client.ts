@@ -1,4 +1,5 @@
 import { ExecuteIntentRequest, ExecuteIntentResponse } from "./execution.contract";
+import { DcdrEntitlementsContract } from "./entitlements.contract";
 
 /**
  * Runtime healthcheck response shape.
@@ -84,11 +85,59 @@ export interface DcdrRuntimeCircuitBreakerResetResponse {
 }
 
 /**
+ * Status for optional entitlements data returned by the auth check endpoint.
+ */
+export enum DcdrRuntimeAuthCheckEntitlementsStatus {
+  OK = "OK",
+  ERROR = "ERROR",
+  SKIPPED = "SKIPPED",
+}
+
+/**
+ * Response shape for token validation diagnostics.
+ *
+ * Notes
+ * - This endpoint is intended for customer integrations to verify that their configured token is accepted by the runtime.
+ * - The runtime may add extra fields over time; consumers should treat unknown fields as ignorable.
+ */
+export interface DcdrRuntimeAuthCheckResponse {
+  valid: boolean;
+  authMode?: "internal" | "customer";
+  nowMs: number;
+
+  /** Present for customer tokens. */
+  cid?: string;
+
+  /** Present for customer tokens. */
+  session?: {
+    id: string;
+    aid: string;
+    cid?: string;
+    iat: number;
+    exp: number;
+    scopes: string[];
+  };
+
+  /** Present for customer tokens when snapshot allowlist info is available. */
+  allowlist?: {
+    snapshotAgeMs: number;
+  };
+
+  /** Present for customer tokens when backend entitlements are enabled. */
+  entitlementsStatus?: DcdrRuntimeAuthCheckEntitlementsStatus;
+  entitlements?: DcdrEntitlementsContract;
+}
+
+/**
  * Configuration for `DcdrRuntimeClient`.
  */
 export interface DcdrRuntimeClientConfig {
-  /** Base URL for the runtime, e.g. `https://dcdr.my-company.com`. */
-  baseUrl: string;
+  /**
+   * Base URL for the runtime, e.g. `https://dcdr.my-company.com`.
+   *
+   * Defaults to `https://runtime.dcdr.ai` when omitted.
+   */
+  baseUrl?: string;
 
   /** Customer-mode auth: backend-issued DcdrSessionToken. */
   bearerToken?: string;
@@ -161,7 +210,6 @@ interface RequestTextArgs {
  * ```ts
  * // Customer mode (cloud)
  * const client = new DcdrRuntimeClient({
- *   baseUrl: "https://dcdr.my-company.com",
  *   bearerToken: process.env.DCDR_SESSION_TOKEN,
  * });
  *
@@ -198,11 +246,13 @@ export class DcdrRuntimeClient {
    * @param cfg Client configuration.
    */
   constructor(cfg: DcdrRuntimeClientConfig) {
-    if (!cfg?.baseUrl) {
-      throw new Error("DcdrRuntimeClient requires baseUrl");
+    const resolvedBaseUrl = cfg?.baseUrl ?? "https://runtime.dcdr.ai";
+    const resolvedBaseUrlTrimmed = String(resolvedBaseUrl).trim();
+    if (!resolvedBaseUrlTrimmed) {
+      throw new Error("DcdrRuntimeClient requires baseUrl (or omit it to use https://runtime.dcdr.ai)");
     }
 
-    this.baseUrl = String(cfg.baseUrl).replace(/\/$/, "");
+    this.baseUrl = resolvedBaseUrlTrimmed.replace(/\/$/, "");
     this.bearerToken = cfg.bearerToken ? String(cfg.bearerToken).trim() : undefined;
     this.apiToken = cfg.apiToken ? String(cfg.apiToken).trim() : undefined;
     this.sessionBypassToken = cfg.sessionBypassToken ? String(cfg.sessionBypassToken).trim() : undefined;
@@ -280,12 +330,31 @@ export class DcdrRuntimeClient {
   /**
    * Calls `GET /api/system/metrics`.
    * Returns the raw Prometheus exposition format text.
+   *
+   * @param token Optional metrics query token (`?token=...`) when the runtime is configured to require it.
    * @returns Metrics text.
    */
-  async metrics(): Promise<string> {
+  async metrics(token?: string): Promise<string> {
+    const t = String(token ?? "").trim();
+    const qp = t ? `?token=${encodeURIComponent(t)}` : "";
     return this.requestText({
       method: "GET",
-      path: "/api/system/metrics",
+      path: `/api/system/metrics${qp}`,
+      timeoutMs: this.timeoutMs,
+    });
+  }
+
+  /**
+   * Calls `GET /api/auth/check`.
+   *
+   * Notes
+   * - This endpoint is intended for customer integrations to verify their auth configuration.
+   * - It performs the same validation path as execution calls, but does not execute an Intent.
+   */
+  async authCheck(): Promise<DcdrRuntimeAuthCheckResponse> {
+    return this.requestJson({
+      method: "GET",
+      path: "/api/auth/check",
       timeoutMs: this.timeoutMs,
     });
   }

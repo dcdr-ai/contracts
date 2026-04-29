@@ -2,7 +2,7 @@ import { CapabilityKey, getRequiredCapabilitiesFromRegistry } from "../src/capab
 import { DcdrRegistry } from "../src/control.contract";
 import { IntentContract, IntentType } from "../src/intent.contract";
 import { ImplementationContract } from "../src/implementations.contract";
-import { ExecutionPolicyType } from "../src/policies.contract";
+import { ExecutionPolicyType, ExplorationMode } from "../src/policies.contract";
 import { IntentProvider } from "../src/provider.contract";
 import { PromptTemplate } from "../src/prompts.contract";
 import { RetryPolicy } from "../src/policies.contract";
@@ -91,6 +91,23 @@ describe("capabilities.contract", () => {
 
     const caps = getRequiredCapabilitiesFromRegistry(reg);
     expect(caps).toContain(CapabilityKey.AI_INTENTS_ADVANCED_EXECUTION_POLICY);
+  });
+
+  it("detects exploration policy usage", () => {
+    const reg: DcdrRegistry = {
+      sha256: "r",
+      intents: [
+        makeIntent({
+          executionPolicy: {
+            type: ExecutionPolicyType.FASTEST_FIRST,
+            exploration: { mode: ExplorationMode.EPSILON_GREEDY_TOP_K, epsilon: 0.25, topK: 2 },
+          },
+        }),
+      ],
+    };
+
+    const caps = getRequiredCapabilitiesFromRegistry(reg);
+    expect(caps).toContain(CapabilityKey.AI_INTENTS_EXPLORATION_POLICY);
   });
 
   it("detects per-implementation cache TTL", () => {

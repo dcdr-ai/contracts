@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+
 import { DcdrRuntimeClient } from "../src/runtime.client";
 
 function makeMockResponse(args: {
@@ -33,6 +35,21 @@ function makeMockTextResponse(args: { ok: boolean; status: number; text: string;
 }
 
 describe("DcdrRuntimeClient", () => {
+  it("defaults baseUrl to https://runtime.dcdr.ai when omitted", async () => {
+    const fetchFn = jest.fn(async (url: string) => {
+      expect(url).toBe("https://runtime.dcdr.ai/api/system/healthcheck");
+      return makeMockResponse({ ok: true, status: 200, json: { status: "OK" } });
+    });
+
+    const client = new DcdrRuntimeClient({
+      bearerToken: "TOKEN",
+      fetchFn,
+    });
+
+    const res = await client.healthcheck();
+    expect(res.status).toBe("OK");
+  });
+
   it("sends Authorization Bearer when bearerToken is configured", async () => {
     const fetchFn = jest.fn(async (_url: string, init?: RequestInit) => {
       const headers = init?.headers as Record<string, string>;
@@ -100,6 +117,41 @@ describe("DcdrRuntimeClient", () => {
 
     const text = await client.metrics();
     expect(text).toContain("# HELP");
+  });
+
+  it("calls /api/system/metrics?token=... when token is provided", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/system/metrics?token=SECRET");
+      expect(init?.method).toBe("GET");
+      return makeMockTextResponse({ ok: true, status: 200, text: "# HELP x y\n" });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const text = await client.metrics("SECRET");
+    expect(text).toContain("# HELP");
+  });
+
+  it("calls GET /api/auth/check for authCheck()", async () => {
+      const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+        expect(url).toBe("https://example.invalid/api/auth/check");
+        expect(init?.method).toBe("GET");
+        return makeMockResponse({ ok: true, status: 200, json: { valid: true, nowMs: 123 } });
+      });
+  
+      const client = new DcdrRuntimeClient({
+        baseUrl: "https://example.invalid",
+        apiToken: "API",
+        fetchFn,
+      });
+  
+      const res = await client.authCheck();
+      expect(res.valid).toBe(true);
+      expect(res.nowMs).toBe(123);
   });
 
   it("calls /api/execution/dry-run/:intent for dryRun()", async () => {

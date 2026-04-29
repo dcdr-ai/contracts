@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "1.2.2",
+  "version": "1.4.0",
   "description": "Interfaces for Dcdr Platform",
   "private": false,
   "license": "Apache-2.0",
@@ -12,7 +12,8 @@
   "scripts": {
     "prepare": "npm run build",
     "check": "tsc --noEmit",
-    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
     "test": "npm run build && jest",
     "test:ci": "npm run build && jest --runInBand"
   },
@@ -32,6 +33,7 @@
     "./capabilities.contract": "./dist/capabilities.contract.js",
     "./control.contract": "./dist/control.contract.js",
     "./credentials.contract": "./dist/credentials.contract.js",
+    "./subscription.contract": "./dist/subscription.contract.js",
     "./http.contract": "./dist/http.contract.js",
     "./entitlements.contract": "./dist/entitlements.contract.js",
     "./errors.contract": "./dist/errors.contract.js",

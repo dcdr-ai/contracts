@@ -44,8 +44,22 @@ export class RetryPolicy {
     allowFallback: boolean = true;
 
     /**
-     * Whether to do a "repair pass" when output fails JSON/schema validation.
-     * Useful for strict JSON intents (format parser, mappers).
+        * Whether to do a "repair pass" when output fails JSON/schema validation.
+        * Useful for strict JSON intents (format parser, mappers).
+        *
+        * Repair pass semantics (runtime behavior)
+        * - Trigger condition: the previous attempt failed with `PARSE_FAIL` or `SCHEMA_FAIL`.
+        * - Structured-only: only applies when the intent is in structured mode (has `outputSchema` and/or
+        *   `response_format` is `json_object`/`json_schema`).
+        * - Effect: the gateway appends one extra *system* instruction message to the existing rendered prompt
+        *   (marker: `[DCDR_REPAIR_PASS]`) asking the model to re-emit ONLY valid JSON matching the expected schema.
+        * - Budgeting: consumes the normal retry budget (must still be within `maxPerCandidate` and `maxAttempts`).
+        * - Scope: at most one repair pass is attempted per candidate execution.
+        *
+        * Notes
+        * - This does not change the intent inputs; it only changes the instruction for the next attempt.
+        * - If you want repair behavior, you typically enable this AND include `PARSE_FAIL`/`SCHEMA_FAIL` in `retryOn`,
+        *   but the repair pass itself is allowed even when `retryOn` is empty.
      */
     @IsOptional()
     @IsBoolean()
@@ -241,6 +255,43 @@ export enum ExecutionPolicyFallbackMode {
     ERROR = "ERROR",
 }
 
+/**
+ * Exploration modes for candidate planning.
+ *
+ * Exploration is always explicit (opt-in) and is applied *after* deterministic ordering.
+ *
+ * V1 invariant
+ * - Do not combine weight-based selection with score-based ordering.
+ * - Exploration may reorder which candidate is tried first, but it must not change the underlying score ordering.
+ */
+export enum ExplorationMode {
+    /**
+     * Epsilon-greedy exploration over the top-K candidates.
+     *
+     * With probability `epsilon`, pick a random candidate in the top-K list.
+     * Otherwise, keep the deterministic best candidate.
+     */
+    EPSILON_GREEDY_TOP_K = "EPSILON_GREEDY_TOP_K",
+}
+
+/**
+ * Optional exploration configuration.
+ *
+ * Notes
+ * - This is intended for Cloud/Cloud Pro only; runtime (self-hosted) may reject registries that require it.
+ * - Parameters are validated at runtime.
+ */
+export interface ExplorationPolicy {
+    /** Exploration mode. */
+    mode: ExplorationMode;
+
+    /** Probability of exploring (0..1). */
+    epsilon: number;
+
+    /** Max number of top candidates to sample within (>= 1). */
+    topK: number;
+}
+
 
 
 /**
@@ -290,4 +341,11 @@ export interface ExecutionPolicy {
      * - FASTEST_FIRST without latency metadata
      */
     fallbackMode?: ExecutionPolicyFallbackMode;
+
+    /**
+     * Optional exploration behavior applied after deterministic ordering.
+     *
+     * Exploration is never enabled by default; it is only used when this block is present.
+     */
+    exploration?: ExplorationPolicy;
 }

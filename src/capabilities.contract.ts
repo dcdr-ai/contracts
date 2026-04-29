@@ -22,6 +22,9 @@ export enum CapabilityKey {
   /** Any non-default/advanced execution policy (non-WEIGHTED). */
   AI_INTENTS_ADVANCED_EXECUTION_POLICY = "AI_INTENTS_ADVANCED_EXECUTION_POLICY",
 
+  /** ExecutionPolicy exploration enabled (epsilon-greedy / top-K sampling). */
+  AI_INTENTS_EXPLORATION_POLICY = "AI_INTENTS_EXPLORATION_POLICY",
+
   /** Response caching enabled with per-implementation TTL configuration. */
   AI_RUNTIME_CACHE_TTL_CONFIGURABLE = "AI_RUNTIME_CACHE_TTL_CONFIGURABLE",
 
@@ -58,6 +61,10 @@ export function getRequiredCapabilitiesForIntent(intent: IntentContract): Capabi
 
   if (intent.executionPolicy && intent.executionPolicy.type !== ExecutionPolicyType.WEIGHTED) {
     out.push(CapabilityKey.AI_INTENTS_ADVANCED_EXECUTION_POLICY);
+  }
+
+  if (intent.executionPolicy && intent.executionPolicy.exploration) {
+    out.push(CapabilityKey.AI_INTENTS_EXPLORATION_POLICY);
   }
 
   const implementations = Array.isArray(intent.implementations) ? intent.implementations : [];

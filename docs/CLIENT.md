@@ -13,7 +13,7 @@ Quick map (method → HTTP surface):
 | `healthcheck()` | `GET /api/system/healthcheck` | none by default | Load balancers / basic diagnostics |
 | `metrics()` | `GET /api/system/metrics` | none by default | Prometheus scraping |
 | `executeIntent(intent, request)` | `POST /api/execution/run/:intent` | required | Normal intent execution |
-| `demo(intent, request)` | `POST /api/execution/demo/:intent` | required | Demo-specific intent execution |
+| `demo(intent, request)` | `POST /api/execution/demo/:intent` | required (except demo mode) | Demo-specific intent execution |
 | `dryRun(intent, vars)` | `POST /api/execution/dry-run/:intent` | required | Debug prompt rendering & resolved config |
 | `eval(intent, vars)` | `POST /api/execution/eval/:intent` | required | Cloud and Cloud Pro evaluation workflows |
 | `circuitBreakerStatus(provider, model?, tenantCid?)` | `GET /api/execution/circuit-breakers` | required | Observe breaker state (tenant-scoped) |
@@ -23,7 +23,8 @@ What “auth required” means:
 
 - **Customer mode (Cloud and Cloud Pro)**: set `bearerToken` (sends `Authorization: Bearer <DcdrSessionToken>`)
 	- You create/get the token in the DCDR Cloud UI.
-- **Internal/dev mode (Runtime (self-hosted))**: set `apiToken` (sends `token: <token>`) and optionally `sessionBypassToken` (sends `x-session-bypass`)
+- **Internal/dev mode (Runtime (self-hosted))**: set `apiToken` (sends `token: <token>`)
+	- Note: `/api/execution/*` endpoints require a session. For dev/testing you can set `sessionBypassToken` (sends `x-session-bypass`) when the runtime is configured with `SESSION_BYPASS_TOKEN`.
 
 Common error patterns (all methods):
 
@@ -57,6 +58,7 @@ Runtime error codes (not exhaustive)
 
 - Same shape as `executeIntent`, but targets the demo route: `POST /api/execution/demo/:intent`.
 - Intended for curated demo intents (e.g. `DCDR_LOCAL_DEMO`).
+- When the runtime is started in demo mode (for example `dcdr-runtime:latest --demo`), demo intents are intended to be callable without auth.
 
 ### `dryRun(intent, vars)`
 

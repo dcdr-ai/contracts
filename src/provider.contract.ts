@@ -214,6 +214,80 @@ export interface ProviderModelPricing extends ProviderPricingMeta {
     components: ProviderPricingComponent[];
 }
 
+/** Runtime-level support status for a (provider, modelId) pair. */
+export enum ProviderModelRuntimeSupportStatus {
+    /** Supported by this runtime (intended to work). */
+    SUPPORTED = "SUPPORTED",
+
+    /** Explicitly not supported by this runtime (do not attempt provider calls). */
+    NOT_SUPPORTED = "NOT_SUPPORTED",
+
+    /** Known failing in current runtime; keep visible but treat as unstable. */
+    FAILING = "FAILING",
+
+    /** Under active work; may be partially implemented. */
+    IN_PROGRESS = "IN_PROGRESS",
+}
+
+/** Preferred upstream API surface for this model (when provider offers multiple). */
+export enum ProviderModelPreferredApi {
+    CHAT_COMPLETIONS = "CHAT_COMPLETIONS",
+    RESPONSES = "RESPONSES",
+}
+
+/** Generic prompt/runtime parameter keys that can be exposed to users (UI) and adapters. */
+export enum PromptParameterKey {
+    TEMPERATURE = "temperature",
+    TOP_P = "top_p",
+    TOP_K = "top_k",
+    MAX_TOKENS = "max_tokens",
+    SEED = "seed",
+    ENABLE_THINKING = "enable_thinking",
+    RESPONSE_FORMAT = "response_format",
+    PRESENCE_PENALTY = "presence_penalty",
+    FREQUENCY_PENALTY = "frequency_penalty",
+}
+
+/** Runtime-level parameter support status for a specific model. */
+export enum ProviderModelParameterSupportStatus {
+    /** Parameter is supported and may be used. */
+    SUPPORTED = "SUPPORTED",
+
+    /** Parameter is not supported and should not be sent. */
+    NOT_SUPPORTED = "NOT_SUPPORTED",
+
+    /** Only provider default is supported; runtime should avoid sending custom values. */
+    DEFAULT_ONLY = "DEFAULT_ONLY",
+}
+
+/** Optional parameter support metadata attached to a model definition (for UI and adapter normalization). */
+export interface ProviderModelParameterSupportInfo {
+    /** Per-parameter support mapping. Omitted keys mean "unknown" (use adapter defaults). */
+    parameters?: Partial<Record<PromptParameterKey, ProviderModelParameterSupportStatus>>;
+
+    /** Optional recommendations to avoid common misconfiguration. */
+    recommended?: {
+        /** Recommended minimum `max_tokens` to avoid empty/reasoning-only outputs on some models. */
+        minMaxTokens?: number;
+    };
+
+    /** Human-readable notes (safe for UI/logs). */
+    notes?: string;
+
+    /** ISO date string of last verification (e.g. from E2E/probes). */
+    updatedAt?: string;
+}
+
+/** Optional runtime support metadata attached to a model definition. */
+export interface ProviderModelRuntimeSupportInfo {
+    status: ProviderModelRuntimeSupportStatus;
+    preferredApi?: ProviderModelPreferredApi;
+    /** Human-readable notes (safe for logs/CI). */
+    reason?: string;
+    /** ISO date string of last verification (e.g. from E2E/probes). */
+    updatedAt?: string;
+}
+
 /**
  * Canonical (de-duplicated) model definition.
  *
@@ -224,6 +298,8 @@ export interface ProviderModelDefinition {
     id: string;
     types: IntentType[];
     pricing?: ProviderModelPricing;
+    runtimeSupport?: ProviderModelRuntimeSupportInfo;
+    parameterSupport?: ProviderModelParameterSupportInfo;
 }
 
 function buildProviderModelCatalogAndTypeIndex(
@@ -265,11 +341,33 @@ const ANTHROPIC_MODELS_URL = "https://platform.claude.com/docs/en/docs/about-cla
 const MISTRAL_MODELS_URL = "https://docs.mistral.ai/getting-started/models/";
 const GEMINI_PRICING_URL = "https://ai.google.dev/gemini-api/docs/pricing";
 
+const OPENAI_GPT5_PARAMETER_SUPPORT: ProviderModelParameterSupportInfo = {
+    parameters: {
+        [PromptParameterKey.TEMPERATURE]: ProviderModelParameterSupportStatus.DEFAULT_ONLY,
+        [PromptParameterKey.TOP_P]: ProviderModelParameterSupportStatus.DEFAULT_ONLY,
+        [PromptParameterKey.TOP_K]: ProviderModelParameterSupportStatus.NOT_SUPPORTED,
+    },
+    recommended: {
+        // E2E and probes showed that very low budgets (e.g. 16) can yield reasoning-only outputs.
+        minMaxTokens: 64,
+    },
+    notes: "GPT-5 family: avoid custom sampling params; ensure sufficient max_tokens budget.",
+    updatedAt: "2026-04-28",
+};
+
 function pricingPerMillionTokens(args: {
     input: number;
     output: number;
     cachedInput?: number;
     cachedOutput?: number;
+    tiers?: Array<{
+        name: string;
+        condition?: string;
+        input: number;
+        output: number;
+        cachedInput?: number;
+        cachedOutput?: number;
+    }>;
     sourceUrl: string;
     updatedAt?: number;
     confidence?: ProviderModelPricing["confidence"];
@@ -289,6 +387,7 @@ function pricingPerMillionTokens(args: {
                 outputUsd: args.output,
                 cachedInput: args.cachedInput,
                 cachedOutput: args.cachedOutput,
+                tiers: args.tiers,
             },
         ],
     };
@@ -304,47 +403,99 @@ function pricingPerMillionTokens(args: {
 export const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER: Record<IntentProvider, ProviderModelDefinition[]> = {
     [IntentProvider.OPEN_AI]: [
         // Pricing snapshot: OpenAI pricing page, updatedAt=2026-03-27
-        { id: "gpt-5.2", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 1.75, cachedInput: 0.175, output: 14.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-5.2-pro", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 21.0, output: 168.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-5.1", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 1.25, cachedInput: 0.125, output: 10.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-5", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 1.25, cachedInput: 0.125, output: 10.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-5-mini", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.25, cachedInput: 0.025, output: 2.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-5-nano", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.05, cachedInput: 0.005, output: 0.4, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-5-pro", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 15.0, output: 120.0, sourceUrl: OPENAI_PRICING_URL }) },
+        // Model IDs below are kept in roughly "newest first" order.
+        // Discovered aliases are sourced from OpenAI `GET /v1/models` (snapshot 2026-04-27).
 
-        { id: "gpt-4.1", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 2.0, cachedInput: 0.5, output: 8.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4.1-mini", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.4, cachedInput: 0.1, output: 1.6, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4.1-nano", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.1, cachedInput: 0.025, output: 0.4, sourceUrl: OPENAI_PRICING_URL }) },
+        // --- gpt-5.5 (discovered; priced) ---
+        { id: "gpt-5.5", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 5.0, cachedInput: 0.5, output: 30.0, tiers: [{ name: "long_context", condition: "Long context", input: 10.0, cachedInput: 1.0, output: 45.0 }], sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.5-2026-04-23", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.5-pro", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 30.0, output: 180.0, tiers: [{ name: "long_context", condition: "Long context", input: 60.0, output: 270.0 }], sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "OpenAI responses-only model (not supported on /v1/chat/completions)", updatedAt: "2026-04-27" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.5-pro-2026-04-23", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "OpenAI responses-only model (not supported on /v1/chat/completions)", updatedAt: "2026-04-27" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
 
-        { id: "gpt-4o", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 2.5, cachedInput: 1.25, output: 10.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4o-mini", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.15, cachedInput: 0.075, output: 0.6, sourceUrl: OPENAI_PRICING_URL }) },
+        // --- gpt-5.4 (discovered; priced) ---
+        { id: "gpt-5.4", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 2.5, cachedInput: 0.25, output: 15.0, tiers: [{ name: "long_context", condition: "Long context", input: 5.0, cachedInput: 0.5, output: 22.5 }], sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.4-2026-03-05", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.4-mini", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 0.75, cachedInput: 0.075, output: 4.5, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.4-mini-2026-03-17", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.4-nano", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 0.2, cachedInput: 0.02, output: 1.25, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.4-nano-2026-03-17", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.4-pro", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 30.0, output: 180.0, tiers: [{ name: "long_context", condition: "Long context", input: 60.0, output: 270.0 }], sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "OpenAI responses-only model (not supported on /v1/chat/completions)", updatedAt: "2026-04-27" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.4-pro-2026-03-05", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "OpenAI responses-only model (not supported on /v1/chat/completions)", updatedAt: "2026-04-27" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
 
-        { id: "o4-mini", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.1, cachedInput: 0.275, output: 4.4, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }) },
-        { id: "o3", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 2.0, cachedInput: 0.5, output: 8.0, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }) },
-        { id: "o3-mini", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.1, cachedInput: 0.55, output: 4.4, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }) },
-        { id: "o3-pro", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 20.0, output: 80.0, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }) },
-        { id: "o1", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 15.0, cachedInput: 7.5, output: 60.0, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }) },
-        { id: "o1-mini", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.1, cachedInput: 0.55, output: 4.4, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }) },
-        { id: "o1-pro", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 150.0, output: 600.0, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }) },
+        // --- gpt-5.3 (discovered; priced) ---
+        { id: "gpt-5.3-chat-latest", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.75, cachedInput: 0.175, output: 14.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.3-codex", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.75, cachedInput: 0.175, output: 14.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
 
-        { id: "gpt-4o-2024-05-13", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 5.0, output: 15.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4-turbo-2024-04-09", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 10.0, output: 30.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4-0125-preview", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 10.0, output: 30.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4-1106-preview", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 10.0, output: 30.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4-1106-vision-preview", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 10.0, output: 30.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4-0613", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 30.0, output: 60.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4-0314", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 30.0, output: 60.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-4-32k", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 60.0, output: 120.0, sourceUrl: OPENAI_PRICING_URL }) },
+        // --- gpt-5.2 (base IDs are priced; aliases discovered) ---
+        { id: "gpt-5.2", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 1.75, cachedInput: 0.175, output: 14.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.2-2025-12-11", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.2-chat-latest", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.2-codex", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.2-pro", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 21.0, output: 168.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "OpenAI responses-only model (not supported on /v1/chat/completions)", updatedAt: "2026-04-27" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.2-pro-2025-12-11", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "OpenAI responses-only model (not supported on /v1/chat/completions)", updatedAt: "2026-04-27" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
 
-        { id: "gpt-3.5-turbo", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 0.5, output: 1.5, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-3.5-turbo-0125", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 0.5, output: 1.5, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-3.5-turbo-1106", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.0, output: 2.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-3.5-turbo-0613", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.5, output: 2.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-3.5-0301", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.5, output: 2.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-3.5-turbo-instruct", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.5, output: 2.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "gpt-3.5-turbo-16k-0613", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 3.0, output: 4.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "davinci-002", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 2.0, output: 2.0, sourceUrl: OPENAI_PRICING_URL }) },
-        { id: "babbage-002", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 0.4, output: 0.4, sourceUrl: OPENAI_PRICING_URL }) },
+        // --- gpt-5.1 (base ID is priced; aliases discovered) ---
+        { id: "gpt-5.1", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 1.25, cachedInput: 0.125, output: 10.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.1-2025-11-13", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.1-chat-latest", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.1-codex", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.1-codex-max", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5.1-codex-mini", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+
+        // --- gpt-5.0 (base IDs are priced; aliases discovered) ---
+        { id: "gpt-5", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 1.25, cachedInput: 0.125, output: 10.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-2025-08-07", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-chat-latest", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-codex", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-mini", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.25, cachedInput: 0.025, output: 2.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-mini-2025-08-07", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-nano", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.05, cachedInput: 0.005, output: 0.4, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-nano-2025-08-07", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-pro", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 15.0, output: 120.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "OpenAI responses-only model (not supported on /v1/chat/completions)", updatedAt: "2026-04-27" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-pro-2025-10-06", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "OpenAI responses-only model (not supported on /v1/chat/completions)", updatedAt: "2026-04-27" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-search-api", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Not supported by runtime: upstream 5xx on basic calls; structured json_schema not supported", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+        { id: "gpt-5-search-api-2025-10-14", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Not supported by runtime: upstream 5xx on basic calls; structured json_schema not supported", updatedAt: "2026-04-28" }, parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT },
+
+        { id: "gpt-4.1", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 2.0, cachedInput: 0.5, output: 8.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4.1-2025-04-14", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4.1-mini", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.4, cachedInput: 0.1, output: 1.6, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4.1-mini-2025-04-14", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4.1-nano", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.1, cachedInput: 0.025, output: 0.4, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4.1-nano-2025-04-14", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+
+        { id: "gpt-4o", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 2.5, cachedInput: 1.25, output: 10.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4o-2024-08-06", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4o-2024-11-20", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4o-mini", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 0.15, cachedInput: 0.075, output: 0.6, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4o-mini-2024-07-18", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+
+        { id: "gpt-4o-2024-05-13", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS], pricing: pricingPerMillionTokens({ input: 5.0, output: 15.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E (structured uses prompt-only JSON)", updatedAt: "2026-04-28" }, parameterSupport: { parameters: { [PromptParameterKey.RESPONSE_FORMAT]: ProviderModelParameterSupportStatus.NOT_SUPPORTED }, notes: "This model version rejects response_format=json_schema; use prompt-only JSON + local parse.", updatedAt: "2026-04-28" } },
+        { id: "gpt-4-turbo", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4-turbo-2024-04-09", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 10.0, output: 30.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-4-0613", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 30.0, output: 60.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+
+        { id: "gpt-3.5-turbo", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 0.5, output: 1.5, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-3.5-turbo-0125", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 0.5, output: 1.5, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-3.5-turbo-1106", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.0, output: 2.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+        { id: "gpt-3.5-turbo-16k", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 3.0, output: 4.0, sourceUrl: OPENAI_PRICING_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS, reason: "Validated via provider E2E", updatedAt: "2026-04-28" } },
+
+        // --- o-series (reasoning; exposed in /v1/models as o*) ---
+        { id: "o4-mini", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.1, cachedInput: 0.275, output: 4.4, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o4-mini-2025-04-16", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+
+        { id: "o3-pro", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 20.0, output: 80.0, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o3-pro-2025-06-10", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o3", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 2.0, cachedInput: 0.5, output: 8.0, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o3-2025-04-16", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o3-mini", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.1, cachedInput: 0.55, output: 4.4, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o3-mini-2025-01-31", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+
+        { id: "o1-pro", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 150.0, output: 600.0, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o1-pro-2025-03-19", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o1", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 15.0, cachedInput: 7.5, output: 60.0, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
+        { id: "o1-mini", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.1, cachedInput: 0.55, output: 4.4, sourceUrl: OPENAI_PRICING_URL, notes: "Reasoning-family model" }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.IN_PROGRESS, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Priced on OpenAI pricing page; not yet validated via provider E2E in this repo", updatedAt: "2026-04-28" } },
+        { id: "o1-2024-12-17", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, preferredApi: ProviderModelPreferredApi.RESPONSES, reason: "Validated via provider E2E; routed via OpenAI Responses API", updatedAt: "2026-04-28" } },
 
         // Other OpenAI models (pricing varies by endpoint/unit; fill as needed)
         { id: "text-embedding-3-small", types: [IntentType.EMBEDDING] },
@@ -841,7 +992,11 @@ export const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER: Record<IntentProvider, Prov
         { id: "cohere-transcribe-03-2026", types: [IntentType.SPEECH_TO_TEXT] },
     ],
 
-    [IntentProvider.OFFICE]: [],
+    [IntentProvider.OFFICE]: [
+        // Office = internal/local OpenAI-compatible runtime (vLLM etc.)
+        // Keep IDs aligned with the common local model naming used in registries.
+        { id: "Qwen3-4B-Instruct-2507", types: [IntentType.CHAT] },        
+    ],
 
     [IntentProvider.OLLAMA]: [
         { id: "llama3.3", types: [IntentType.CHAT] },
@@ -891,6 +1046,59 @@ export const PROVIDER_MODEL_CATALOG: Record<IntentProvider, Record<string, Provi
  */
 export const PROVIDER_MODEL_IDS_BY_PROVIDER_AND_TYPE: Record<IntentProvider, Record<IntentType, string[]>> =
     _PROVIDER_MODEL_INDEXES.idsByType;
+
+/**
+ * E2E model status used by provider test suites.
+ *
+ * Notes
+ * - This is an opt-in testing mechanism; it does not affect runtime behavior.
+ * - Use `LEGACY` to explicitly skip obsolete/retired model IDs while still keeping them
+ *   discoverable in the catalog for historical compatibility.
+ */
+export enum ProviderModelE2EStatus {
+    /** Model should be exercised by E2E suites (when provider is implemented and credentials exist). */
+    ACTIVE = "ACTIVE",
+
+    /** Model is considered legacy/obsolete and may be skipped by E2E suites. */
+    LEGACY = "LEGACY",
+}
+
+/**
+ * Per-model E2E override metadata.
+ */
+export interface ProviderModelE2EOverride {
+    status: ProviderModelE2EStatus;
+    /** Human-readable skip rationale (keep short; safe for CI logs). */
+    reason: string;
+}
+
+/**
+ * Optional provider-model overrides consumed by the provider E2E matrix tests.
+ *
+ * How to use
+ * - When a model ID becomes obsolete/retired, mark it as `LEGACY` with a reason.
+ * - The E2E suite will still enumerate it (catalog stays complete) but will skip execution.
+ */
+export const PROVIDER_MODEL_E2E_OVERRIDES: Record<IntentProvider, Record<string, ProviderModelE2EOverride>> = {
+    [IntentProvider.OPEN_AI]: {
+        // Not chat-completions models (will 404 on /v1/chat/completions)
+        "babbage-002": { status: ProviderModelE2EStatus.LEGACY, reason: "Not a chat-completions model" },
+        "davinci-002": { status: ProviderModelE2EStatus.LEGACY, reason: "Not a chat-completions model" },
+        "gpt-3.5-turbo-instruct": { status: ProviderModelE2EStatus.LEGACY, reason: "Not a chat-completions model" },
+    },
+    [IntentProvider.GEMINI]: {},
+    [IntentProvider.GROK]: {},
+    [IntentProvider.ANTHROPIC]: {},
+    [IntentProvider.MISTRAL]: {},
+    [IntentProvider.COHERE]: {},
+    [IntentProvider.OFFICE]: {},
+    [IntentProvider.OLLAMA]: {},
+    [IntentProvider.OPEN_AI_COMPATIBLE]: {},
+    [IntentProvider.OCR]: {},
+    [IntentProvider.CLIP]: {},
+    [IntentProvider.HTTP_TOOL]: {},
+    [IntentProvider.RULES]: {},
+};
 
 /**
  * Static utility class for querying the provider model catalog.

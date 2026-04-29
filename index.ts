@@ -11,4 +11,6 @@ export * from "./src/logs.contract";
 export * from "./src/provider.contract";
 export * from "./src/credentials.contract";
 export * from "./src/capabilities.contract";
+export * from "./src/subscription.contract";
+export * from "./src/entitlements.contract";
 export * from "./src/runtime.client";

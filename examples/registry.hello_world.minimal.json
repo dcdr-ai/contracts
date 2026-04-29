@@ -1,5 +1,4 @@
 {
-  "generatedAt": "2026-04-08T00:00:00.000Z",
   "credentials": [
     {
       "id": "cred_openai",
@@ -20,35 +19,24 @@
       "type": "CHAT",
       "active": true,
       "inputSchema": {
-        "name": {
-          "type": "string",
-          "required": true,
-          "description": "Name to greet"
-        }
+        "name": { "type": "string", "required": true }
       },
       "outputSchema": {
-        "result": {
-          "type": "string",
-          "required": true,
-          "description": "Greeting"
-        }
+        "result": { "type": "string", "required": true }
       },
       "defaultPrompt": {
         "id": "prompt_hello_world_v1",
         "name": "hello_world_v1",
         "version": "1.0",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "semanticHash": "0000000000000000000000000000000000000000000000000000000000000000",
         "variablesInterpolationType": "MUSTACHE",
         "params": {
-          "temperature": 0.7,
-          "max_tokens": 256,
-          "response_format": "json_schema"
+          "response_format": "json_schema",
+          "max_tokens": 128
         },
         "messages": [
           {
             "role": "system",
-            "content": "You are DCDR AI. Reply exactly with JSON like: {\"result\":\"...\"}. Do not add extra keys."
+            "content": "Reply ONLY valid JSON with exactly one key: {\"result\":\"...\"}."
           },
           {
             "role": "user",
@@ -59,17 +47,9 @@
       "retryPolicy": {
         "maxAttempts": 3,
         "maxPerCandidate": 2,
-        "attemptTimeoutMs": 10000,
-        "repairOnParseFail": true,
         "allowFallback": true,
-        "retryOn": [
-          "TIMEOUT",
-          "RATE_LIMIT",
-          "UPSTREAM_5XX",
-          "NETWORK",
-          "PARSE_FAIL",
-          "SCHEMA_FAIL"
-        ]
+        "retryOn": ["TIMEOUT", "UPSTREAM_5XX", "SCHEMA_FAIL"],
+        "repairOnParseFail": true
       },
       "implementations": [
         {
@@ -77,8 +57,6 @@
           "provider": "OPEN_AI",
           "name": "OpenAI (nano)",
           "version": "1.0",
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "semanticHash": "0000000000000000000000000000000000000000000000000000000000000000",
           "model": "gpt-4.1-nano",
           "endpoint": "https://api.openai.com/v1",
           "active": true,
@@ -90,8 +68,6 @@
           "provider": "OPEN_AI",
           "name": "OpenAI (mini)",
           "version": "1.0",
-          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-          "semanticHash": "0000000000000000000000000000000000000000000000000000000000000000",
           "model": "gpt-4.1-mini",
           "endpoint": "https://api.openai.com/v1",
           "active": true,

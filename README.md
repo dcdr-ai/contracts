@@ -2,7 +2,7 @@
 
 > ⚙️ Intent-based AI runtime + control plane for production systems
 
-[![version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
+[![version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 
@@ -109,12 +109,13 @@ curl -sS -H 'Content-Type: application/json' \
 
 ---
 
-## 🧭 Choose your path
+## Choose your path
 
-- **I want to run DCDR in Runtime (self-hosted)** → [Quickstart (Docker runtime – production setup)](#quickstart-docker-runtime--production-setup)
-- **I want managed cloud (DCDR Cloud)** → [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md)
-- **I only want to use the TypeScript client** → [Use the TypeScript client](#use-the-typescript-client)
-- **I want to define intents** → [docs/CONTRACTS.md](docs/CONTRACTS.md)
+- **Smoke test (no tokens, no registry)** → [30-second quickstart](#-30-second-quickstart)
+- **Self-hosted (registry.json + auth)** → [Quickstart (Docker runtime – registry.json setup)](#quickstart-docker-runtime--registryjson-setup)
+- **Managed cloud (DCDR Cloud / Cloud Pro)** → [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md)
+- **TypeScript client only** → [Use the TypeScript client](#use-the-typescript-client)
+- **Define intents / registry authoring** → [docs/CONTRACTS.md](docs/CONTRACTS.md)
 
 ---
 
@@ -122,16 +123,20 @@ curl -sS -H 'Content-Type: application/json' \
 
 - [When should I use DCDR?](#-when-should-i-use-dcdr)
 - [30-second quickstart](#-30-second-quickstart)
-- [Quickstart (Docker runtime – production setup)](#quickstart-docker-runtime--production-setup)
+- [Quickstart (Docker runtime – registry.json setup)](#quickstart-docker-runtime--registryjson-setup)
 - [Use the TypeScript client](#use-the-typescript-client)
 - [Common patterns (recipes)](#-common-patterns-recipes)
 - [More docs](#more-docs)
 
 ---
 
-## Quickstart (Docker runtime – production setup)
+## Quickstart (Docker runtime – registry.json setup)
 
-This quickstart is for **Runtime (self-hosted)**.
+This quickstart is for **Runtime (self-hosted)** with a local `registry.json`.
+
+Notes
+- This is a production-oriented setup: `/api/execution/*` endpoints require auth + session.
+- If you only want to confirm the runtime works (no tokens, no registry), use the [30-second quickstart](#-30-second-quickstart) with `--demo`.
 
 If you are using **Cloud** or **Cloud Pro**, skip this section and see [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md).
 
@@ -155,7 +160,7 @@ This example includes:
 
 - 1 intent (`HELLO_WORLD`)
 - 2 implementations (same provider `OPEN_AI`, two models)
-- `executionPolicy.type = WEIGHTED` and implementation `weight` values in **0..1**
+- `executionPolicy.type = WEIGHTED` and implementation `weight` values (conventionally **0..1**, but any positive numbers work)
 - OpenAI `endpoint` set to **`https://api.openai.com/v1`** (base URL)
 
 ### 2) Run the runtime container
@@ -166,6 +171,7 @@ This example includes:
 docker pull dcdr.ai/dcdr-runtime:latest
 docker run --rm -p 8000:8000 `
 	-e API_TOKEN='dev-token' `
+	-e SESSION_BYPASS_TOKEN='dev-session-bypass' `
 	-v "${PWD}/registry.json:/data/registry.json:ro" `
 	dcdr.ai/dcdr-runtime:latest --registry /data/registry.json
 ```
@@ -176,6 +182,7 @@ docker run --rm -p 8000:8000 `
 docker pull dcdr.ai/dcdr-runtime:latest
 docker run --rm -p 8000:8000 \
 	-e API_TOKEN='dev-token' \
+	-e SESSION_BYPASS_TOKEN='dev-session-bypass' \
 	-v "$PWD/registry.json:/data/registry.json:ro" \
 	dcdr.ai/dcdr-runtime:latest --registry /data/registry.json
 ```
@@ -194,6 +201,7 @@ Execute the `HELLO_WORLD` intent:
 curl -sS \
 	-H 'Content-Type: application/json' \
 	-H 'token: dev-token' \
+	-H 'x-session-bypass: dev-session-bypass' \
 	-X POST http://localhost:8000/api/execution/run/HELLO_WORLD \
 	-d '{"vars":{"name":"Ada"}}'
 ```
@@ -213,7 +221,8 @@ curl -sS \
 
 - **Customer mode (Cloud; also Cloud Pro)**: `bearerToken` → sends `Authorization: Bearer <DcdrSessionToken>`
 	- You obtain the `DcdrSessionToken` in Cloud.
-- **Internal/dev mode (Runtime (self-hosted))**: `apiToken` → sends `token: <token>` and optionally `x-session-bypass`
+- **Internal/dev mode (Runtime (self-hosted))**: `apiToken` → sends `token: <token>`
+	- Note: `/api/execution/*` endpoints require a session. For dev/testing you can set `SESSION_BYPASS_TOKEN` on the runtime and pass `sessionBypassToken` in the client (sends `x-session-bypass`).
 
 Install (in a Node/TS app):
 
@@ -229,12 +238,35 @@ import { DcdrRuntimeClient } from "@dcdr/contracts/runtime.client";
 const client = new DcdrRuntimeClient({
 	baseUrl: "http://localhost:8000",
 	apiToken: "dev-token",
+	sessionBypassToken: "dev-session-bypass",
 });
 
 const health = await client.healthcheck();
 const res = await client.executeIntent("HELLO_WORLD", { vars: { name: "Ada" } });
 
 console.log(health.status);
+console.log(res.status, res.output);
+```
+
+Example (customer mode / live):
+
+```ts
+import { DcdrRuntimeClient } from "@dcdr/contracts/runtime.client";
+
+const client = new DcdrRuntimeClient({
+	// baseUrl defaults to https://runtime.dcdr.ai
+	bearerToken: process.env.DCDR_SESSION_TOKEN,
+});
+
+// 1) Verify token is accepted (recommended during setup/debugging)
+const auth = await client.authCheck();
+console.log(auth.valid, auth.authMode, auth.cid);
+
+// 2) Execute your first Intent (must exist in your Registry)
+const res = await client.executeIntent("MY_FIRST_INTENT", {
+	vars: { topic: "hello", language: "es" },
+});
+
 console.log(res.status, res.output);
 ```
 

@@ -8,7 +8,12 @@
  * Backend remains source-of-truth; runtime uses snapshot + local delta.
  */
 
-export type DcdrEntitlementLimits = {
+import { SubscriptionStatus } from "./subscription.contract";
+
+/**
+ * Hard/soft technical limits enforced by the runtime.
+ */
+export interface DcdrEntitlementLimits {
   /** Hard limit (monthly). Null = unlimited. */
   maxCallsPerMonth: number | null;
 
@@ -18,9 +23,13 @@ export type DcdrEntitlementLimits = {
 
   /** Soft limit: after this, runtime should disable I/O tracking/log enrichment. */
   maxTrackedCallsPerMonth?: number | null;
-};
+}
 
-export type DcdrEntitlementUsageBaseline = {
+/**
+ * Backend-provided usage baseline for the current billing window.
+ * Runtime uses this + local counters to enforce quotas.
+ */
+export interface DcdrEntitlementUsageBaseline {
   /** Billing window key in UTC, e.g. "2026-03" */
   periodKey: string;
 
@@ -29,9 +38,49 @@ export type DcdrEntitlementUsageBaseline = {
 
   /** Baseline tracked calls already accounted for (optional). */
   trackedCallsThisMonth?: number;
-};
+}
 
-export type DcdrEntitlementsContract = {
+/**
+ * Optional business-level limits (primarily used by UI/control plane).
+ *
+ * Notes
+ * - Runtime should not rely on these for critical enforcement.
+ * - These fields are included so clients can display subscription/plan info.
+ */
+export interface DcdrBusinessLimitsContract {
+  maxUsers?: number;
+  maxServiceTokens?: number;
+  logRetentionDays?: number;
+  maxIntents?: number;
+  maxImplementations?: number;
+  maxPromptTemplates?: number;
+  maxCredentials?: number;
+  maxExecutionWindows?: number;
+  maxWebhooks?: number;
+}
+
+/**
+ * Optional business-level usage counters (primarily used by UI/control plane).
+ */
+export interface DcdrBusinessUsageContract {
+  users?: number;
+  serviceTokens?: number;
+  implementations?: number;
+  intents?: number;
+  promptTemplates?: number;
+  credentials?: number;
+  executionWindows?: number;
+  webhooks?: number;
+}
+
+/**
+ * Entitlements snapshot returned by the backend and cached in the runtime.
+ *
+ * Notes
+ * - Runtime enforces `limits` and uses `usageBaseline`.
+ * - Other fields are optional and mainly for diagnostics / UI parity.
+ */
+export interface DcdrEntitlementsContract {
   cid: string;
   limits: DcdrEntitlementLimits;
   usageBaseline: DcdrEntitlementUsageBaseline;
@@ -41,4 +90,19 @@ export type DcdrEntitlementsContract = {
 
   /** Issued at (unix ms). Optional. */
   iat?: number;
-};
+
+  /** Optional subscription/contract status (backend-defined), e.g. `TRIAL`. */
+  subscriptionStatus?: SubscriptionStatus;
+
+  /** Optional subscription end date (unix ms). */
+  subscriptionEndDateMs?: number;
+
+  /** Optional log retention in days (may mirror businessLimits.logRetentionDays). */
+  logRetentionDays?: number;
+
+  /** Optional business/UI limits snapshot. */
+  businessLimits?: DcdrBusinessLimitsContract;
+
+  /** Optional business/UI usage snapshot. */
+  businessUsage?: DcdrBusinessUsageContract;
+}

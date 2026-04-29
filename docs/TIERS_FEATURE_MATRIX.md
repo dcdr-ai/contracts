@@ -54,6 +54,7 @@ Roadmap notes:
 | Execution windows (per implementation) | ❌ | ✅ | ✅ |
 | Response caching (cost saver) | ❌ | ✅ (short TTL) | ✅ (configurable) |
 | Runtime Registry source | JSON/manual | ✅ (managed) | ✅ (managed) |
+| Exploration policy (epsilon-greedy / top-K sampling) | ❌ | ✅ | ✅ |
 | Advanced routing (quality/cost aware) | ❌ | 🚧 (limited) | 🚧 |
 | Policy-based execution (quality/latency/cost) + chained fallbacks | ❌ | ❌ | 🚧 |
 
