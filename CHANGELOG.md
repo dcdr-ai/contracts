@@ -4,6 +4,22 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260504.1] — 09:47UTC
+
+<!--
+sourceCommit: da8690c664a8e6040c32a141461e22b80491a419
+queuedAtUtc: 
+previousMirroredBuild: 20260429.2 (2026-04-29)
+contractsSubmodule: 1fb4b3610ba5..6fab9996df38
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Added SSE streaming execution endpoint `POST /api/execution/stream/:intent` (meta/delta/final) and client helper `DcdrRuntimeClient.executeIntentStream()`.
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.5.0`.
+### Fixed
+- <kbd>RUNTIME</kbd> SSE streaming now aborts upstream work more reliably when the client disconnects mid-stream.
+
 ## [20260429.2] — 11:42UTC
 
 <!--

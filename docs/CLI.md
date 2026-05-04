@@ -22,6 +22,9 @@ npm run dcdr -- health --base-url http://localhost:8000 --api-token dev-token
 # Execute an intent
 npm run dcdr -- run HELLO_WORLD --base-url http://localhost:8000 --api-token dev-token --vars-json '{"name":"Ada"}'
 
+# Stream an intent (SSE)
+npm run dcdr -- stream HELLO_WORLD --base-url http://localhost:8000 --api-token dev-token --vars-json '{"name":"Ada"}'
+
 # Demo
 npm run dcdr -- demo DCDR_LOCAL_DEMO --base-url http://localhost:8000 --api-token dev-token --vars-file ./vars.json
 

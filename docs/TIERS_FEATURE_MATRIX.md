@@ -47,6 +47,7 @@ Roadmap notes:
 | Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
 |---|---:|---:|---:|
 | Intent execution | ✅ | ✅ | ✅ |
+| Streaming execution (SSE) | ✅ | ✅ | ✅ |
 | Retry policy (retries, backoff, fallback) | ✅ | ✅ | ✅ |
 | Structured output enforcement | ✅ | ✅ | ✅ |
 | Input/output schema validation | ✅ | ✅ | ✅ |

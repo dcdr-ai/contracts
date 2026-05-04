@@ -1,5 +1,29 @@
-import { ExecuteIntentRequest, ExecuteIntentResponse } from "./execution.contract";
+import {
+  ExecuteIntentRequest,
+  ExecuteIntentResponse,
+  ExecutionStreamDeltaEvent,
+  ExecutionStreamErrorEvent,
+  ExecutionStreamEventType,
+  ExecutionStreamFinalEvent,
+  ExecutionStreamMetaEvent,
+} from "./execution.contract";
 import { DcdrEntitlementsContract } from "./entitlements.contract";
+
+/**
+ * Options for `DcdrRuntimeClient.executeIntentStream`.
+ */
+export interface DcdrRuntimeClientStreamOptions {
+  /** Optional request timeout override (ms). Defaults to client timeoutMs. */
+  timeoutMs?: number;
+
+  /** Optional abort signal for client-side cancellation. */
+  signal?: AbortSignal;
+}
+
+interface ParsedSseEvent {
+  event: string;
+  data: string;
+}
 
 /**
  * Runtime healthcheck response shape.
@@ -285,6 +309,162 @@ export class DcdrRuntimeClient {
       body: request ?? {},
       timeoutMs: this.timeoutMs,
     });
+  }
+
+  /**
+   * Calls `POST /api/execution/stream/:intent` and yields SSE events.
+   *
+   * Notes
+   * - The streaming endpoint is additive; `executeIntent()` remains the stable JSON path.
+   * - v1 streams a minimal envelope (`meta` then `final`). Providers without native streaming
+   *   may yield zero `delta` events.
+   *
+   * @param intent Intent name.
+   * @param request Execute request payload.
+   * @param opts Streaming options (timeout/signal).
+   */
+  async *executeIntentStream(
+    intent: string,
+    request: ExecuteIntentRequest,
+    opts?: DcdrRuntimeClientStreamOptions,
+  ): AsyncGenerator<ExecutionStreamMetaEvent | ExecutionStreamDeltaEvent | ExecutionStreamFinalEvent | ExecutionStreamErrorEvent, void, void> {
+    const safeIntent = encodeURIComponent(String(intent ?? "").trim());
+    const url = `${this.baseUrl}/api/execution/stream/${safeIntent}`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      ...this.extraHeaders,
+    };
+
+    if (this.bearerToken) {
+      headers["Authorization"] = `Bearer ${this.bearerToken}`;
+    } else if (this.apiToken) {
+      headers["token"] = this.apiToken;
+      if (this.sessionBypassToken) {
+        headers["x-session-bypass"] = this.sessionBypassToken;
+      }
+    }
+
+    const controller = new AbortController();
+    const timeoutMs = typeof opts?.timeoutMs === "number" && opts.timeoutMs > 0 ? opts.timeoutMs : this.timeoutMs;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    const onAbort = () => controller.abort();
+    if (opts?.signal) {
+      if (opts.signal.aborted) controller.abort();
+      else opts.signal.addEventListener("abort", onAbort);
+    }
+
+    try {
+      const resp = await this.fetchFn(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(request ?? {}),
+        signal: controller.signal,
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        const preview = text.length > 4000 ? text.slice(0, 4000) + "…" : text;
+        throw new Error(`DcdrRuntimeClient request failed: POST /api/execution/stream/:intent status=${resp.status} body=${preview}`);
+      }
+
+      const ct = resp.headers.get("content-type") ?? "";
+      if (!/text\/event-stream/i.test(ct)) {
+        const text = await resp.text();
+        const preview = text.length > 4000 ? text.slice(0, 4000) + "…" : text;
+        throw new Error(`DcdrRuntimeClient expected text/event-stream but got content-type='${ct}' body=${preview}`);
+      }
+
+      if (!resp.body) {
+        throw new Error("DcdrRuntimeClient streaming response body is missing");
+      }
+
+      for await (const evt of this.parseSseStream(resp.body)) {
+        const eventName = evt.event;
+        const json = evt.data ? JSON.parse(evt.data) : {};
+
+        if (eventName === ExecutionStreamEventType.META) {
+          yield { type: ExecutionStreamEventType.META, data: json } as ExecutionStreamMetaEvent;
+        } else if (eventName === ExecutionStreamEventType.DELTA) {
+          yield { type: ExecutionStreamEventType.DELTA, data: json } as ExecutionStreamDeltaEvent;
+        } else if (eventName === ExecutionStreamEventType.FINAL) {
+          yield { type: ExecutionStreamEventType.FINAL, data: json } as ExecutionStreamFinalEvent;
+          return;
+        } else if (eventName === ExecutionStreamEventType.ERROR) {
+          yield { type: ExecutionStreamEventType.ERROR, data: json } as ExecutionStreamErrorEvent;
+          return;
+        }
+      }
+    } finally {
+      clearTimeout(timeout);
+      if (opts?.signal) opts.signal.removeEventListener("abort", onAbort);
+    }
+  }
+
+  /**
+   * Parses a ReadableStream of SSE bytes into discrete `{event,data}` frames.
+   */
+  private async *parseSseStream(body: ReadableStream<Uint8Array>): AsyncGenerator<ParsedSseEvent, void, void> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      while (true) {
+        const idx = buffer.indexOf("\n\n");
+        if (idx < 0) break;
+
+        const raw = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+
+        const parsed = this.parseSseEvent(raw);
+        if (parsed) yield parsed;
+      }
+    }
+
+    // Flush remaining bytes.
+    buffer += decoder.decode();
+    const remaining = buffer.trim();
+    if (remaining) {
+      const parsed = this.parseSseEvent(remaining);
+      if (parsed) yield parsed;
+    }
+  }
+
+  /**
+   * Parses a single SSE event frame.
+   */
+  private parseSseEvent(raw: string): ParsedSseEvent | null {
+    const lines = raw.split("\n");
+    let event = "message";
+    const dataLines: string[] = [];
+
+    for (const line of lines) {
+      const l = line.trimEnd();
+      if (!l) continue;
+      if (l.startsWith(":")) continue; // comment/heartbeat
+
+      if (l.startsWith("event:")) {
+        event = l.slice("event:".length).trim();
+        continue;
+      }
+
+      if (l.startsWith("data:")) {
+        dataLines.push(l.slice("data:".length).trim());
+        continue;
+      }
+    }
+
+    const data = dataLines.join("\n");
+    if (!event && !data) return null;
+    return { event, data };
   }
 
   /**

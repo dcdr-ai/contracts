@@ -210,3 +210,88 @@ export interface ExecuteIntentResponse {
 export interface ExecutionContext {
   [key: string]: any;
 }
+
+
+/**
+ * Streaming execution event type names.
+ *
+ * Notes
+ * - These strings are used as SSE `event:` names.
+ * - Keep values stable (wire-level behavior).
+ */
+export enum ExecutionStreamEventType {
+  META = "meta",
+  DELTA = "delta",
+  FINAL = "final",
+  ERROR = "error",
+}
+
+/**
+ * Metadata emitted at the start of a streaming execution.
+ */
+export interface ExecutionStreamMetaEventData {
+  /** Gateway-generated correlation ID for this execution. */
+  gatewayRequestId: string;
+
+  /** Intent name being executed. */
+  intent: Intent;
+
+  /** ISO timestamp for when the stream started (gateway wall-clock). */
+  startedAt: string;
+}
+
+/**
+ * A text delta emitted during streaming generation.
+ *
+ * Notes
+ * - v1 focuses on text deltas only.
+ * - Providers that do not support native streaming may emit zero delta events.
+ */
+export interface ExecutionStreamDeltaEventData {
+  text: string;
+}
+
+/**
+ * Final execution payload emitted at the end of the stream.
+ *
+ * Notes
+ * - This is the same response shape as non-streaming `executeIntent`.
+ * - Even error executions should be delivered as a final response where possible.
+ */
+export interface ExecutionStreamFinalEventData {
+  response: ExecuteIntentResponse;
+}
+
+/**
+ * Fatal streaming error emitted when the stream cannot produce a final response.
+ *
+ * Notes
+ * - Prefer emitting `final` with `status=ERROR` when possible.
+ */
+export interface ExecutionStreamErrorEventData {
+  error: ExecutionError;
+}
+
+/** Streaming `meta` event envelope. */
+export interface ExecutionStreamMetaEvent {
+  type: ExecutionStreamEventType.META;
+  data: ExecutionStreamMetaEventData;
+}
+
+/** Streaming `delta` event envelope. */
+export interface ExecutionStreamDeltaEvent {
+  type: ExecutionStreamEventType.DELTA;
+  data: ExecutionStreamDeltaEventData;
+}
+
+/** Streaming `final` event envelope. */
+export interface ExecutionStreamFinalEvent {
+  type: ExecutionStreamEventType.FINAL;
+  data: ExecutionStreamFinalEventData;
+}
+
+/** Streaming `error` event envelope. */
+export interface ExecutionStreamErrorEvent {
+  type: ExecutionStreamEventType.ERROR;
+  data: ExecutionStreamErrorEventData;
+}

@@ -13,6 +13,7 @@ Quick map (method → HTTP surface):
 | `healthcheck()` | `GET /api/system/healthcheck` | none by default | Load balancers / basic diagnostics |
 | `metrics()` | `GET /api/system/metrics` | none by default | Prometheus scraping |
 | `executeIntent(intent, request)` | `POST /api/execution/run/:intent` | required | Normal intent execution |
+| `executeIntentStream(intent, request)` | `POST /api/execution/stream/:intent` | required | Streaming execution (SSE) |
 | `demo(intent, request)` | `POST /api/execution/demo/:intent` | required (except demo mode) | Demo-specific intent execution |
 | `dryRun(intent, vars)` | `POST /api/execution/dry-run/:intent` | required | Debug prompt rendering & resolved config |
 | `eval(intent, vars)` | `POST /api/execution/eval/:intent` | required | Cloud and Cloud Pro evaluation workflows |
@@ -53,6 +54,14 @@ Runtime error codes (not exhaustive)
 - Endpoint: `POST /api/execution/run/:intent`
 - Input contract: `ExecuteIntentRequest`
 - Output contract: `ExecuteIntentResponse` (includes `report` for deep diagnostics)
+
+### `executeIntentStream(intent, request)`
+
+- Endpoint: `POST /api/execution/stream/:intent`
+- Transport: Server-Sent Events (SSE), `Content-Type: text/event-stream`
+- Output: a stream of events (`meta`, optional `delta`, then `final`)
+
+See: [STREAMING_EXECUTION_SSE.md](STREAMING_EXECUTION_SSE.md)
 
 ### `demo(intent, request)`
 
