@@ -4,6 +4,32 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260504.2] — 18:25UTC
+
+<!--
+sourceCommit: eeb7704f53b1a0f7ee5d390d79ac24be1c632014
+queuedAtUtc: 
+previousMirroredBuild: 20260504.1 (2026-05-04)
+contractsSubmodule: 6fab9996df38..44f40761f11e
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Added Anthropic (Claude) provider adapter for CHAT intents via `@anthropic-ai/sdk`, including structured outputs with local validation and optional streaming deltas.
+- <kbd>RUNTIME</kbd> Added Gemini provider adapter for CHAT intents via `@google/genai`, including structured outputs (JSON schema + local validation) and optional streaming deltas.
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.7.0`.
+- <kbd>CONTRACTS</kbd> Provider model catalog now only enumerates implemented providers (OpenAI, OFFICE, Anthropic, Gemini); other provider model lists are kept empty until implemented.
+- <kbd>CONTRACTS</kbd> Provider model catalog now includes a minimal Gemini CHAT starter model (`gemini-2.5-flash`) marked `SUPPORTED` after provider E2E validation.
+- <kbd>CONTRACTS</kbd> Expanded Gemini model catalog to include all discovered `gemini-*` model IDs (CHAT + EMBEDDING) with initial runtime support metadata and E2E legacy overrides.
+- <kbd>CONTRACTS</kbd> Curated Gemini CHAT runtime support statuses based on provider E2E (text + structured + streaming SSE).
+- <kbd>CONTRACTS</kbd> Added official Gemini model token pricing metadata (per-million tokens + tiers) to the provider model catalog.
+- <kbd>CONTRACTS</kbd> Versioned model IDs now inherit missing pricing from their base model (marked as `approx`) to avoid catalog pricing gaps.
+- <kbd>CONTRACTS</kbd> Marked Anthropic `claude-opus-4-7` as `SUPPORTED` after provider E2E validation (run + streaming SSE).
+### Fixed
+- <kbd>RUNTIME</kbd> Gemini adapter now avoids sending `thinkingConfig` to models that reject it and uses a prompt-based structured fallback for models that do not support native `responseSchema`.
+- <kbd>RUNTIME</kbd> Anthropic `claude-opus-4-7` calls now omit deprecated sampling parameters to avoid upstream 4xx errors.
+- <kbd>RUNTIME</kbd> Gemini adapter now disables thinking by default (unless `enable_thinking=true`) to avoid empty outputs when token budgets are small.
+
 ## [20260504.1] — 09:47UTC
 
 <!--

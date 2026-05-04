@@ -26,6 +26,15 @@ interface ParsedSseEvent {
 }
 
 /**
+ * Max characters to include when embedding a response body preview inside an Error message.
+ *
+ * Notes
+ * - Keeps logs and CLI output readable.
+ * - Reduces the chance of leaking large/sensitive upstream HTML or debug payloads.
+ */
+const ERROR_BODY_PREVIEW_MAX_CHARS = 4000;
+
+/**
  * Runtime healthcheck response shape.
  *
  * Notes
@@ -366,14 +375,14 @@ export class DcdrRuntimeClient {
 
       if (!resp.ok) {
         const text = await resp.text();
-        const preview = text.length > 4000 ? text.slice(0, 4000) + "…" : text;
+        const preview = buildBodyPreview(text);
         throw new Error(`DcdrRuntimeClient request failed: POST /api/execution/stream/:intent status=${resp.status} body=${preview}`);
       }
 
       const ct = resp.headers.get("content-type") ?? "";
       if (!/text\/event-stream/i.test(ct)) {
         const text = await resp.text();
-        const preview = text.length > 4000 ? text.slice(0, 4000) + "…" : text;
+        const preview = buildBodyPreview(text);
         throw new Error(`DcdrRuntimeClient expected text/event-stream but got content-type='${ct}' body=${preview}`);
       }
 
@@ -675,7 +684,7 @@ export class DcdrRuntimeClient {
       const isJson = /application\/json/i.test(resp.headers.get("content-type") ?? "");
 
       if (!resp.ok) {
-        const preview = text.length > 4000 ? text.slice(0, 4000) + "…" : text;
+        const preview = buildBodyPreview(text);
         throw new Error(`DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${resp.status} body=${preview}`);
       }
 
@@ -711,7 +720,7 @@ export class DcdrRuntimeClient {
    * @param args - Request configuration including method, path, and timeout.
    * @returns The response body as text.
    * @throws {@link Error} If the response status is not OK (`resp.ok === false`). The error message includes the
-   * HTTP method, path, status code, and up to the first 4000 characters of the response body as a preview.
+  * HTTP method, path, status code, and a bounded preview of the response body.
    */
   private async requestText(args: RequestTextArgs): Promise<string> {
     const url = `${this.baseUrl}${args.path}`;
@@ -742,7 +751,7 @@ export class DcdrRuntimeClient {
       const text = await resp.text();
 
       if (!resp.ok) {
-        const preview = text.length > 4000 ? text.slice(0, 4000) + "…" : text;
+        const preview = buildBodyPreview(text);
         throw new Error(`DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${resp.status} body=${preview}`);
       }
 
@@ -751,5 +760,17 @@ export class DcdrRuntimeClient {
       clearTimeout(timeout);
     }
   }
+}
+
+/**
+ * Builds a bounded, human-readable body preview string.
+ * @param text Full response body text.
+ * @returns Preview string capped to {@link ERROR_BODY_PREVIEW_MAX_CHARS}.
+ */
+function buildBodyPreview(text: string): string {
+  const t = String(text ?? "");
+  return t.length > ERROR_BODY_PREVIEW_MAX_CHARS
+    ? t.slice(0, ERROR_BODY_PREVIEW_MAX_CHARS) + "…"
+    : t;
 }
 

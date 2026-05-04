@@ -302,39 +302,15 @@ export interface ProviderModelDefinition {
     parameterSupport?: ProviderModelParameterSupportInfo;
 }
 
-function buildProviderModelCatalogAndTypeIndex(
-    modelsByProvider: Record<IntentProvider, ProviderModelDefinition[]>
-): {
-    catalog: Record<IntentProvider, Record<string, ProviderModelDefinition>>;
-    idsByType: Record<IntentProvider, Record<IntentType, string[]>>;
-} {
-    const intentTypes = Object.values(IntentType) as IntentType[];
-
-    const catalog = {} as Record<IntentProvider, Record<string, ProviderModelDefinition>>;
-    const idsByType = {} as Record<IntentProvider, Record<IntentType, string[]>>;
-
-    for (const provider of Object.values(IntentProvider) as IntentProvider[]) {
-        catalog[provider] = {};
-
-        const perType = {} as Record<IntentType, string[]>;
-        for (const t of intentTypes) perType[t] = [];
-        idsByType[provider] = perType;
-
-        const defs = modelsByProvider[provider] ?? [];
-        for (const def of defs) {
-            catalog[provider][def.id] = def;
-
-            for (const t of def.types) {
-                idsByType[provider][t].push(def.id);
-            }
-        }
-    }
-
-    return { catalog, idsByType };
+interface ProviderPricingFallbackRule {
+    /** If the modelId matches this rule, attempt to inherit pricing from baseModelId. */
+    match: RegExp;
+    baseModelId: string;
 }
 
 const PRICING_UPDATED_AT_20260327 = Date.UTC(2026, 2, 27);
 const PRICING_UPDATED_AT_20260326 = Date.UTC(2026, 2, 26);
+const PRICING_UPDATED_AT_20260430 = Date.UTC(2026, 3, 30);
 const OPENAI_PRICING_URL = "https://developers.openai.com/api/docs/pricing";
 const XAI_PRICING_URL = "https://docs.x.ai/developers/models";
 const ANTHROPIC_MODELS_URL = "https://platform.claude.com/docs/en/docs/about-claude/models";
@@ -355,43 +331,29 @@ const OPENAI_GPT5_PARAMETER_SUPPORT: ProviderModelParameterSupportInfo = {
     updatedAt: "2026-04-28",
 };
 
-function pricingPerMillionTokens(args: {
-    input: number;
-    output: number;
-    cachedInput?: number;
-    cachedOutput?: number;
-    tiers?: Array<{
-        name: string;
-        condition?: string;
-        input: number;
-        output: number;
-        cachedInput?: number;
-        cachedOutput?: number;
-    }>;
-    sourceUrl: string;
-    updatedAt?: number;
-    confidence?: ProviderModelPricing["confidence"];
-    notes?: string;
-}): ProviderModelPricing {
-    return {
-        currency: "USD",
-        sourceUrl: args.sourceUrl,
-        updatedAt: args.updatedAt ?? PRICING_UPDATED_AT_20260327,
-        confidence: args.confidence ?? "official",
-        notes: args.notes,
-        components: [
-            {
-                kind: "tokens",
-                unit: "per_million_tokens",
-                input: args.input,
-                outputUsd: args.output,
-                cachedInput: args.cachedInput,
-                cachedOutput: args.cachedOutput,
-                tiers: args.tiers,
-            },
-        ],
-    };
-}
+const PRICING_FALLBACK_RULES_BY_PROVIDER: Record<IntentProvider, ProviderPricingFallbackRule[]> = {
+    [IntentProvider.OPEN_AI]: [
+        // Not officially published separately; assume same token pricing as base GPT-5.
+        { match: /^gpt-5-search-api/, baseModelId: "gpt-5" },
+    ],
+    [IntentProvider.ANTHROPIC]: [
+        // Opus/Sonnet/Haiku family pricing is expected to be consistent across close variants.
+        { match: /^claude-opus-4-/, baseModelId: "claude-opus-4-7" },
+        { match: /^claude-sonnet-4-/, baseModelId: "claude-sonnet-4-6" },
+        { match: /^claude-haiku-4-/, baseModelId: "claude-haiku-4-5" },
+    ],
+    [IntentProvider.GEMINI]: [],
+    [IntentProvider.GROK]: [],
+    [IntentProvider.MISTRAL]: [],
+    [IntentProvider.COHERE]: [],
+    [IntentProvider.OFFICE]: [],
+    [IntentProvider.OLLAMA]: [],
+    [IntentProvider.OPEN_AI_COMPATIBLE]: [],
+    [IntentProvider.OCR]: [],
+    [IntentProvider.CLIP]: [],
+    [IntentProvider.HTTP_TOOL]: [],
+    [IntentProvider.RULES]: [],
+};
 
 
 /**
@@ -400,7 +362,7 @@ function pricingPerMillionTokens(args: {
  * Note: This is a curated snapshot of commonly used official model IDs (updated March 2026).
  * Providers may add/deprecate models frequently; keep this list in sync with vendor docs.
  */
-export const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER: Record<IntentProvider, ProviderModelDefinition[]> = {
+const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<IntentProvider, ProviderModelDefinition[]> = {
     [IntentProvider.OPEN_AI]: [
         // Pricing snapshot: OpenAI pricing page, updatedAt=2026-03-27
         // Model IDs below are kept in roughly "newest first" order.
@@ -521,476 +483,405 @@ export const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER: Record<IntentProvider, Prov
     ],
 
     [IntentProvider.GEMINI]: [
-        {
-            id: "gemini-2.5-pro",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 1.25,
-                        outputUsd: 10.0,
-                        cachedInput: 0.125,
-                        tiers: [
-                            {
-                                name: "prompts > 200k tokens",
-                                condition: "prompts > 200k tokens",
-                                input: 2.5,
-                                output: 15.0,
-                                cachedInput: 0.25,
-                            },
-                        ],
-                    },
-                ],
-            },
-        },
+        // Source: Gemini Models API (`npm run gemini-models:sync`), updated 2026-05-04
+        // Notes:
+        // - DCDR runtime v1 implements Gemini for CHAT only (via generateContent / generateContentStream).
+        // - Embedding models are cataloged as EMBEDDING, but the runtime does not yet implement a Gemini embedding adapter.
+
+        // --- Validated starter model ---
         {
             id: "gemini-2.5-flash",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.3,
-                        outputUsd: 2.5,
-                        cachedInput: 0.03,
-                        tiers: [
-                            {
-                                name: "audio input",
-                                condition: "audio input tokens",
-                                input: 1.0,
-                                output: 2.5,
-                                cachedInput: 0.1,
-                            },
-                        ],
-                    },
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.30,
+                output: 2.50,
+                tiers: [
+                    { name: "audio", condition: "audio", input: 1.00, output: 2.50 },
                 ],
-            },
+                notes: "Prices may differ by modality; output includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + structured + streaming SSE)", updatedAt: "2026-05-04" },
         },
+
+        // --- Newer preview families (pending E2E curation) ---
         {
-            id: "gemini-2.5-flash-lite",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.1,
-                        outputUsd: 0.4,
-                        cachedInput: 0.01,
-                        tiers: [
-                            {
-                                name: "audio input",
-                                condition: "audio input tokens",
-                                input: 0.3,
-                                output: 0.4,
-                                cachedInput: 0.03,
-                            },
-                        ],
-                    },
+            id: "gemini-3.1-pro-preview-customtools",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 2.00,
+                output: 12.00,
+                tiers: [
+                    { name: "prompts <= 200k", condition: "prompts <= 200k tokens", input: 2.00, output: 12.00 },
+                    { name: "prompts > 200k", condition: "prompts > 200k tokens", input: 4.00, output: 18.00 },
                 ],
-            },
+                notes: "Output price includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE) with larger token budgets; model uses thinking", updatedAt: "2026-05-04" },
         },
         {
             id: "gemini-3.1-pro-preview",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 2.0,
-                        outputUsd: 12.0,
-                        cachedInput: 0.2,
-                        tiers: [
-                            {
-                                name: "prompts > 200k tokens",
-                                condition: "prompts > 200k tokens",
-                                input: 4.0,
-                                output: 18.0,
-                                cachedInput: 0.4,
-                            },
-                        ],
-                    },
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 2.00,
+                output: 12.00,
+                tiers: [
+                    { name: "prompts <= 200k", condition: "prompts <= 200k tokens", input: 2.00, output: 12.00 },
+                    { name: "prompts > 200k", condition: "prompts > 200k tokens", input: 4.00, output: 18.00 },
                 ],
-            },
+                notes: "Output price includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE) with larger token budgets; model uses thinking", updatedAt: "2026-05-04" },
         },
         {
-            id: "gemini-3-flash-preview",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.5,
-                        outputUsd: 3.0,
-                        cachedInput: 0.05,
-                        tiers: [
-                            {
-                                name: "audio input",
-                                condition: "audio input tokens",
-                                input: 1.0,
-                                output: 3.0,
-                                cachedInput: 0.1,
-                            },
-                        ],
-                    },
+            id: "gemini-3.1-flash-tts-preview",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 1.00,
+                output: 20.00,
+                notes: "TTS preview: output billed as audio tokens (docs: ~25 tokens/sec).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Rejects developer/system instruction in runtime prompt shape (400 INVALID_ARGUMENT)", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-3.1-flash-live-preview",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.75,
+                output: 4.50,
+                tiers: [
+                    { name: "audio", condition: "audio", input: 3.00, output: 12.00 },
+                    { name: "image/video", condition: "image/video", input: 1.00, output: 4.50 },
                 ],
-            },
+                notes: "Live preview pricing varies by modality; docs also list per-minute rates for audio/video.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Model/endpoint not found (404) in provider E2E for this account", updatedAt: "2026-05-04" },
         },
         {
             id: "gemini-3.1-flash-lite-preview",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.25,
-                        outputUsd: 1.5,
-                        cachedInput: 0.025,
-                        tiers: [
-                            {
-                                name: "audio input",
-                                condition: "audio input tokens",
-                                input: 0.5,
-                                output: 1.5,
-                                cachedInput: 0.05,
-                            },
-                        ],
-                    },
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.25,
+                output: 1.50,
+                tiers: [
+                    { name: "audio", condition: "audio", input: 0.50, output: 1.50 },
                 ],
-            },
-        },
-
-        {
-            id: "gemini-embedding-001",
-            types: [IntentType.EMBEDDING],
-            pricing: pricingPerMillionTokens({ input: 0.15, output: 0.0, sourceUrl: GEMINI_PRICING_URL, updatedAt: PRICING_UPDATED_AT_20260326 }),
-        },
-        {
-            id: "gemini-embedding-2-preview",
-            types: [IntentType.EMBEDDING],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                notes:
-                    "Modality-specific input pricing. Page also lists equivalences: image $0.00012/image; audio $0.00016/sec; video $0.00079/frame.",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.2,
-                        outputUsd: 0.0,
-                        tiers: [
-                            { name: "image input", condition: "image input", input: 0.45, output: 0.0 },
-                            { name: "audio input", condition: "audio input", input: 6.5, output: 0.0 },
-                            { name: "video input", condition: "video input", input: 12.0, output: 0.0 },
-                        ],
-                    },
-                    { kind: "images", unit: "per_image", input: 0.00012, notes: "Image input equivalence from pricing page" },
-                    { kind: "audio_minutes", unit: "per_minute", input: 0.0096, notes: "Derived from $0.00016/sec shown on pricing page" },
-                ],
-            },
-        },
-
-        {
-            id: "gemini-2.5-flash-image",
-            types: [IntentType.IMAGE_GENERATION],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                notes: "Text input priced like Gemini 2.5 Flash; image output priced per image.",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.3,
-                        outputUsd: 2.5,
-                        cachedInput: 0.03,
-                    },
-                    { kind: "images", unit: "per_image", output: 0.039, notes: "Up to 1024x1024 equivalent" },
-                ],
-            },
-        },
-        {
-            id: "imagen-4.0-generate-001",
-            types: [IntentType.IMAGE_GENERATION],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [{ kind: "images", unit: "per_image", output: 0.04 }],
-            },
-        },
-        {
-            id: "imagen-4.0-ultra-generate-001",
-            types: [IntentType.IMAGE_GENERATION],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [{ kind: "images", unit: "per_image", output: 0.06 }],
-            },
-        },
-        {
-            id: "imagen-4.0-fast-generate-001",
-            types: [IntentType.IMAGE_GENERATION],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                components: [{ kind: "images", unit: "per_image", output: 0.02 }],
-            },
+                notes: "Prices may differ by modality; output includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE)", updatedAt: "2026-05-04" },
         },
         {
             id: "gemini-3.1-flash-image-preview",
-            types: [IntentType.IMAGE_GENERATION],
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.50,
+                output: 3.00,
+                notes: "Image-preview model; docs list separate image output pricing (not modeled here).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE)", updatedAt: "2026-05-04" },
+        },
+
+        {
+            id: "gemini-3-pro-preview",
+            types: [IntentType.CHAT],
             pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                notes:
-                    "Pricing page lists image output as $60 / 1M tokens with per-image equivalents by resolution (0.5K/1K/2K/4K).",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.5,
-                        outputUsd: 3.0,
-                        tiers: [{ name: "image output tokens", condition: "image output tokens", input: 0.5, output: 60.0 }],
-                    },
-                ],
+                ...pricingGeminiPerMillionTokens({
+                    input: 2.00,
+                    output: 12.00,
+                    tiers: [
+                        { name: "prompts <= 200k", condition: "prompts <= 200k tokens", input: 2.00, output: 12.00 },
+                        { name: "prompts > 200k", condition: "prompts > 200k tokens", input: 4.00, output: 18.00 },
+                    ],
+                    notes: "Output price includes thinking tokens.",
+                }),
+                confidence: "approx",
+                notes: "Not explicitly listed on pricing page; approximated from Gemini 3.1 Pro Preview.",
             },
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE)", updatedAt: "2026-05-04" },
         },
         {
             id: "gemini-3-pro-image-preview",
-            types: [IntentType.IMAGE_GENERATION],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                notes:
-                    "Text IO priced like Gemini 3.1 Pro Preview. Page lists image input equivalence $0.0011/image and image output as $120 / 1M tokens with per-image equivalents.",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 2.0,
-                        outputUsd: 12.0,
-                        tiers: [{ name: "image output tokens", condition: "image output tokens", input: 2.0, output: 120.0 }],
-                    },
-                    { kind: "images", unit: "per_image", input: 0.0011, notes: "Image input equivalence from pricing page" },
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 2.00,
+                output: 12.00,
+                tiers: [
+                    { name: "prompts <= 200k", condition: "prompts <= 200k tokens", input: 2.00, output: 12.00 },
+                    { name: "prompts > 200k", condition: "prompts > 200k tokens", input: 4.00, output: 18.00 },
                 ],
-            },
+                notes: "Image generation model; text pricing is the same as Gemini 3.1 Pro (image output priced separately).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Structured mode returned empty text in provider E2E (streaming SSE OK)", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-3-flash-preview",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.50,
+                output: 3.00,
+                tiers: [
+                    { name: "audio", condition: "audio", input: 1.00, output: 3.00 },
+                ],
+                notes: "Prices may differ by modality; output includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE)", updatedAt: "2026-05-04" },
         },
 
+        // --- 2.5 family variants (pending E2E curation) ---
         {
-            id: "gemini-2.5-flash-preview-tts",
-            types: [IntentType.TEXT_TO_SPEECH],
-            pricing: pricingPerMillionTokens({
-                input: 0.5,
-                output: 10.0,
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                notes: "Pricing table labels output as audio; represented here as token-like units per the Gemini pricing page.",
+            id: "gemini-2.5-pro",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 1.25,
+                output: 10.00,
+                tiers: [
+                    { name: "prompts <= 200k", condition: "prompts <= 200k tokens", input: 1.25, output: 10.00 },
+                    { name: "prompts > 200k", condition: "prompts > 200k tokens", input: 2.50, output: 15.00 },
+                ],
+                notes: "Output price includes thinking tokens.",
             }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Provider E2E: empty output in text + structured (streaming SSE OK)", updatedAt: "2026-05-04" },
         },
         {
             id: "gemini-2.5-pro-preview-tts",
-            types: [IntentType.TEXT_TO_SPEECH],
-            pricing: pricingPerMillionTokens({
-                input: 1.0,
-                output: 20.0,
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                notes: "Pricing table labels output as audio; represented here as token-like units per the Gemini pricing page.",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 1.00,
+                output: 20.00,
+                notes: "TTS preview: output billed as audio tokens.",
             }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Audio-only response modality (TEXT unsupported) in provider E2E; runtime v1 is text-only", updatedAt: "2026-05-04" },
         },
-
         {
-            id: "gemini-3.1-flash-live-preview",
-            types: [IntentType.MULTIMODAL],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                notes:
-                    "Live API model: pricing page lists both token-based prices and alternate per-minute rates for some modalities.",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.75,
-                        outputUsd: 4.5,
-                        tiers: [
-                            { name: "audio", condition: "audio", input: 3.0, output: 12.0 },
-                            { name: "image/video input", condition: "image/video input", input: 1.0, output: 4.5 },
-                        ],
-                    },
-                    {
-                        kind: "audio_minutes",
-                        unit: "per_minute",
-                        input: 0.005,
-                        output: 0.018,
-                        notes: "Audio per-minute alternative. Page also lists image/video input alternative: $0.002/min.",
-                    },
+            id: "gemini-2.5-flash-lite",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.10,
+                output: 0.40,
+                tiers: [
+                    { name: "audio", condition: "audio", input: 0.30, output: 0.40 },
                 ],
-            },
+                notes: "Prices may differ by modality; output includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE)", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-2.5-flash-image",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.30,
+                output: 2.50,
+                notes: "Image generation model; docs list separate per-image output pricing (not modeled here).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE)", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-2.5-flash-native-audio-latest",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.50,
+                output: 2.00,
+                tiers: [
+                    { name: "audio/video", condition: "audio/video", input: 3.00, output: 12.00 },
+                ],
+                notes: "Native audio (Live API): docs also list per-minute rates for audio; output includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Native-audio model (text-only runtime v1); also 404 in provider E2E for this account", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-2.5-flash-native-audio-preview-09-2025",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.50,
+                output: 2.00,
+                tiers: [
+                    { name: "audio/video", condition: "audio/video", input: 3.00, output: 12.00 },
+                ],
+                notes: "Native audio (Live API): docs also list per-minute rates for audio; output includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Native-audio model (text-only runtime v1); also 404 in provider E2E for this account", updatedAt: "2026-05-04" },
         },
         {
             id: "gemini-2.5-flash-native-audio-preview-12-2025",
-            types: [IntentType.MULTIMODAL],
-            pricing: {
-                currency: "USD",
-                sourceUrl: GEMINI_PRICING_URL,
-                updatedAt: PRICING_UPDATED_AT_20260326,
-                confidence: "official",
-                notes: "Live API native audio model.",
-                components: [
-                    {
-                        kind: "tokens",
-                        unit: "per_million_tokens",
-                        input: 0.5,
-                        outputUsd: 2.0,
-                        tiers: [{ name: "audio/video", condition: "audio/video", input: 3.0, output: 12.0 }],
-                    },
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.50,
+                output: 2.00,
+                tiers: [
+                    { name: "audio/video", condition: "audio/video", input: 3.00, output: 12.00 },
                 ],
+                notes: "Native audio (Live API): docs also list per-minute rates for audio; output includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Native-audio model (text-only runtime v1); also 404 in provider E2E for this account", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-2.5-flash-preview-tts",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.50,
+                output: 10.00,
+                notes: "TTS preview: output billed as audio tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Audio-only response modality (TEXT unsupported) in provider E2E; runtime v1 is text-only", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-2.5-computer-use-preview-10-2025",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 1.25,
+                output: 10.00,
+                tiers: [
+                    { name: "prompts <= 200k", condition: "prompts <= 200k tokens", input: 1.25, output: 10.00 },
+                    { name: "prompts > 200k", condition: "prompts > 200k tokens", input: 2.50, output: 15.00 },
+                ],
+                notes: "Computer Use model token pricing (tools may have separate charges).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Requires Computer Use tool wiring (not supported in runtime v1)", updatedAt: "2026-05-04" },
+        },
+
+        // --- Older 2.0 family IDs (may appear but can be unavailable to new users) ---
+        {
+            id: "gemini-2.0-flash",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.10,
+                output: 0.40,
+                tiers: [
+                    { name: "audio", condition: "audio", input: 0.70, output: 0.40 },
+                ],
+                notes: "Deprecated model family (shutdown noted in docs).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Visible via Models API but may be unavailable to new users (404)", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-2.0-flash-001",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.10,
+                output: 0.40,
+                tiers: [
+                    { name: "audio", condition: "audio", input: 0.70, output: 0.40 },
+                ],
+                notes: "Deprecated model family (shutdown noted in docs).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Visible via Models API but may be unavailable to new users (404)", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-2.0-flash-lite",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.075,
+                output: 0.30,
+                notes: "Deprecated model family (shutdown noted in docs).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Visible via Models API but may be unavailable to new users (404)", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-2.0-flash-lite-001",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 0.075,
+                output: 0.30,
+                notes: "Deprecated model family (shutdown noted in docs).",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Visible via Models API but may be unavailable to new users (404)", updatedAt: "2026-05-04" },
+        },
+
+        // --- Rolling aliases ---
+        {
+            id: "gemini-flash-latest",
+            types: [IntentType.CHAT],
+            pricing: {
+                ...pricingGeminiPerMillionTokens({
+                    input: 0.30,
+                    output: 2.50,
+                    tiers: [
+                        { name: "audio", condition: "audio", input: 1.00, output: 2.50 },
+                    ],
+                    notes: "Prices may differ by modality; output includes thinking tokens.",
+                }),
+                confidence: "approx",
+                notes: "Rolling alias; priced as Gemini 2.5 Flash (approx).",
             },
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE) (alias)", updatedAt: "2026-05-04" },
         },
+        {
+            id: "gemini-flash-lite-latest",
+            types: [IntentType.CHAT],
+            pricing: {
+                ...pricingGeminiPerMillionTokens({
+                    input: 0.10,
+                    output: 0.40,
+                    tiers: [
+                        { name: "audio", condition: "audio", input: 0.30, output: 0.40 },
+                    ],
+                    notes: "Prices may differ by modality; output includes thinking tokens.",
+                }),
+                confidence: "approx",
+                notes: "Rolling alias; priced as Gemini 2.5 Flash-Lite (approx).",
+            },
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE) (alias)", updatedAt: "2026-05-04" },
+        },
+        {
+            id: "gemini-pro-latest",
+            types: [IntentType.CHAT],
+            pricing: {
+                ...pricingGeminiPerMillionTokens({
+                    input: 1.25,
+                    output: 10.00,
+                    tiers: [
+                        { name: "prompts <= 200k", condition: "prompts <= 200k tokens", input: 1.25, output: 10.00 },
+                        { name: "prompts > 200k", condition: "prompts > 200k tokens", input: 2.50, output: 15.00 },
+                    ],
+                    notes: "Output price includes thinking tokens.",
+                }),
+                confidence: "approx",
+                notes: "Rolling alias; priced as Gemini 2.5 Pro (approx).",
+            },
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (text + structured + streaming SSE) (alias)", updatedAt: "2026-05-04" },
+        },
+
+        // --- Robotics models (listed by API; may require special modalities) ---
+        {
+            id: "gemini-robotics-er-1.6-preview",
+            types: [IntentType.CHAT],
+            pricing: pricingGeminiPerMillionTokens({
+                input: 1.00,
+                output: 5.00,
+                tiers: [
+                    { name: "audio", condition: "audio", input: 2.00, output: 5.00 },
+                ],
+                notes: "Prices may differ by modality; output includes thinking tokens.",
+            }),
+            runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Provider E2E: empty output in text + structured + streaming", updatedAt: "2026-05-04" },
+        },
+        { id: "gemini-robotics-er-1.5-preview", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.FAILING, reason: "Model/endpoint not found (404) in provider E2E for this account", updatedAt: "2026-05-04" } },
+
+        // --- Embeddings (cataloged, but runtime adapter not implemented yet) ---
+        { id: "gemini-embedding-2-preview", types: [IntentType.EMBEDDING], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Gemini embedding adapter not implemented in runtime v1", updatedAt: "2026-05-04" } },
+        { id: "gemini-embedding-2", types: [IntentType.EMBEDDING], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Gemini embedding adapter not implemented in runtime v1", updatedAt: "2026-05-04" } },
+        { id: "gemini-embedding-001", types: [IntentType.EMBEDDING], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.NOT_SUPPORTED, reason: "Gemini embedding adapter not implemented in runtime v1", updatedAt: "2026-05-04" } },
     ],
 
-    [IntentProvider.GROK]: [
-        { id: "grok-4", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS] },
-        { id: "grok-4-latest", types: [IntentType.CHAT, IntentType.MULTIMODAL] },
-        {
-            id: "grok-4.20-0309-reasoning",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 2.0, cachedInput: 0.2, output: 6.0, sourceUrl: XAI_PRICING_URL }),
-        },
-        {
-            id: "grok-4.20-0309-non-reasoning",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 2.0, cachedInput: 0.2, output: 6.0, sourceUrl: XAI_PRICING_URL }),
-        },
-        {
-            id: "grok-4-1-fast-reasoning",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 0.2, cachedInput: 0.05, output: 0.5, sourceUrl: XAI_PRICING_URL }),
-        },
-        {
-            id: "grok-4-1-fast-non-reasoning",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 0.2, cachedInput: 0.05, output: 0.5, sourceUrl: XAI_PRICING_URL }),
-        },
-        { id: "grok-4.20-multi-agent-0309", types: [IntentType.CHAT, IntentType.MULTIMODAL] },
-        { id: "grok-3", types: [IntentType.CHAT, IntentType.MULTIMODAL] },
-        { id: "grok-3-mini", types: [IntentType.CHAT, IntentType.MULTIMODAL] },
-
-        { id: "grok-imagine-image", types: [IntentType.IMAGE_GENERATION] },
-        { id: "grok-imagine-image-pro", types: [IntentType.IMAGE_GENERATION] },
-    ],
+    [IntentProvider.GROK]: [],
 
     [IntentProvider.ANTHROPIC]: [
-        {
-            id: "claude-opus-4-6",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 5.0, output: 25.0, sourceUrl: ANTHROPIC_MODELS_URL }),
-        },
-        {
-            id: "claude-sonnet-4-6",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 3.0, output: 15.0, sourceUrl: ANTHROPIC_MODELS_URL }),
-        },
-        {
-            id: "claude-haiku-4-5",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 1.0, output: 5.0, sourceUrl: ANTHROPIC_MODELS_URL }),
-        },
-        {
-            id: "claude-haiku-4-5-20251001",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 1.0, output: 5.0, sourceUrl: ANTHROPIC_MODELS_URL }),
-        },
+        // Source: Anthropic Models overview (latest models comparison), updated 2026-05-04
+        // Note: DCDR runtime v1 treats Anthropic as CHAT-only; multimodal/vision intent types are intentionally not listed yet.
+        { id: "claude-opus-4-7", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 5.0, output: 25.0, sourceUrl: ANTHROPIC_MODELS_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + streaming SSE)", updatedAt: "2026-05-04" } },
+        // Legacy/stable IDs still visible via Models API for some accounts.
+        { id: "claude-opus-4-6", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + structured + streaming SSE)", updatedAt: "2026-05-04" } },
+        { id: "claude-opus-4-5-20251101", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + structured + streaming SSE)", updatedAt: "2026-05-04" } },
+        { id: "claude-opus-4-1-20250805", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + structured + streaming SSE)", updatedAt: "2026-05-04" } },
+        { id: "claude-sonnet-4-6", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 3.0, output: 15.0, sourceUrl: ANTHROPIC_MODELS_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + streaming SSE)", updatedAt: "2026-05-04" } },
+        { id: "claude-sonnet-4-5-20250929", types: [IntentType.CHAT], runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + structured + streaming SSE)", updatedAt: "2026-05-04" } },
+        // Haiku is the cheapest/default smoke-test model.
+        { id: "claude-haiku-4-5", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.0, output: 5.0, sourceUrl: ANTHROPIC_MODELS_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + streaming SSE)", updatedAt: "2026-05-04" } },
+        { id: "claude-haiku-4-5-20251001", types: [IntentType.CHAT], pricing: pricingPerMillionTokens({ input: 1.0, output: 5.0, sourceUrl: ANTHROPIC_MODELS_URL }), runtimeSupport: { status: ProviderModelRuntimeSupportStatus.SUPPORTED, reason: "Validated via provider E2E (run + streaming SSE)", updatedAt: "2026-05-04" } },
     ],
 
-    [IntentProvider.MISTRAL]: [
-        {
-            id: "mistral-large-2512",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 0.5, output: 1.5, sourceUrl: MISTRAL_MODELS_URL }),
-        },
-        {
-            id: "mistral-small-2603",
-            types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS],
-            pricing: pricingPerMillionTokens({ input: 0.15, output: 0.6, sourceUrl: MISTRAL_MODELS_URL }),
-        },
+    [IntentProvider.MISTRAL]: [],
 
-        {
-            id: "mistral-embed-2312",
-            types: [IntentType.EMBEDDING],
-            pricing: pricingPerMillionTokens({ input: 0.1, output: 0.0, sourceUrl: MISTRAL_MODELS_URL, notes: "Embedding models are typically billed on input tokens only" }),
-        },
-
-        { id: "voxtral-mini-2602", types: [IntentType.SPEECH_TO_TEXT] },
-        { id: "voxtral-tts-2603", types: [IntentType.TEXT_TO_SPEECH] },
-    ],
-
-    [IntentProvider.COHERE]: [
-        { id: "command-a-03-2025", types: [IntentType.CHAT] },
-        { id: "command-a-reasoning-08-2025", types: [IntentType.CHAT] },
-        { id: "command-r-plus-08-2024", types: [IntentType.CHAT] },
-        { id: "command-r-08-2024", types: [IntentType.CHAT] },
-        { id: "command-r7b-12-2024", types: [IntentType.CHAT] },
-        { id: "c4ai-aya-expanse-32b", types: [IntentType.CHAT] },
-        { id: "command-a-vision-07-2025", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS] },
-        { id: "c4ai-aya-vision-32b", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS] },
-
-        { id: "embed-v4.0", types: [IntentType.EMBEDDING] },
-        { id: "embed-english-v3.0", types: [IntentType.EMBEDDING] },
-        { id: "embed-english-light-v3.0", types: [IntentType.EMBEDDING] },
-        { id: "embed-multilingual-v3.0", types: [IntentType.EMBEDDING] },
-        { id: "embed-multilingual-light-v3.0", types: [IntentType.EMBEDDING] },
-
-        { id: "cohere-transcribe-03-2026", types: [IntentType.SPEECH_TO_TEXT] },
-    ],
+    [IntentProvider.COHERE]: [],
 
     [IntentProvider.OFFICE]: [
         // Office = internal/local OpenAI-compatible runtime (vLLM etc.)
@@ -998,40 +889,22 @@ export const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER: Record<IntentProvider, Prov
         { id: "Qwen3-4B-Instruct-2507", types: [IntentType.CHAT] },        
     ],
 
-    [IntentProvider.OLLAMA]: [
-        { id: "llama3.3", types: [IntentType.CHAT] },
-        { id: "llama3.2", types: [IntentType.CHAT] },
-        { id: "llama3.1", types: [IntentType.CHAT] },
-        { id: "qwen3", types: [IntentType.CHAT] },
-        { id: "qwen2.5", types: [IntentType.CHAT] },
-        { id: "deepseek-r1", types: [IntentType.CHAT] },
-        { id: "gemma3", types: [IntentType.CHAT] },
-        { id: "mistral", types: [IntentType.CHAT] },
-        { id: "phi4", types: [IntentType.CHAT] },
-        { id: "gpt-oss", types: [IntentType.CHAT] },
-
-        { id: "llava", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS] },
-        { id: "llama3.2-vision", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS] },
-        { id: "minicpm-v", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS] },
-        { id: "moondream", types: [IntentType.CHAT, IntentType.MULTIMODAL, IntentType.IMAGE_ANALYSIS] },
-
-        { id: "nomic-embed-text", types: [IntentType.EMBEDDING] },
-        { id: "mxbai-embed-large", types: [IntentType.EMBEDDING] },
-        { id: "bge-m3", types: [IntentType.EMBEDDING] },
-        { id: "embeddinggemma", types: [IntentType.EMBEDDING] },
-        { id: "qwen3-embedding", types: [IntentType.EMBEDDING] },
-    ],
+    [IntentProvider.OLLAMA]: [],
 
     [IntentProvider.OPEN_AI_COMPATIBLE]: [],
 
-    [IntentProvider.OCR]: [
-        { id: "mistral-ocr-2512", types: [IntentType.IMAGE_ANALYSIS] },
-    ],
+    [IntentProvider.OCR]: [],
 
     [IntentProvider.CLIP]: [],
     [IntentProvider.HTTP_TOOL]: [],
     [IntentProvider.RULES]: [],
 };
+
+/**
+ * Canonical provider model catalog (after enrichment passes).
+ */
+export const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER: Record<IntentProvider, ProviderModelDefinition[]> =
+    fillMissingPricingFromBaseModels(PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW);
 
 const _PROVIDER_MODEL_INDEXES = buildProviderModelCatalogAndTypeIndex(PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER);
 
@@ -1086,7 +959,29 @@ export const PROVIDER_MODEL_E2E_OVERRIDES: Record<IntentProvider, Record<string,
         "davinci-002": { status: ProviderModelE2EStatus.LEGACY, reason: "Not a chat-completions model" },
         "gpt-3.5-turbo-instruct": { status: ProviderModelE2EStatus.LEGACY, reason: "Not a chat-completions model" },
     },
-    [IntentProvider.GEMINI]: {},
+    [IntentProvider.GEMINI]: {
+        // Listed by the Models API but not callable for many accounts (404).
+        "gemini-2.0-flash": { status: ProviderModelE2EStatus.LEGACY, reason: "Listed but not callable for many accounts (404)" },
+        "gemini-2.0-flash-001": { status: ProviderModelE2EStatus.LEGACY, reason: "Listed but not callable for many accounts (404)" },
+        "gemini-2.0-flash-lite": { status: ProviderModelE2EStatus.LEGACY, reason: "Listed but not callable for many accounts (404)" },
+        "gemini-2.0-flash-lite-001": { status: ProviderModelE2EStatus.LEGACY, reason: "Listed but not callable for many accounts (404)" },
+
+        // Preview/live endpoint variants can be account-gated or missing.
+        "gemini-3.1-flash-live-preview": { status: ProviderModelE2EStatus.LEGACY, reason: "Model/endpoint not found (404) in provider E2E" },
+
+        // Requires explicit Computer Use tooling.
+        "gemini-2.5-computer-use-preview-10-2025": { status: ProviderModelE2EStatus.LEGACY, reason: "Requires Computer Use tool wiring (not supported in runtime v1)" },
+
+        // Audio-only response modalities (runtime v1 is text-only).
+        "gemini-2.5-pro-preview-tts": { status: ProviderModelE2EStatus.LEGACY, reason: "Audio-only response modality (TEXT unsupported)" },
+        "gemini-2.5-flash-preview-tts": { status: ProviderModelE2EStatus.LEGACY, reason: "Audio-only response modality (TEXT unsupported)" },
+        "gemini-2.5-flash-native-audio-latest": { status: ProviderModelE2EStatus.LEGACY, reason: "Native-audio model (text-only runtime)" },
+        "gemini-2.5-flash-native-audio-preview-09-2025": { status: ProviderModelE2EStatus.LEGACY, reason: "Native-audio model (text-only runtime)" },
+        "gemini-2.5-flash-native-audio-preview-12-2025": { status: ProviderModelE2EStatus.LEGACY, reason: "Native-audio model (text-only runtime)" },
+
+        // Some robotics preview IDs appear/disappear across accounts.
+        "gemini-robotics-er-1.5-preview": { status: ProviderModelE2EStatus.LEGACY, reason: "Model/endpoint not found (404) in provider E2E" },
+    },
     [IntentProvider.GROK]: {},
     [IntentProvider.ANTHROPIC]: {},
     [IntentProvider.MISTRAL]: {},
@@ -1099,6 +994,199 @@ export const PROVIDER_MODEL_E2E_OVERRIDES: Record<IntentProvider, Record<string,
     [IntentProvider.HTTP_TOOL]: {},
     [IntentProvider.RULES]: {},
 };
+
+function pricingPerMillionTokens(args: {
+    input: number;
+    output: number;
+    cachedInput?: number;
+    cachedOutput?: number;
+    tiers?: Array<{
+        name: string;
+        condition?: string;
+        input: number;
+        output: number;
+        cachedInput?: number;
+        cachedOutput?: number;
+    }>;
+    sourceUrl: string;
+    updatedAt?: number;
+    confidence?: ProviderModelPricing["confidence"];
+    notes?: string;
+}): ProviderModelPricing {
+    return {
+        currency: "USD",
+        sourceUrl: args.sourceUrl,
+        updatedAt: args.updatedAt ?? PRICING_UPDATED_AT_20260327,
+        confidence: args.confidence ?? "official",
+        notes: args.notes,
+        components: [
+            {
+                kind: "tokens",
+                unit: "per_million_tokens",
+                input: args.input,
+                outputUsd: args.output,
+                cachedInput: args.cachedInput,
+                cachedOutput: args.cachedOutput,
+                tiers: args.tiers,
+            },
+        ],
+    };
+}
+
+/**
+ * Gemini token pricing helper.
+ *
+ * Notes
+ * - Uses the Gemini Developer API pricing page as the canonical source.
+ * - Pricing tables sometimes vary by modality (text vs audio) and/or prompt size (<=200k vs >200k tokens).
+ *   We represent those as `tiers` with a human-readable condition.
+ */
+function pricingGeminiPerMillionTokens(args: {
+    input: number;
+    output: number;
+    tiers?: Array<{
+        name: string;
+        condition?: string;
+        input: number;
+        output: number;
+    }>;
+    notes?: string;
+}): ProviderModelPricing {
+    return pricingPerMillionTokens({
+        input: args.input,
+        output: args.output,
+        tiers: args.tiers,
+        sourceUrl: GEMINI_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260430,
+        confidence: "official",
+        notes: args.notes,
+    });
+}
+
+function clonePricingAsApproxFromBase(args: {
+    modelId: string;
+    baseId: string;
+    basePricing: ProviderModelPricing;
+    relation?: "base" | "fallback";
+}): ProviderModelPricing {
+    const base = args.basePricing;
+    const relation = args.relation ?? "base";
+    const extraNote = relation === "fallback"
+        ? `Inherited pricing from fallback model: ${args.baseId}`
+        : `Inherited pricing from base model: ${args.baseId}`;
+    const notes = base.notes ? `${base.notes} | ${extraNote}` : extraNote;
+
+    return {
+        currency: base.currency,
+        sourceUrl: base.sourceUrl,
+        updatedAt: base.updatedAt,
+        confidence: "approx",
+        notes,
+        components: base.components.map((c) => ({ ...c })),
+    };
+}
+
+function tryGetBaseModelIdFromVersionedId(modelId: string): string | null {
+    const id = String(modelId || "").trim();
+    if (!id) return null;
+
+    // Common vendor patterns:
+    // - OpenAI: gpt-4o-2024-11-20
+    // - OpenAI: gpt-5.4-mini-2026-03-17
+    // - Anthropic: claude-haiku-4-5-20251001
+    const m1 = id.match(/^(.*)-\d{4}-\d{2}-\d{2}$/);
+    if (m1?.[1]) return m1[1];
+
+    const m2 = id.match(/^(.*)-\d{8}$/);
+    if (m2?.[1]) return m2[1];
+
+    return null;
+}
+
+/**
+ * Fills pricing gaps by inheriting pricing from the base model when a vendor exposes
+ * versioned/dated aliases that share the same pricing.
+ *
+ * Notes
+ * - Inherited pricing is marked as `confidence: "approx"`.
+ * - Only applies when a base model is present in the same provider list.
+ */
+function fillMissingPricingFromBaseModels(modelsByProvider: Record<IntentProvider, ProviderModelDefinition[]>): Record<IntentProvider, ProviderModelDefinition[]> {
+    const out = {} as Record<IntentProvider, ProviderModelDefinition[]>;
+
+    for (const provider of Object.values(IntentProvider) as IntentProvider[]) {
+        const defs = modelsByProvider[provider] ?? [];
+
+        const pricingById: Record<string, ProviderModelPricing> = {};
+        for (const def of defs) {
+            if (def.pricing) pricingById[def.id] = def.pricing;
+        }
+
+        const fallbacks = PRICING_FALLBACK_RULES_BY_PROVIDER[provider] ?? [];
+
+        out[provider] = defs.map((def) => {
+            if (def.pricing) return def;
+
+            const baseId = tryGetBaseModelIdFromVersionedId(def.id);
+            if (baseId) {
+                const basePricing = pricingById[baseId];
+                if (basePricing) {
+                    return {
+                        ...def,
+                        pricing: clonePricingAsApproxFromBase({ modelId: def.id, baseId, basePricing, relation: "base" }),
+                    };
+                }
+            }
+
+            for (const rule of fallbacks) {
+                if (!rule.match.test(def.id)) continue;
+
+                const fallbackPricing = pricingById[rule.baseModelId];
+                if (!fallbackPricing) continue;
+
+                return {
+                    ...def,
+                    pricing: clonePricingAsApproxFromBase({ modelId: def.id, baseId: rule.baseModelId, basePricing: fallbackPricing, relation: "fallback" }),
+                };
+            }
+
+            return def;
+        });
+    }
+
+    return out;
+}
+
+function buildProviderModelCatalogAndTypeIndex(
+    modelsByProvider: Record<IntentProvider, ProviderModelDefinition[]>
+): {
+    catalog: Record<IntentProvider, Record<string, ProviderModelDefinition>>;
+    idsByType: Record<IntentProvider, Record<IntentType, string[]>>;
+} {
+    const intentTypes = Object.values(IntentType) as IntentType[];
+
+    const catalog = {} as Record<IntentProvider, Record<string, ProviderModelDefinition>>;
+    const idsByType = {} as Record<IntentProvider, Record<IntentType, string[]>>;
+
+    for (const provider of Object.values(IntentProvider) as IntentProvider[]) {
+        catalog[provider] = {};
+
+        const perType = {} as Record<IntentType, string[]>;
+        for (const t of intentTypes) perType[t] = [];
+        idsByType[provider] = perType;
+
+        const defs = modelsByProvider[provider] ?? [];
+        for (const def of defs) {
+            catalog[provider][def.id] = def;
+
+            for (const t of def.types) {
+                idsByType[provider][t].push(def.id);
+            }
+        }
+    }
+
+    return { catalog, idsByType };
+}
 
 /**
  * Static utility class for querying the provider model catalog.
