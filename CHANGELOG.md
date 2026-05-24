@@ -4,6 +4,30 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260524.1] — 07:10UTC
+
+<!--
+sourceCommit: b418e7c9dd51f03c5f8467917655ea1cc750c6e0
+queuedAtUtc: 
+previousMirroredBuild: 20260504.3 (2026-05-04)
+contractsSubmodule: 44f40761f11e..88c7b79fecba
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Added cloud-only backend credential resolution via `CredentialsContract.resolution=BACKEND` (requires trusted registry signature; rejected in `--registry` mode).
+- <kbd>RUNTIME</kbd> Enabled `IntentProvider.OPEN_AI_COMPATIBLE` execution via the OpenAI-compatible adapter to support customer-provided internal endpoints (e.g. vLLM-style gateways).
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.8.0`.
+- <kbd>CONTRACTS</kbd> Added virtual provider `IntentProvider.DCDR` with namespaced model IDs (`provider/model`) resolving to runtime-supported models across implemented providers.
+- <kbd>CONTRACTS</kbd> Refreshed OpenAI and Gemini model catalogs with newly discovered model IDs (May 2026 sync) and updated Gemini runtime support metadata for `gemini-3.1-flash-lite` and `gemini-3.5-flash`.
+- <kbd>CONTRACTS</kbd> Added official OpenAI pricing metadata for `gpt-image-*`, `gpt-audio*`, and `gpt-realtime*` model families (standard pricing snapshot).
+### Fixed
+- <kbd>RUNTIME</kbd> OpenAI structured output schema generation no longer emits empty JSON Schema nodes that OpenAI rejects (fixes `invalid_json_schema` 400s).
+- <kbd>RUNTIME</kbd> OpenAI Responses structured mode now falls back to local JSON/Zod validation when the declared output schema contains freeform JSON/object shapes that OpenAI schema validation rejects.
+- <kbd>CONTRACTS</kbd> Mark OpenAI `o1-mini` as account-gated (`model_not_found`) and skip it by default in provider E2E curation.
+- <kbd>RUNTIME</kbd> Gemini adapter now disables thinking by default for `gemini-3.5-flash` under small token budgets and tolerates minor structured-output formatting (code fences/prefix text), fixing empty output and JSON parse failures in provider E2E.
+- <kbd>RUNTIME</kbd> Anthropic adapter now preserves stable `ExecutionError` codes for structured schema failures and empty responses (was incorrectly mapped to `UPSTREAM_5XX`).
+
 ## [20260504.3] — 23:03UTC
 
 <!--
