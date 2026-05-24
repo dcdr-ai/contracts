@@ -4,6 +4,21 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260524.2] — 16:47UTC
+
+<!--
+sourceCommit: 6c9d514b54263ce3757aa3bdb6739f1124adabf8
+queuedAtUtc: 
+previousMirroredBuild: 20260524.1 (2026-05-24)
+contractsSubmodule: 88c7b79fecba..3099d7ab05f6
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.8.1`.
+- <kbd>CONTRACTS</kbd> Added `DcdrEntitlementsContract.dcdrVirtual` to allow backend to disable the paid DCDR virtual provider per tenant (fail-open when omitted).
+- <kbd>CONTRACTS</kbd> Added execution error code `PAYMENT_REQUIRED`.
+- <kbd>RUNTIME</kbd> Execution engine blocks `IntentProvider.DCDR` attempts when `entitlements.dcdrVirtual.enabled=false` (HTTP 402 + `PAYMENT_REQUIRED`) while still allowing BYOK fallbacks.
+
 ## [20260524.1] — 07:10UTC
 
 <!--

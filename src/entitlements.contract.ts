@@ -85,6 +85,24 @@ export interface DcdrEntitlementsContract {
   limits: DcdrEntitlementLimits;
   usageBaseline: DcdrEntitlementUsageBaseline;
 
+  /**
+   * Optional gate controlling whether the tenant can use the paid DCDR virtual provider.
+   *
+   * Notes
+   * - Additive and fail-open: when omitted, the runtime must assume the virtual provider is enabled.
+   * - Intended for wallet/balance enforcement in managed (cloud) mode without affecting BYOK providers.
+   */
+  dcdrVirtual?: {
+    /** When false, runtime must block executions that target `IntentProvider.DCDR`. */
+    enabled: boolean;
+
+    /** Optional business-friendly reason code (no sensitive details). */
+    reason?: string;
+
+    /** Optional hint for clients on when to retry (ms). */
+    retryAfterMs?: number;
+  };
+
   /** Optional reset time for quotas (unix ms). */
   resetAt?: number;
 

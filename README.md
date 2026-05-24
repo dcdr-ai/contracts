@@ -2,7 +2,7 @@
 
 > ⚙️ Intent-based AI runtime + control plane for production systems
 
-[![version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
+[![version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 
@@ -88,13 +88,13 @@ DCDR does not replace model providers (OpenAI, local models, etc.). It orchestra
 
 Run a working intent in seconds, no API key required:
 
-1) Run runtime container:
+1. Run runtime container:
 
 ```bash
 docker run --rm -p 8000:8000 dcdr.ai/dcdr-runtime:latest --demo
 ```
 
-2) Call a built-in demo Intent:
+2. Call a built-in demo Intent:
 
 ```bash
 curl -sS -H 'Content-Type: application/json' \
@@ -135,6 +135,7 @@ curl -sS -H 'Content-Type: application/json' \
 This quickstart is for **Runtime (self-hosted)** with a local `registry.json`.
 
 Notes
+
 - This is a production-oriented setup: `/api/execution/*` endpoints require auth + session.
 - If you only want to confirm the runtime works (no tokens, no registry), use the [30-second quickstart](#-30-second-quickstart) with `--demo`.
 
@@ -220,9 +221,9 @@ curl -sS \
 `DcdrRuntimeClient` supports two auth modes:
 
 - **Customer mode (Cloud; also Cloud Pro)**: `bearerToken` → sends `Authorization: Bearer <DcdrSessionToken>`
-	- You obtain the `DcdrSessionToken` in Cloud.
+  - You obtain the `DcdrSessionToken` in Cloud.
 - **Internal/dev mode (Runtime (self-hosted))**: `apiToken` → sends `token: <token>`
-	- Note: `/api/execution/*` endpoints require a session. For dev/testing you can set `SESSION_BYPASS_TOKEN` on the runtime and pass `sessionBypassToken` in the client (sends `x-session-bypass`).
+  - Note: `/api/execution/*` endpoints require a session. For dev/testing you can set `SESSION_BYPASS_TOKEN` on the runtime and pass `sessionBypassToken` in the client (sends `x-session-bypass`).
 
 Install (in a Node/TS app):
 
@@ -236,13 +237,15 @@ Example (internal/dev mode):
 import { DcdrRuntimeClient } from "@dcdr/contracts/runtime.client";
 
 const client = new DcdrRuntimeClient({
-	baseUrl: "http://localhost:8000",
-	apiToken: "dev-token",
-	sessionBypassToken: "dev-session-bypass",
+  baseUrl: "http://localhost:8000",
+  apiToken: "dev-token",
+  sessionBypassToken: "dev-session-bypass",
 });
 
 const health = await client.healthcheck();
-const res = await client.executeIntent("HELLO_WORLD", { vars: { name: "Ada" } });
+const res = await client.executeIntent("HELLO_WORLD", {
+  vars: { name: "Ada" },
+});
 
 console.log(health.status);
 console.log(res.status, res.output);
@@ -254,8 +257,8 @@ Example (customer mode / live):
 import { DcdrRuntimeClient } from "@dcdr/contracts/runtime.client";
 
 const client = new DcdrRuntimeClient({
-	// baseUrl defaults to https://runtime.dcdr.ai
-	bearerToken: process.env.DCDR_SESSION_TOKEN,
+  // baseUrl defaults to https://runtime.dcdr.ai
+  bearerToken: process.env.DCDR_SESSION_TOKEN,
 });
 
 // 1) Verify token is accepted (recommended during setup/debugging)
@@ -264,7 +267,7 @@ console.log(auth.valid, auth.authMode, auth.cid);
 
 // 2) Execute your first Intent (must exist in your Registry)
 const res = await client.executeIntent("MY_FIRST_INTENT", {
-	vars: { topic: "hello", language: "es" },
+  vars: { topic: "hello", language: "es" },
 });
 
 console.log(res.status, res.output);
@@ -284,45 +287,45 @@ Use this pattern when you need guaranteed machine-readable outputs.
 
 ```json
 {
-	"id": "INTENT_ID",
-	"intent": "FORMAT_PARSER",
-	"type": "CHAT",
-	"active": true,
-	"outputSchema": {
-		"result": { "type": "string", "required": true }
-	},
-	"defaultPrompt": {
-		"id": "PROMPT_ID",
-		"version": "v1",
-		"name": "format-parser",
-		"sha256": "PROMPT_SHA256",
-		"semanticHash": "PROMPT_SEMANTIC_HASH",
-		"messages": [
-			{ "role": "system", "content": "Return JSON only." },
-			{ "role": "user", "content": "Input: {{text}}" }
-		],
-		"variablesInterpolationType": "MUSTACHE",
-		"params": { "response_format": "json_schema" }
-	},
-	"retryPolicy": {
-		"maxAttempts": 3,
-		"allowFallback": true,
-		"repairOnParseFail": true,
-		"retryOn": ["PARSE_FAIL", "SCHEMA_FAIL"]
-	},
-	"implementations": [
-		{
-			"id": "IMPL_ID",
-			"provider": "OPEN_AI",
-			"name": "openai-format-parser",
-			"version": "v1",
-			"sha256": "IMPL_SHA256",
-			"semanticHash": "IMPL_SEMANTIC_HASH",
-			"model": "gpt-4.1-mini",
-			"endpoint": "https://api.openai.com/v1",
-			"active": true
-		}
-	]
+  "id": "INTENT_ID",
+  "intent": "FORMAT_PARSER",
+  "type": "CHAT",
+  "active": true,
+  "outputSchema": {
+    "result": { "type": "string", "required": true }
+  },
+  "defaultPrompt": {
+    "id": "PROMPT_ID",
+    "version": "v1",
+    "name": "format-parser",
+    "sha256": "PROMPT_SHA256",
+    "semanticHash": "PROMPT_SEMANTIC_HASH",
+    "messages": [
+      { "role": "system", "content": "Return JSON only." },
+      { "role": "user", "content": "Input: {{text}}" }
+    ],
+    "variablesInterpolationType": "MUSTACHE",
+    "params": { "response_format": "json_schema" }
+  },
+  "retryPolicy": {
+    "maxAttempts": 3,
+    "allowFallback": true,
+    "repairOnParseFail": true,
+    "retryOn": ["PARSE_FAIL", "SCHEMA_FAIL"]
+  },
+  "implementations": [
+    {
+      "id": "IMPL_ID",
+      "provider": "OPEN_AI",
+      "name": "openai-format-parser",
+      "version": "v1",
+      "sha256": "IMPL_SHA256",
+      "semanticHash": "IMPL_SEMANTIC_HASH",
+      "model": "gpt-4.1-mini",
+      "endpoint": "https://api.openai.com/v1",
+      "active": true
+    }
+  ]
 }
 ```
 
@@ -330,33 +333,33 @@ Use this pattern when you need guaranteed machine-readable outputs.
 
 ```json
 {
-	"executionPolicy": { "type": "WEIGHTED" },
-	"implementations": [
-		{
-			"id": "IMPL_PRIMARY",
-			"provider": "OPEN_AI",
-			"name": "primary",
-			"version": "v1",
-			"sha256": "IMPL_SHA256_1",
-			"semanticHash": "IMPL_SEMANTIC_HASH_1",
-			"model": "gpt-4.1-mini",
-			"endpoint": "https://api.openai.com/v1",
-			"active": true,
-			"weight": 0.7
-		},
-		{
-			"id": "IMPL_SECONDARY",
-			"provider": "OPEN_AI",
-			"name": "secondary",
-			"version": "v1",
-			"sha256": "IMPL_SHA256_2",
-			"semanticHash": "IMPL_SEMANTIC_HASH_2",
-			"model": "gpt-4.1",
-			"endpoint": "https://api.openai.com/v1",
-			"active": true,
-			"weight": 0.3
-		}
-	]
+  "executionPolicy": { "type": "WEIGHTED" },
+  "implementations": [
+    {
+      "id": "IMPL_PRIMARY",
+      "provider": "OPEN_AI",
+      "name": "primary",
+      "version": "v1",
+      "sha256": "IMPL_SHA256_1",
+      "semanticHash": "IMPL_SEMANTIC_HASH_1",
+      "model": "gpt-4.1-mini",
+      "endpoint": "https://api.openai.com/v1",
+      "active": true,
+      "weight": 0.7
+    },
+    {
+      "id": "IMPL_SECONDARY",
+      "provider": "OPEN_AI",
+      "name": "secondary",
+      "version": "v1",
+      "sha256": "IMPL_SHA256_2",
+      "semanticHash": "IMPL_SEMANTIC_HASH_2",
+      "model": "gpt-4.1",
+      "endpoint": "https://api.openai.com/v1",
+      "active": true,
+      "weight": 0.3
+    }
+  ]
 }
 ```
 
