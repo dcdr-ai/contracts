@@ -4,6 +4,17 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260525.3] — 17:05UTC
+
+<!--
+sourceCommit: 126bce84149a52e45c1e6d5057f259ff74d463e2
+queuedAtUtc: 
+previousMirroredBuild: 20260525.2 (2026-05-25)
+-->
+
+### Fixed
+- <kbd>RUNTIME</kbd> Execution reports now include `outputHash` on successful executions (stable hash of normalized output).
+
 ## [20260525.2] — 16:32UTC
 
 <!--
