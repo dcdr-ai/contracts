@@ -301,6 +301,30 @@ export interface ProviderModelRuntimeSupportInfo {
 }
 
 /**
+ * Product-level managed categories for public customer models.
+ *
+ * Purpose
+ * - Provide a stable grouping/filtering abstraction for customer-facing UIs.
+ * - Avoid exposing a flat provider/model list by default.
+ */
+export enum DcdrPublicModelCategory {
+  /** Maximum quality / strongest reasoning; typically expensive. */
+  BEST = "BEST",
+
+  /** Best balance between quality and cost; recommended default for production chat. */
+  SMART = "SMART",
+
+  /** Low latency; good for interactive chat/support. */
+  FAST = "FAST",
+
+  /** Lowest cost; good for high-volume simple tasks. */
+  ECONOMY = "ECONOMY",
+
+  /** Internal/local/company-managed models (self-hosted, Office, etc.). */
+  PRIVATE = "PRIVATE",
+}
+
+/**
  * Canonical (de-duplicated) model definition.
  *
  * A single model can support multiple IntentType(s). Keeping the model metadata in one place
@@ -309,9 +333,120 @@ export interface ProviderModelRuntimeSupportInfo {
 export interface ProviderModelDefinition {
   id: string;
   types: IntentType[];
+  /**
+   * If true, this model is eligible for customer-facing UIs.
+   *
+   * Notes
+   * - Fail-closed: missing/undefined is treated as false by the catalog normalizer.
+   * - This does not affect runtime execution support; it is a UI curation flag.
+   */
+  publicForCustomers: boolean;
+
+  /** Stable customer-facing family name for managed public models (should not expose provider/model IDs). */
+  publicName?: string;
+
+  /** Small variant label displayed next to `publicName` (e.g. "OpenAI", "Fast", "Lowest cost"). */
+  badge?: string;
+
+  /** Primary managed category used for default grouping in simple UI mode. */
+  primaryCategory?: DcdrPublicModelCategory;
+
+  /** Additional managed categories/tags for badges and advanced filtering. */
+  categories?: DcdrPublicModelCategory[];
+
+  /** Quality tier (1..5), where 5 is best. */
+  qualityTier?: number;
+
+  /** Speed tier (1..5), where 5 is best. */
+  speedTier?: number;
+
+  /** Cost tier (1..5), where 5 is best (lowest cost). */
+  costTier?: number;
+
+  /** Optional suggested use cases (safe for UI). */
+  recommendedUseCases?: string[];
+
+  /** Model is generally recommended to customers. */
+  isRecommended?: boolean;
+
+  /** Global default model when the user has not chosen any model/category. Exactly one public model should be true. */
+  isGlobalDefault?: boolean;
+
+  /** Default model within its primaryCategory when a category is chosen but no specific model is selected. */
+  isCategoryDefault?: boolean;
   pricing?: ProviderModelPricing;
   runtimeSupport?: ProviderModelRuntimeSupportInfo;
   parameterSupport?: ProviderModelParameterSupportInfo;
+}
+
+/**
+ * Stricter shape for public customer models.
+ *
+ * Notes
+ * - This is an additive (non-breaking) interface.
+ * - The catalog normalizer enforces these fields at runtime for models where `publicForCustomers === true`.
+ */
+export interface ProviderPublicCustomerModelDefinition extends ProviderModelDefinition {
+  publicForCustomers: true;
+  publicName: string;
+  badge?: string;
+  primaryCategory: DcdrPublicModelCategory;
+  categories: DcdrPublicModelCategory[];
+  qualityTier: number;
+  speedTier: number;
+  costTier: number;
+  recommendedUseCases: string[];
+  isRecommended: boolean;
+  isGlobalDefault: boolean;
+  isCategoryDefault: boolean;
+}
+
+/**
+ * Input shape for the provider model catalog.
+ *
+ * `publicForCustomers` is optional here to keep the catalog authoring low-noise;
+ * it is normalized to a required boolean in `ProviderModelDefinition`.
+ */
+interface ProviderModelDefinitionInput {
+  id: string;
+  types: IntentType[];
+  publicForCustomers?: boolean;
+  publicName?: string;
+  badge?: string;
+  primaryCategory?: DcdrPublicModelCategory;
+  categories?: DcdrPublicModelCategory[];
+  qualityTier?: number;
+  speedTier?: number;
+  costTier?: number;
+  recommendedUseCases?: string[];
+  isRecommended?: boolean;
+  isGlobalDefault?: boolean;
+  isCategoryDefault?: boolean;
+  pricing?: ProviderModelPricing;
+  runtimeSupport?: ProviderModelRuntimeSupportInfo;
+  parameterSupport?: ProviderModelParameterSupportInfo;
+}
+
+/** Options for ProviderModelRegistry.listProviderModels(...). */
+export interface ProviderModelListProviderModelsOptions {
+  /** When true, only returns models explicitly curated for customer-facing UIs. */
+  onlyPublicForCustomers?: boolean;
+}
+
+/** Provider + model pairing for public customer model listing helpers. */
+export interface ProviderPublicCustomerModelRef {
+  provider: IntentProvider;
+  modelId: string;
+  model: ProviderPublicCustomerModelDefinition;
+}
+
+/** Options for ProviderModelRegistry.listPublicCustomerModels(...). */
+export interface ProviderModelListPublicCustomerModelsOptions {
+  /** Optional filter: only include models whose primaryCategory matches this value. */
+  primaryCategory?: DcdrPublicModelCategory;
+
+  /** Optional filter: only include models that contain at least one of these categories. */
+  includeCategories?: DcdrPublicModelCategory[];
 }
 
 interface ProviderPricingFallbackRule {
@@ -323,6 +458,7 @@ interface ProviderPricingFallbackRule {
 const PRICING_UPDATED_AT_20260327 = Date.UTC(2026, 2, 27);
 const PRICING_UPDATED_AT_20260326 = Date.UTC(2026, 2, 26);
 const PRICING_UPDATED_AT_20260430 = Date.UTC(2026, 3, 30);
+const PRICING_UPDATED_AT_20260519 = Date.UTC(2026, 4, 19);
 const PRICING_UPDATED_AT_20260522 = Date.UTC(2026, 4, 22);
 const OPENAI_PRICING_URL = "https://developers.openai.com/api/docs/pricing";
 const XAI_PRICING_URL = "https://docs.x.ai/developers/models";
@@ -477,6 +613,7 @@ function buildDcdrVirtualProviderModelDefinitions(
       out.push({
         ...def,
         id: prefixedId,
+        publicForCustomers: false,
       });
     }
   }
@@ -492,7 +629,7 @@ function buildDcdrVirtualProviderModelDefinitions(
  */
 const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
   IntentProvider,
-  ProviderModelDefinition[]
+  ProviderModelDefinitionInput[]
 > = {
   [IntentProvider.DCDR]: [],
   [IntentProvider.OPEN_AI]: [
@@ -504,6 +641,18 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.5",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Best",
+      badge: "OpenAI",
+      primaryCategory: DcdrPublicModelCategory.BEST,
+      categories: [DcdrPublicModelCategory.BEST],
+      qualityTier: 5,
+      speedTier: 3,
+      costTier: 1,
+      recommendedUseCases: ["reasoning", "agentic_coding"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: true,
       pricing: pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
@@ -580,6 +729,18 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.4",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Smart",
+      badge: "Recommended",
+      primaryCategory: DcdrPublicModelCategory.SMART,
+      categories: [DcdrPublicModelCategory.SMART, DcdrPublicModelCategory.BEST],
+      qualityTier: 4,
+      speedTier: 4,
+      costTier: 3,
+      recommendedUseCases: ["production_chat", "coding", "reasoning"],
+      isRecommended: true,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       pricing: pricingPerMillionTokens({
         input: 2.5,
         cachedInput: 0.25,
@@ -617,6 +778,21 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.4-mini",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Fast",
+      badge: "OpenAI",
+      primaryCategory: DcdrPublicModelCategory.FAST,
+      categories: [
+        DcdrPublicModelCategory.FAST,
+        DcdrPublicModelCategory.ECONOMY,
+      ],
+      qualityTier: 3,
+      speedTier: 5,
+      costTier: 4,
+      recommendedUseCases: ["interactive_chat", "support", "rewriting"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: true,
       pricing: pricingPerMillionTokens({
         input: 0.75,
         cachedInput: 0.075,
@@ -2021,6 +2197,21 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gemini-2.5-flash",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Economy",
+      badge: "Fast",
+      primaryCategory: DcdrPublicModelCategory.ECONOMY,
+      categories: [
+        DcdrPublicModelCategory.ECONOMY,
+        DcdrPublicModelCategory.FAST,
+      ],
+      qualityTier: 3,
+      speedTier: 4,
+      costTier: 5,
+      recommendedUseCases: ["high_volume_chat", "extraction", "classification"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: true,
       pricing: pricingGeminiPerMillionTokens({
         input: 0.3,
         output: 2.5,
@@ -2040,6 +2231,23 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gemini-3.5-flash",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Smart",
+      badge: "Fast",
+      primaryCategory: DcdrPublicModelCategory.SMART,
+      categories: [DcdrPublicModelCategory.SMART, DcdrPublicModelCategory.FAST],
+      qualityTier: 4,
+      speedTier: 5,
+      costTier: 4,
+      recommendedUseCases: ["production_chat", "interactive_chat", "support"],
+      isRecommended: true,
+      isGlobalDefault: true,
+      isCategoryDefault: true,
+      pricing: pricingGeminiPerMillionTokens({
+        input: 1.5,
+        output: 9.0,
+        notes: "Output price includes thinking tokens.",
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         reason:
@@ -2320,6 +2528,22 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gemini-2.5-flash-lite",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Economy",
+      badge: "Lowest cost",
+      primaryCategory: DcdrPublicModelCategory.ECONOMY,
+      categories: [DcdrPublicModelCategory.ECONOMY],
+      qualityTier: 2,
+      speedTier: 5,
+      costTier: 5,
+      recommendedUseCases: [
+        "high_volume_extraction",
+        "classification",
+        "rewriting",
+      ],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       pricing: pricingGeminiPerMillionTokens({
         input: 0.1,
         output: 0.4,
@@ -2679,6 +2903,18 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "claude-opus-4-7",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Best",
+      badge: "Anthropic",
+      primaryCategory: DcdrPublicModelCategory.BEST,
+      categories: [DcdrPublicModelCategory.BEST],
+      qualityTier: 5,
+      speedTier: 3,
+      costTier: 1,
+      recommendedUseCases: ["reasoning", "agentic_coding"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       pricing: pricingPerMillionTokens({
         input: 5.0,
         output: 25.0,
@@ -2721,6 +2957,18 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "claude-sonnet-4-6",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Smart",
+      badge: "Anthropic",
+      primaryCategory: DcdrPublicModelCategory.SMART,
+      categories: [DcdrPublicModelCategory.SMART, DcdrPublicModelCategory.FAST],
+      qualityTier: 4,
+      speedTier: 4,
+      costTier: 3,
+      recommendedUseCases: ["production_chat", "coding", "reasoning"],
+      isRecommended: true,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       pricing: pricingPerMillionTokens({
         input: 3.0,
         output: 15.0,
@@ -2745,6 +2993,21 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "claude-haiku-4-5",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Fast",
+      badge: "Anthropic",
+      primaryCategory: DcdrPublicModelCategory.FAST,
+      categories: [
+        DcdrPublicModelCategory.FAST,
+        DcdrPublicModelCategory.ECONOMY,
+      ],
+      qualityTier: 3,
+      speedTier: 5,
+      costTier: 4,
+      recommendedUseCases: ["interactive_chat", "support", "classification"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       pricing: pricingPerMillionTokens({
         input: 1.0,
         output: 5.0,
@@ -2779,7 +3042,37 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
   [IntentProvider.OFFICE]: [
     // Office = internal/local OpenAI-compatible runtime (vLLM etc.)
     // Keep IDs aligned with the common local model naming used in registries.
-    { id: "Qwen3-4B-Instruct-2507", types: [IntentType.CHAT] },
+    {
+      id: "Qwen3-4B-Instruct-2507",
+      types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Private",
+      badge: "Local",
+      primaryCategory: DcdrPublicModelCategory.PRIVATE,
+      categories: [
+        DcdrPublicModelCategory.PRIVATE,
+        DcdrPublicModelCategory.ECONOMY,
+        DcdrPublicModelCategory.FAST,
+      ],
+      qualityTier: 2,
+      speedTier: 5,
+      costTier: 5,
+      recommendedUseCases: ["private_data", "on_prem", "high_volume"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: true,
+      pricing: pricingPerMillionTokens({
+        // Synthetic estimate for local models: keep Office cheaper than hosted providers.
+        // Pick round numbers for UI cost guidance.
+        input: 0.05,
+        output: 0.15,
+        sourceUrl: GEMINI_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260519,
+        confidence: "approx",
+        notes:
+          "Synthetic pricing for local OFFICE provider. For UI cost guidance only.",
+      }),
+    },
   ],
 
   [IntentProvider.OLLAMA]: [],
@@ -2793,6 +3086,194 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
   [IntentProvider.RULES]: [],
 };
 
+/** Normalizes catalog entries so optional flags become required (fail-closed). */
+function normalizeProviderModelDefinitions(
+  modelsByProvider: Record<IntentProvider, ProviderModelDefinitionInput[]>,
+): Record<IntentProvider, ProviderModelDefinition[]> {
+  const out = {} as Record<IntentProvider, ProviderModelDefinition[]>;
+
+  let globalDefaultCount = 0;
+  const categoryDefaultCounts = new Map<DcdrPublicModelCategory, number>();
+  const categoriesWithPublicModels = new Set<DcdrPublicModelCategory>();
+
+  const assertTier = (
+    provider: IntentProvider,
+    modelId: string,
+    field: string,
+    value: number,
+  ): void => {
+    if (!Number.isFinite(value)) {
+      throw new Error(
+        `Provider model catalog: ${provider}/${modelId} ${field} must be a finite number (1..5).`,
+      );
+    }
+    const n = Math.trunc(value);
+    if (n !== value || n < 1 || n > 5) {
+      throw new Error(
+        `Provider model catalog: ${provider}/${modelId} ${field} must be an integer in range 1..5.`,
+      );
+    }
+  };
+
+  const assertNoLegacyManagedFields = (
+    provider: IntentProvider,
+    modelId: string,
+    def: ProviderModelDefinitionInput,
+  ): void => {
+    const d = def as unknown as Record<string, unknown>;
+    const legacyFields = [
+      "publicDisplayName",
+      "isRecommendedDefault",
+      "default",
+    ];
+    for (const f of legacyFields) {
+      if (Object.prototype.hasOwnProperty.call(d, f)) {
+        throw new Error(
+          `Provider model catalog: ${provider}/${modelId} must not include legacy field '${f}'.`,
+        );
+      }
+    }
+  };
+
+  const assertNonEmptyStringArray = (
+    provider: IntentProvider,
+    modelId: string,
+    field: string,
+    value: string[],
+  ): void => {
+    if (!Array.isArray(value) || value.length === 0) {
+      throw new Error(
+        `Provider model catalog: ${provider}/${modelId} ${field} must be a non-empty string array.`,
+      );
+    }
+    for (const v of value) {
+      if (typeof v !== "string" || !v.trim()) {
+        throw new Error(
+          `Provider model catalog: ${provider}/${modelId} ${field} must contain only non-empty strings.`,
+        );
+      }
+    }
+  };
+
+  for (const provider of Object.values(IntentProvider) as IntentProvider[]) {
+    const defs = modelsByProvider[provider] ?? [];
+
+    const ids = new Set<string>();
+
+    out[provider] = defs.map((def) => {
+      assertNoLegacyManagedFields(provider, def.id, def);
+
+      if (ids.has(def.id)) {
+        throw new Error(
+          `Provider model catalog: duplicate modelId '${def.id}' for provider ${provider}.`,
+        );
+      }
+      ids.add(def.id);
+
+      const normalized: ProviderModelDefinition = {
+        ...def,
+        publicForCustomers: def.publicForCustomers === true,
+      };
+
+      if (normalized.publicForCustomers) {
+        if (!normalized.publicName?.trim()) {
+          throw new Error(
+            `Provider model catalog: ${provider}/${normalized.id} publicName is required for publicForCustomers models.`,
+          );
+        }
+        if (!normalized.primaryCategory) {
+          throw new Error(
+            `Provider model catalog: ${provider}/${normalized.id} primaryCategory is required for publicForCustomers models.`,
+          );
+        }
+        if (
+          !Array.isArray(normalized.categories) ||
+          normalized.categories.length === 0
+        ) {
+          throw new Error(
+            `Provider model catalog: ${provider}/${normalized.id} categories is required for publicForCustomers models.`,
+          );
+        }
+        if (!normalized.categories.includes(normalized.primaryCategory)) {
+          throw new Error(
+            `Provider model catalog: ${provider}/${normalized.id} categories must include primaryCategory (${normalized.primaryCategory}).`,
+          );
+        }
+
+        categoriesWithPublicModels.add(normalized.primaryCategory);
+
+        if (typeof normalized.isRecommended !== "boolean") {
+          throw new Error(
+            `Provider model catalog: ${provider}/${normalized.id} isRecommended is required for publicForCustomers models.`,
+          );
+        }
+        if (typeof normalized.isGlobalDefault !== "boolean") {
+          throw new Error(
+            `Provider model catalog: ${provider}/${normalized.id} isGlobalDefault is required for publicForCustomers models.`,
+          );
+        }
+        if (typeof normalized.isCategoryDefault !== "boolean") {
+          throw new Error(
+            `Provider model catalog: ${provider}/${normalized.id} isCategoryDefault is required for publicForCustomers models.`,
+          );
+        }
+
+        if (normalized.isGlobalDefault) globalDefaultCount += 1;
+        if (normalized.isCategoryDefault) {
+          const c = normalized.primaryCategory;
+          const prev = categoryDefaultCounts.get(c) ?? 0;
+          categoryDefaultCounts.set(c, prev + 1);
+        }
+
+        assertTier(
+          provider,
+          normalized.id,
+          "qualityTier",
+          normalized.qualityTier ?? Number.NaN,
+        );
+        assertTier(
+          provider,
+          normalized.id,
+          "speedTier",
+          normalized.speedTier ?? Number.NaN,
+        );
+        assertTier(
+          provider,
+          normalized.id,
+          "costTier",
+          normalized.costTier ?? Number.NaN,
+        );
+
+        assertNonEmptyStringArray(
+          provider,
+          normalized.id,
+          "recommendedUseCases",
+          normalized.recommendedUseCases ?? [],
+        );
+      }
+
+      return normalized;
+    });
+  }
+
+  if (globalDefaultCount !== 1) {
+    throw new Error(
+      `Provider model catalog: expected exactly one public model with isGlobalDefault=true, found ${globalDefaultCount}.`,
+    );
+  }
+
+  for (const c of categoriesWithPublicModels) {
+    const count = categoryDefaultCounts.get(c) ?? 0;
+    if (count <= 0) {
+      throw new Error(
+        `Provider model catalog: expected at least one public model with isCategoryDefault=true for primaryCategory ${c}.`,
+      );
+    }
+  }
+
+  return out;
+}
+
 /**
  * Canonical provider model catalog (after enrichment passes).
  */
@@ -2803,10 +3284,11 @@ export const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER: Record<
   const base = fillMissingPricingFromBaseModels(
     PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW,
   );
+  const normalized = normalizeProviderModelDefinitions(base);
 
   return {
-    ...base,
-    [IntentProvider.DCDR]: buildDcdrVirtualProviderModelDefinitions(base),
+    ...normalized,
+    [IntentProvider.DCDR]: buildDcdrVirtualProviderModelDefinitions(normalized),
   };
 })();
 
@@ -3037,7 +3519,8 @@ function pricingGeminiPerMillionTokens(args: {
     tiers: args.tiers,
     sourceUrl: GEMINI_PRICING_URL,
 
-    updatedAt: PRICING_UPDATED_AT_20260430,
+    // Gemini pricing page last updated 2026-05-19 UTC.
+    updatedAt: PRICING_UPDATED_AT_20260519,
     confidence: "official",
     notes: args.notes,
   });
@@ -3117,9 +3600,9 @@ function tryGetBaseModelIdFromVersionedId(modelId: string): string | null {
  * - Only applies when a base model is present in the same provider list.
  */
 function fillMissingPricingFromBaseModels(
-  modelsByProvider: Record<IntentProvider, ProviderModelDefinition[]>,
-): Record<IntentProvider, ProviderModelDefinition[]> {
-  const out = {} as Record<IntentProvider, ProviderModelDefinition[]>;
+  modelsByProvider: Record<IntentProvider, ProviderModelDefinitionInput[]>,
+): Record<IntentProvider, ProviderModelDefinitionInput[]> {
+  const out = {} as Record<IntentProvider, ProviderModelDefinitionInput[]>;
 
   for (const provider of Object.values(IntentProvider) as IntentProvider[]) {
     const defs = modelsByProvider[provider] ?? [];
@@ -3243,8 +3726,78 @@ export class ProviderModelRegistry {
   /** Lists all model definitions for a provider (stable order as declared in the catalog). */
   static listProviderModels(
     provider: IntentProvider,
+    options?: ProviderModelListProviderModelsOptions,
   ): ProviderModelDefinition[] {
-    return ProviderModelRegistry.definitionsByProvider[provider] ?? [];
+    const defs = ProviderModelRegistry.definitionsByProvider[provider] ?? [];
+    if (!options?.onlyPublicForCustomers) return defs;
+    return defs.filter((m) => m.publicForCustomers === true);
+  }
+
+  /**
+   * Lists all public customer models across all providers.
+   *
+   * Notes
+   * - Uses the catalog declared order (provider order, then per-provider declaration order).
+   * - This is a UI/helper surface only; execution still uses provider+modelId.
+   */
+  static listPublicCustomerModels(
+    options?: ProviderModelListPublicCustomerModelsOptions,
+  ): ProviderPublicCustomerModelRef[] {
+    const out: ProviderPublicCustomerModelRef[] = [];
+
+    for (const provider of Object.values(IntentProvider) as IntentProvider[]) {
+      const defs = ProviderModelRegistry.listProviderModels(provider, {
+        onlyPublicForCustomers: true,
+      });
+
+      for (const def of defs) {
+        const model = def as ProviderPublicCustomerModelDefinition;
+
+        if (
+          options?.primaryCategory &&
+          model.primaryCategory !== options.primaryCategory
+        ) {
+          continue;
+        }
+
+        if (options?.includeCategories?.length) {
+          const include = options.includeCategories;
+          const hasAny = include.some((c) => model.categories.includes(c));
+          if (!hasAny) continue;
+        }
+
+        out.push({ provider, modelId: model.id, model });
+      }
+    }
+
+    return out;
+  }
+
+  /**
+   * Groups all public customer models by their primaryCategory.
+   *
+   * Intended for the "simple UI" mode where the UI shows high-level DCDR groups.
+   */
+  static listPublicCustomerModelsByPrimaryCategory(): Record<
+    DcdrPublicModelCategory,
+    ProviderPublicCustomerModelRef[]
+  > {
+    const out = {} as Record<
+      DcdrPublicModelCategory,
+      ProviderPublicCustomerModelRef[]
+    >;
+
+    for (const c of Object.values(
+      DcdrPublicModelCategory,
+    ) as DcdrPublicModelCategory[]) {
+      out[c] = [];
+    }
+
+    for (const item of ProviderModelRegistry.listPublicCustomerModels()) {
+      out[item.model.primaryCategory].push(item);
+    }
+
+    return out;
   }
 
   /** Lists model IDs for a provider that support a given IntentType. */

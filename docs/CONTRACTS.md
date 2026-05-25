@@ -15,33 +15,33 @@ In Runtime (self-hosted), this object is typically serialized to a JSON file (of
 All fields below belong to `DcdrRegistry`:
 
 - `sha256`
-	- Purpose: fingerprint of the Registry payload for audit/reproducibility.
-	- Behavior:
-		- if omitted in Runtime (self-hosted) registries, the runtime computes it
-		- if provided, the runtime may verify it
-	- Notes: runtime computes the hash over a stable clone that excludes signature fields.
+  - Purpose: fingerprint of the Registry payload for audit/reproducibility.
+  - Behavior:
+    - if omitted in Runtime (self-hosted) registries, the runtime computes it
+    - if provided, the runtime may verify it
+  - Notes: runtime computes the hash over a stable clone that excludes signature fields.
 
 - `generatedAt`
-	- Purpose: timestamp (ISO string) for when the Registry bundle was generated.
-	- Common source: Cloud.
+  - Purpose: timestamp (ISO string) for when the Registry bundle was generated.
+  - Common source: Cloud.
 
 - `signature` (optional)
-	- Purpose: cryptographic signature for the Registry bundle.
-	- Used for: verifying registries issued by Cloud (Cloud Pro flows).
+  - Purpose: cryptographic signature for the Registry bundle.
+  - Used for: verifying registries issued by Cloud (Cloud Pro flows).
 
 - `signatureKeyId` (optional)
-	- Purpose: key identifier/version to support signature rotation.
+  - Purpose: key identifier/version to support signature rotation.
 
 - `intents`
-	- Purpose: list of everything the runtime can execute.
-	- Type: `IntentContract[]`.
-	- Source type: [../src/intent.contract.ts](../src/intent.contract.ts#L98)
+  - Purpose: list of everything the runtime can execute.
+  - Type: `IntentContract[]`.
+  - Source type: [../src/intent.contract.ts](../src/intent.contract.ts#L98)
 
 - `credentials` (optional)
-	- Purpose: reusable auth material referenced by implementations.
-	- Type: `CredentialsContract[]`.
-	- Source type: [../src/credentials.contract.ts](../src/credentials.contract.ts#L8)
-	- Referenced by: `ImplementationContract.credentialRef`.
+  - Purpose: reusable auth material referenced by implementations.
+  - Type: `CredentialsContract[]`.
+  - Source type: [../src/credentials.contract.ts](../src/credentials.contract.ts#L8)
+  - Referenced by: `ImplementationContract.credentialRef`.
 
 ### Related contract types (source links)
 
@@ -73,6 +73,57 @@ Provider execution:
 - `ImplementationContract`: [../src/implementations.contract.ts](../src/implementations.contract.ts#L54)
 - `HttpRequestParams`: [../src/http.contract.ts](../src/http.contract.ts#L13)
 - `IntentProvider`: [../src/provider.contract.ts](../src/provider.contract.ts#L19)
+
+### Provider model catalog (pricing + customer curation)
+
+The contracts package includes a curated provider model catalog (pricing, metadata, and runtime support hints) via:
+
+- `ProviderModelDefinition` + `ProviderModelRegistry`: [../src/provider.contract.ts](../src/provider.contract.ts)
+
+Supported providers (runtime surface)
+
+- Hosted providers with curated pricing + model IDs: OpenAI, Anthropic, Gemini.
+- Local/internal provider IDs: OFFICE.
+- OpenAI-compatible provider is supported at runtime as an execution provider, but the curated model catalog may be empty (model IDs are typically deployment-specific).
+
+DCDR Managed layer (customer UI abstraction)
+
+- The managed layer groups public customer models into stable DCDR categories (BEST/SMART/FAST/ECONOMY/PRIVATE).
+- This is an abstraction above `provider + modelId`; it does not remove direct provider/model selection.
+- Category names and badges must not encode pricing; pricing is always read from the model pricing metadata.
+
+Customer-facing UI curation:
+
+- `ProviderModelDefinition.publicForCustomers` (boolean)
+  - Purpose: marks models that are eligible to be shown in **customer-facing UIs** (DCDR customer sessions).
+  - Default: **false** (fail-closed). If a model does not explicitly opt in, it must not appear in customer UIs.
+  - Notes: this flag does **not** change runtime execution behavior; it only affects listing/filtering.
+
+Managed categories (simple UI mode):
+
+- `DcdrPublicModelCategory` (enum)
+  - Purpose: product-level grouping for customer UIs (BEST/SMART/FAST/ECONOMY/PRIVATE).
+  - Notes: categories are product metadata; pricing still comes from `ProviderModelDefinition.pricing`.
+
+For models where `publicForCustomers=true`, the catalog requires additional public metadata (used by simple/advanced UI modes):
+
+- `publicName` — stable customer-facing family name that should not expose underlying provider/model IDs.
+- `badge` — small variant label shown next to `publicName` (e.g. provider name or a short hint like "Fast").
+- `primaryCategory` + `categories[]` — one primary group plus optional tags/badges.
+- `qualityTier`, `speedTier`, `costTier` — numeric 1..5, where 5 is best.
+- `recommendedUseCases[]` — non-empty list of suggested use cases.
+- `isRecommended` — model is generally recommended to customers.
+- `isGlobalDefault` — single global default when the user has not chosen any model/category.
+- `isCategoryDefault` — default inside its `primaryCategory` when a category is selected.
+
+Selection policy (guidance): keep the public set small and stable (target 3–5 models per provider max), chosen by “jobs-to-be-done”, not “everything available”:
+
+1. 1 flagship (highest quality, stable)
+2. 1 value (best quality/price)
+3. 1 fast/cheap (latency/cost optimized)
+4. Optional 1 specialized (e.g., long-context or reasoning) only when truly needed
+
+Prefer models with stable availability (not preview-only), published pricing, predictable costs, and strong adoption/quality-per-euro. Avoid deprecated/legacy SKUs in the public set.
 
 Runtime API shapes:
 
@@ -125,10 +176,10 @@ The prompt lives in `defaultPrompt` (and optionally `canaryPrompt`).
 Important fields:
 
 - `variablesInterpolationType` — how `{{vars}}` are expanded.
-	- Recommended: `MUSTACHE` → `{{name}}`
+  - Recommended: `MUSTACHE` → `{{name}}`
 - `messages[]` — the chat prompt.
-	- `system` sets behavior/constraints
-	- `user` is the actual user input template
+  - `system` sets behavior/constraints
+  - `user` is the actual user input template
 - `params` — runtime model parameters
 
 Common `params` you will use:
@@ -160,7 +211,7 @@ The simplest and most common policy is:
 
 Optional exploration (Cloud/Cloud Pro)
 
-- `executionPolicy.exploration` is an explicit opt-in mechanism to explore alternative candidates *after* deterministic ordering.
+- `executionPolicy.exploration` is an explicit opt-in mechanism to explore alternative candidates _after_ deterministic ordering.
 - V1 rule: exploration is not supported with `type: WEIGHTED`.
 
 Epsilon-greedy Top-K sampling

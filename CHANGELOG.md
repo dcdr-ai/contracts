@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260525.1] — 07:44UTC
+
+<!--
+sourceCommit: d250b28908d7886d29497655aa4f23f666ec3809
+queuedAtUtc: 
+previousMirroredBuild: 20260524.2 (2026-05-24)
+contractsSubmodule: 3099d7ab05f6..a4a4308992a9
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.8.2`.
+- <kbd>CONTRACTS</kbd> Added `ProviderModelDefinition.publicForCustomers` (fail-closed), managed category metadata (`DcdrPublicModelCategory`, tiers, use cases, `publicName`/`badge`, explicit recommendation/default flags), and listing helpers (`ProviderModelRegistry.listProviderModels(..., { onlyPublicForCustomers })`, `listPublicCustomerModels*`) to support curated customer-facing model lists.
+
 ## [20260524.2] — 16:47UTC
 
 <!--
