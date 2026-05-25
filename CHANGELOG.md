@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260525.2] — 16:32UTC
+
+<!--
+sourceCommit: 1f051222f4218c35477eede901e00d1978e5aaf4
+queuedAtUtc: 
+previousMirroredBuild: 20260525.1 (2026-05-25)
+contractsSubmodule: a4a4308992a9..437ed598dd7d
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.8.3`.
+- <kbd>CONTRACTS</kbd> Expanded managed public model curation to 3 models per category (added Gemini `gemini-3.1-pro-preview` as `BEST`, Gemini `gemini-3-flash-preview` as `FAST`, and OpenAI `gpt-5.4-nano` as `ECONOMY`).
+
 ## [20260525.1] — 07:44UTC
 
 <!--
