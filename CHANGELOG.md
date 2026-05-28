@@ -4,6 +4,23 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260528.1] — 14:24UTC
+
+<!--
+sourceCommit: 5b6039e7fbeef8986b92aec7d5b75c1061b814ab
+queuedAtUtc: 
+previousMirroredBuild: 20260525.3 (2026-05-25)
+contractsSubmodule: 437ed598dd7d..ddce1349b70e
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.0`.
+### Fixed
+- <kbd>RUNTIME</kbd> Control-plane registry sync now computes `sha256` using stable JSON ordering to match backend semantic hashing.
+- <kbd>RUNTIME</kbd> OpenAI Responses structured output now falls back to JSON-object + local validation when the provider rejects the generated schema (`invalid_json_schema`), avoiding hard 422 failures.
+- <kbd>CONTRACTS</kbd> Added execution error code `TOKEN_BUDGET_TOO_LOW` for reasoning models that return no visible output under small token budgets (mapped to HTTP 400).
+- <kbd>RUNTIME</kbd> Session intent-scope enforcement now supports `execute:*` and `execute:<INTENT>` (plus legacy intent-name scopes); forbidden responses include required scope hints.
+
 ## [20260525.3] — 17:05UTC
 
 <!--

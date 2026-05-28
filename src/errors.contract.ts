@@ -5,6 +5,7 @@
 export interface ExecutionError {
   code:
     | "BAD_REQUEST"
+    | "TOKEN_BUDGET_TOO_LOW"
     | "INVALID_INPUT"
     | "VALIDATION_ERROR"
     | "UNSUPPORTED_OPERATION"

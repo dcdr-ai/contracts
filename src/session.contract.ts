@@ -4,12 +4,25 @@
  * - aid: app id (e.g. scraperId)
  */
 export interface DcdrSessionPayload {
-  id: string;       // session id
-  aid: string;      // app/client id
-  cid?: string;     // customer id, for multi-tenant scenarios
-  iat: number;      // unix milliseconds
-  exp: number;      // unix milliseconds
-  scopes: string[]; // allowed intents / scopes
+  id: string; // session id
+  aid: string; // app/client id
+  cid?: string; // customer id, for multi-tenant scenarios
+  iat: number; // unix milliseconds
+  exp: number; // unix milliseconds
+  /**
+   * Allowed scopes for this session token.
+   *
+   * Notes
+   * - Scopes are treated as opaque strings by the token format; semantics are enforced by the runtime.
+   * - The runtime may require execution scopes for `/api/execution/*` endpoints.
+   *
+   * Common scope forms
+   * - `execute:*` to allow executing any intent
+   * - `execute:<INTENT>` to allow a specific intent
+   * - Legacy (backward compatible): include the intent name itself (e.g. `BANKING_INCIDENT_CLASSIFIER`).
+   * - `*` grants full access.
+   */
+  scopes: string[];
 }
 
 /**
@@ -17,7 +30,10 @@ export interface DcdrSessionPayload {
  * This avoids importing "crypto" in shared libs that may be bundled for web.
  */
 export interface HmacDeps {
-  createHmac: (alg: "sha256", key: string) => {
+  createHmac: (
+    alg: "sha256",
+    key: string,
+  ) => {
     update: (data: string) => any;
     digest: (encoding: "base64") => string;
   };
@@ -29,13 +45,20 @@ export interface HmacDeps {
  *   token = base64url(JSON(payload)) + "." + base64url(HMAC_SHA256(secret, payloadB64url))
  */
 export class DcdrSessionToken {
-  static sign(deps: HmacDeps, payload: DcdrSessionPayload, secret: string): string {
+  static sign(
+    deps: HmacDeps,
+    payload: DcdrSessionPayload,
+    secret: string,
+  ): string {
     this.assertValidPayload(payload);
 
     const payloadJson = JSON.stringify(payload);
     const payloadB64url = base64urlEncode(utf8ToBytes(payloadJson));
 
-    const sigB64 = deps.createHmac("sha256", secret).update(payloadB64url).digest("base64");
+    const sigB64 = deps
+      .createHmac("sha256", secret)
+      .update(payloadB64url)
+      .digest("base64");
     const sigB64url = base64ToBase64url(sigB64);
 
     return `${payloadB64url}.${sigB64url}`;
@@ -63,7 +86,10 @@ export class DcdrSessionToken {
     // Verify signature against any allowed secret (rotation)
     let ok = false;
     for (const secret of secretsArr) {
-      const expectedB64 = deps.createHmac("sha256", secret).update(payloadB64url).digest("base64");
+      const expectedB64 = deps
+        .createHmac("sha256", secret)
+        .update(payloadB64url)
+        .digest("base64");
       if (safeEqualBase64(deps, expectedB64, sigB64)) {
         ok = true;
         break;
@@ -73,7 +99,9 @@ export class DcdrSessionToken {
 
     // Decode payload
     const payloadJson = bytesToUtf8(base64urlDecodeToBytes(payloadB64url));
-    const payload = normalizePayloadTimes(JSON.parse(payloadJson) as DcdrSessionPayload);
+    const payload = normalizePayloadTimes(
+      JSON.parse(payloadJson) as DcdrSessionPayload,
+    );
 
     this.assertValidPayload(payload);
 
@@ -100,7 +128,9 @@ export class DcdrSessionToken {
     if (!payloadB64url) throw new Error("TOKEN_FORMAT_INVALID");
 
     const payloadJson = bytesToUtf8(base64urlDecodeToBytes(payloadB64url));
-    const payload = normalizePayloadTimes(JSON.parse(payloadJson) as DcdrSessionPayload);
+    const payload = normalizePayloadTimes(
+      JSON.parse(payloadJson) as DcdrSessionPayload,
+    );
 
     this.assertValidPayload(payload);
     return payload;
@@ -109,13 +139,20 @@ export class DcdrSessionToken {
   private static assertValidPayload(p: DcdrSessionPayload): void {
     if (!p || typeof p !== "object") throw new Error("PAYLOAD_INVALID");
 
-    if (!p.id || typeof p.id !== "string") throw new Error("PAYLOAD_ID_INVALID");
-    if (!p.aid || typeof p.aid !== "string") throw new Error("PAYLOAD_AID_INVALID");
+    if (!p.id || typeof p.id !== "string")
+      throw new Error("PAYLOAD_ID_INVALID");
+    if (!p.aid || typeof p.aid !== "string")
+      throw new Error("PAYLOAD_AID_INVALID");
 
-    if (typeof p.iat !== "number" || !Number.isFinite(p.iat)) throw new Error("PAYLOAD_IAT_INVALID");
-    if (typeof p.exp !== "number" || !Number.isFinite(p.exp)) throw new Error("PAYLOAD_EXP_INVALID");
+    if (typeof p.iat !== "number" || !Number.isFinite(p.iat))
+      throw new Error("PAYLOAD_IAT_INVALID");
+    if (typeof p.exp !== "number" || !Number.isFinite(p.exp))
+      throw new Error("PAYLOAD_EXP_INVALID");
 
-    if (!Array.isArray(p.scopes) || p.scopes.some((s) => typeof s !== "string" || !s)) {
+    if (
+      !Array.isArray(p.scopes) ||
+      p.scopes.some((s) => typeof s !== "string" || !s)
+    ) {
       throw new Error("PAYLOAD_SCOPES_INVALID");
     }
   }
@@ -220,7 +257,8 @@ function utf8ToBytes(s: string): Uint8Array {
 function bytesToUtf8(bytes: Uint8Array): string {
   // Prefer standard API first (works in modern Node and browsers)
   // eslint-disable-next-line no-undef
-  if (typeof TextDecoder !== "undefined") return new TextDecoder("utf-8").decode(bytes);
+  if (typeof TextDecoder !== "undefined")
+    return new TextDecoder("utf-8").decode(bytes);
 
   // Node fallback without referencing Buffer symbol directly
   const g: any = globalThis as any;
@@ -230,5 +268,3 @@ function bytesToUtf8(bytes: Uint8Array): string {
 
   throw new Error("UTF8_DECODER_UNAVAILABLE");
 }
-
-

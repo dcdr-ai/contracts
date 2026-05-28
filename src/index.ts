@@ -16,3 +16,4 @@ export * from "./service-tokens.contract";
 export * from "./capabilities.contract";
 export * from "./subscription.contract";
 export * from "./runtime.client";
+export * from "./utils.contract";
