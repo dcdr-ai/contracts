@@ -2,7 +2,7 @@
 
 > ⚙️ Intent-based AI runtime + control plane for production systems
 
-[![version](https://img.shields.io/badge/version-1.9.6-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
+[![version](https://img.shields.io/npm/v/@dcdr/contracts?label=version&color=blue)](https://www.npmjs.com/package/@dcdr/contracts)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 
@@ -150,7 +150,13 @@ Docker image:
 Copy the example file and edit it:
 
 ```bash
-cp ./src/contracts/examples/registry.hello_world.json ./registry.json
+cp ./examples/registry.hello_world.json ./registry.json
+```
+
+Or start from the minimal sample registry at the repo root:
+
+```bash
+cp ./sample_registry.json ./registry.json
 ```
 
 Then replace:
@@ -394,6 +400,7 @@ See full feature matrix: [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRI
 - [docs/CONTRACTS.md](docs/CONTRACTS.md) — How Registries, Intents, implementations, policies, and capabilities fit together.
 - [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md) — Runtime (self-hosted) vs Cloud vs Cloud Pro (what runs where, who owns what).
 - [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRIX.md) — One-page feature/tier reference.
+- [docs/SUPPORTED_MODELS.md](docs/SUPPORTED_MODELS.md) — Provider model IDs currently marked as runtime-supported.
 
 ### Development
 
@@ -408,4 +415,4 @@ See full feature matrix: [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRI
 - [docs/OPENAPI_SDKS.md](docs/OPENAPI_SDKS.md) — Generate Python/C#/Java SDKs from `openapi.runtime.json`.
 - [docs/PROMETHEUS_METRICS.md](docs/PROMETHEUS_METRICS.md) — Metrics endpoint + the Prometheus gauges/counters we expose.
 - [docs/EXAMPLES.md](docs/EXAMPLES.md) — End-to-end examples and small recipes.
-- [CHANGELOG.md](CHANGELOG.md) — Release notes (synced from the runtime repo changelog; entries start with <kbd>RUNTIME</kbd> / <kbd>CONTRACTS</kbd>).
+- [CHANGELOG.md](CHANGELOG.md) — Release notes (synced from the runtime repo changelog; entries start with `RUNTIME` / `CONTRACTS`).

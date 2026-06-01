@@ -4,6 +4,25 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260601.13] — 22:06UTC
+
+<!--
+sourceCommit: 441a1dddea8d7e2f080238cb7eecd178ce055aa2
+queuedAtUtc: 
+previousMirroredBuild: 20260601.11 (2026-06-01)
+contractsSubmodule: 8376d6f80e62..48c23603adbb
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Added `sample_registry.json` to provide a minimal local `--registry` starting point (inline credentials placeholder).
+- <kbd>CONTRACTS</kbd> Added `docs/SUPPORTED_MODELS.md` (CHAT-only) generated from `ProviderModelRegistry` (excludes DCDR virtual aliases).
+### Changed
+- <kbd>RUNTIME</kbd> Runtime now listens on port `8000` by default (was `5000`).
+- <kbd>CONTRACTS</kbd> Contracts README version badge now tracks npm (`@dcdr/contracts`) instead of a hardcoded version.
+### Fixed
+- <kbd>RUNTIME</kbd> Docker image now forwards runtime CLI flags (e.g. `--demo`, `--registry`) instead of treating them as Node options.
+- <kbd>CONTRACTS</kbd> Fixed docs example links/paths for `registry.hello_world*.json` so copy/paste works in the GitHub mirror.
+
 ## [20260601.11] — 18:32UTC
 
 <!--

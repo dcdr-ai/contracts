@@ -1,9 +1,29 @@
 {
   "name": "@dcdr/contracts",
-  "version": "1.9.6",
-  "description": "Interfaces for Dcdr Platform",
+  "version": "1.9.7",
+  "homepage": "https://dcdr.ai",
+  "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dcdr-ai/contracts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dcdr-ai/contracts/issues"
+  },
+  "keywords": [
+    "dcdr",
+    "ai",
+    "llm",
+    "runtime",
+    "intent",
+    "typescript",
+    "contracts",
+    "registry",
+    "prompt-management",
+    "model-routing"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

@@ -30,98 +30,127 @@ Roadmap notes:
 
 ---
 
-## 🚀 Deployment & Operations
+## 🚀 Deployment
 
-| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
-|---|---:|---:|---:|
-| Self-hosted runtime (Docker) | ✅ | ❌ | ❌ |
-| Managed runtime | ❌ | ✅ | ✅ |
-| Managed configuration (dcdr.ai) | ❌ | ✅ | ✅ |
-| Tenant admin UI | ❌ | ✅ | ✅ |
-| Billing / subscriptions | ❌ | ✅ | ✅ |
-
----
-
-## ⚙️ Runtime execution
-
-| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
-|---|---:|---:|---:|
-| Intent execution | ✅ | ✅ | ✅ |
-| Streaming execution (SSE) | ✅ | ✅ | ✅ |
-| Retry policy (retries, backoff, fallback) | ✅ | ✅ | ✅ |
-| Structured output enforcement | ✅ | ✅ | ✅ |
-| Input/output schema validation | ✅ | ✅ | ✅ |
-| Weighted routing | Basic/manual | ✅ | ✅ |
-| Execution windows (per implementation) | ❌ | ✅ | ✅ |
-| Response caching (cost saver) | ❌ | ✅ (short TTL) | ✅ (configurable) |
-| Runtime Registry source | JSON/manual | ✅ (managed) | ✅ (managed) |
-| Exploration policy (epsilon-greedy / top-K sampling) | ❌ | ✅ | ✅ |
-| Advanced routing (quality/cost aware) | ❌ | 🚧 (limited) | 🚧 |
-| Policy-based execution (quality/latency/cost) + chained fallbacks | ❌ | ❌ | 🚧 |
+| Feature                         | Runtime (self-hosted) | Cloud | Cloud Pro |
+| ------------------------------- | --------------------: | ----: | --------: |
+| Self-hosted runtime             |                    ✅ |    ✅ |        ✅ |
+| Managed cloud control plane     |                    ❌ |    ✅ |        ✅ |
+| Tenant admin UI                 |                    ❌ |    ✅ |        ✅ |
+| Billing portal (Stripe)         |                    ❌ |    ✅ |        ✅ |
+| Managed configuration (dcdr.ai) |                    ❌ |    ✅ |        ✅ |
 
 ---
 
-## 🧠 Intents & Prompting
+## ⚙️ Runtime
 
-| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
-|---|---:|---:|---:|
-| Intent Registry | JSON/manual | ✅ | ✅ |
-| Intent admin UI | ❌ | ✅ | ✅ |
-| Prompt templates | JSON/manual | ✅ | ✅ |
-| Prompt parameters control | JSON/manual | ✅ | ✅ |
-| Prompt versioning | Manual | ✅ | ✅ |
-| Canary prompts / controlled rollouts | ❌ | ❌ | ✅ |
-| Templated variables (e.g. `{{name}}`) | ✅ | ✅ | ✅ |
-| Typed variables + validation UI | ❌ | ✅ | ✅ |
-| Prompt comparison tools | ❌ | ❌ | 🚧 |
+| Feature                                   | Runtime (self-hosted) |          Cloud |             Cloud Pro |
+| ----------------------------------------- | --------------------: | -------------: | --------------------: |
+| Intent execution                          |                    ✅ |             ✅ |                    ✅ |
+| Streaming execution (SSE)                 |                    ✅ |             ✅ |                    ✅ |
+| Structured output enforcement             |                    ✅ |             ✅ |                    ✅ |
+| Input schema validation                   |                    ✅ |             ✅ |                    ✅ |
+| Output schema validation                  |                    ✅ |             ✅ |                    ✅ |
+| Retry policy                              |                    ✅ |             ✅ |                    ✅ |
+| Weighted routing                          |          Basic/manual |             ✅ |                    ✅ |
+| Intelligent routing (quality/cost-aware)  |                    ❌ |             ❌ |                    ✅ |
+| Execution windows by base model           |                    ❌ |             ✅ |                    ✅ |
+| Response caching (cost saver)             |                    ❌ | ✅ (short TTL) | ✅ (configurable TTL) |
+| OpenAI-compatible chat execution          |                    ✅ |             ✅ |                    ✅ |
+| Fallback execution                        |                 Basic |             ✅ |                    ✅ |
+| Advanced execution & exploration policies |                    ❌ |             ❌ |                    ✅ |
+| Runtime registry sync                     |           JSON/manual |             ✅ |                    ✅ |
+| Policy-based execution                    |                    ❌ |             ❌ |                    ✅ |
+| Chained provider fallbacks                |                    ❌ |             ❌ |                    ✅ |
+| JSON registry validator                   |                    ✅ |             ✅ |                    ✅ |
 
 ---
 
-## 🔌 Providers & Implementations
+## 🧠 Intents
 
-| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
-|---|---:|---:|---:|
-| OpenAI-compatible chat providers (OpenAI, vLLM) | ✅ | ✅ | ✅ |
-| Additional intent types (embeddings, vision, multimodal) | 🚧 | 🚧 | 🚧 |
-| Implementation Registry UI | ❌ | ✅ | ✅ |
-| Shared provider credentials | ❌ | ✅ | ✅ |
-| Tracking probability (I/O sampling) | ❌ | ✅ | ✅ |
-| Implementation health status | ❌ | ❌ | 🚧 |
+| Feature                | Runtime (self-hosted) |        Cloud |        Cloud Pro |
+| ---------------------- | --------------------: | -----------: | ---------------: |
+| Intent registry        |           JSON/manual |           ✅ |               ✅ |
+| Intent admin UI        |                    ❌ |           ✅ |               ✅ |
+| Input/output editor    |                    ❌ |           ✅ |               ✅ |
+| Intent creator wizard  |                    ❌ | ✅ (Limited) | ✅ (AI-assisted) |
+| Intent-level reporting |                    ❌ |        Basic |               ✅ |
+
+---
+
+## ✍️ Prompting
+
+| Feature                                             | Runtime (self-hosted) | Cloud | Cloud Pro |
+| --------------------------------------------------- | --------------------: | ----: | --------: |
+| Prompt templates                                    |           JSON/manual |    ✅ |        ✅ |
+| Prompt parameters control (temperature, max_tokens) |           JSON/manual |    ✅ |        ✅ |
+| Auto-tune params + retry policy (diff/confirm)      |                    ❌ |    ❌ |        ✅ |
+| Prompt versioning                                   |                Manual |    ✅ |        ✅ |
+| Prompt canary                                       |                    ❌ |    ❌ |        ✅ |
+| System + user prompt separation                     |                    ✅ |    ✅ |        ✅ |
+| Templated variables                                 |                    ✅ |    ✅ |        ✅ |
+| Typed variables + validation UI                     |                    ❌ |    ✅ |        ✅ |
+| Prompt comparison                                   |                    ❌ |    ❌ |        ✅ |
+| Prompt parameter presets                            |                    🚧 |    🚧 |        🚧 |
+
+---
+
+## 🔌 Providers
+
+| Feature                          | Runtime (self-hosted) | Cloud | Cloud Pro |
+| -------------------------------- | --------------------: | ----: | --------: |
+| OpenAI-compatible chat providers |                    ✅ |    ✅ |        ✅ |
+| Anthropic (chat)                 |                    ✅ |    ✅ |        ✅ |
+| Gemini (chat)                    |                    ✅ |    ✅ |        ✅ |
+| Vision models                    |                    🚧 |    🚧 |        🚧 |
+| Embedding models                 |                    🚧 |    🚧 |        🚧 |
+
+---
+
+## 🧩 Implementations
+
+| Feature                             | Runtime (self-hosted) | Cloud | Cloud Pro |
+| ----------------------------------- | --------------------: | ----: | --------: |
+| Implementation registry UI          |                    ❌ |    ✅ |        ✅ |
+| Per-intent implementations          |           JSON/manual |    ✅ |        ✅ |
+| Shared provider credentials         |                    ❌ |    ✅ |        ✅ |
+| Tracking probability (I/O sampling) |                    ❌ |    ✅ |        ✅ |
+| Health status per implementation    |                    ❌ |    ❌ |        🚧 |
 
 ---
 
 ## 🔐 Credentials
 
-| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
-|---|---:|---:|---:|
-| Encrypted credentials store | ❌ | ✅ | ✅ |
-| Reusable credentials | ❌ | ✅ | ✅ |
-| Header/query templating/interpolation | ❌ | ✅ | ✅ |
+| Feature                               | Runtime (self-hosted) | Cloud | Cloud Pro |
+| ------------------------------------- | --------------------: | ----: | --------: |
+| Encrypted credentials store           |                    ❌ |    ✅ |        ✅ |
+| Reusable credentials                  |                    ❌ |    ✅ |        ✅ |
+| Header/query templating/interpolation |                    ❌ |    ✅ |        ✅ |
 
 ---
 
 ## 🔎 Observability
 
-| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
-|---|---:|---:|---:|
-| Execution reports (attempts, latency, usage) | ✅ | ✅ | ✅ |
-| Centralized logs & search | ❌ | ✅ | ✅ |
-| Full request/response traces | Self-managed | ✅ | ✅ |
-| Export logs | ✅ (file) | ✅ | ✅ |
-| Saved filters/views | ❌ | ✅ | ✅ |
+| Feature                                      | Runtime (self-hosted) | Cloud | Cloud Pro |
+| -------------------------------------------- | --------------------: | ----: | --------: |
+| Execution reports (attempts, latency, usage) |                    ✅ |    ✅ |        ✅ |
+| Centralized logs & search                    |                    ❌ |    ✅ |        ✅ |
+| Full request/response traces                 |          Self-managed |    ✅ |        ✅ |
+| Export logs                                  |             ✅ (file) |    ✅ |        ✅ |
+| Saved filters/views                          |                    ❌ |    ✅ |        ✅ |
 
 ---
 
 ## ✅ Quality workflows
 
-| Feature | Runtime (self-hosted) | Cloud | Cloud Pro |
-|---|---:|---:|---:|
-| Accuracy reports | ❌ | ✅ | ✅ |
-| Drift detection & alerts | ❌ | ✅ | ✅ |
-| Human review (QC) | ❌ | ❌ | ✅ |
-| Annotations / taxonomy / scoring | ❌ | ❌ | ✅ |
-| Review queue | ❌ | ❌ | 🚧 |
-| Training-ready exports | ❌ | ❌ | ✅ |
+| Feature                          | Runtime (self-hosted) | Cloud | Cloud Pro |
+| -------------------------------- | --------------------: | ----: | --------: |
+| Accuracy reports                 |                    ❌ |    ✅ |        ✅ |
+| Drift detection & alerts         |                    ❌ |    ✅ |        ✅ |
+| Human review (QC)                |                    ❌ |    ❌ |        ✅ |
+| Annotations / taxonomy / scoring |                    ❌ |    ❌ |        ✅ |
+| Review queue                     |                    ❌ |    ❌ |        🚧 |
+| Training-ready exports           |                    ❌ |    ❌ |        ✅ |
 
 ---
 
