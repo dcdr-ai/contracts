@@ -2,7 +2,7 @@
 
 > ⚙️ Intent-based AI runtime + control plane for production systems
 
-[![version](https://img.shields.io/badge/version-1.9.0-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
+[![version](https://img.shields.io/badge/version-1.9.5-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 
@@ -19,7 +19,7 @@ DCDR moves this into a versioned, configurable layer so you can:
 - control routing and fallback centrally
 - use execution logs + QC workflows to review and correct outputs, enabling fast iteration on prompts and models based on real traffic
 
-Learn more: https://dcdr.ai
+Learn more: <https://dcdr.ai>
 
 ## 💣 What problem does this solve?
 
@@ -52,21 +52,21 @@ On top of that, every failure can be reviewed, corrected, and turned into traini
 
 ## ⚡ When should I use DCDR?
 
-### Use DCDR if:
+### Use DCDR if
 
 - You need stable AI interfaces (intents)
 - You want to decouple prompts from code
 - You need retries, fallback, routing
 - You need structured outputs (JSON enforcement)
 
-### Do NOT use DCDR if:
+### Do NOT use DCDR if
 
 - You only need simple one-off OpenAI calls
 - You don't need control over execution or quality
 
 DCDR does not replace model providers (OpenAI, local models, etc.). It orchestrates how they are used.
 
-### Fastest way to try it:
+### Fastest way to try it
 
 - Run Runtime (self-hosted) with Docker
 - Call a built-in demo intent (no API key required)
@@ -94,7 +94,7 @@ Run a working intent in seconds, no API key required:
 docker run --rm -p 8000:8000 dcdr.ai/dcdr-runtime:latest --demo
 ```
 
-2. Call a built-in demo Intent:
+1. Call a built-in demo Intent:
 
 ```bash
 curl -sS -H 'Content-Type: application/json' \
@@ -171,10 +171,10 @@ This example includes:
 ```powershell
 docker pull dcdr.ai/dcdr-runtime:latest
 docker run --rm -p 8000:8000 `
-	-e API_TOKEN='dev-token' `
-	-e SESSION_BYPASS_TOKEN='dev-session-bypass' `
-	-v "${PWD}/registry.json:/data/registry.json:ro" `
-	dcdr.ai/dcdr-runtime:latest --registry /data/registry.json
+ -e API_TOKEN='dev-token' `
+ -e SESSION_BYPASS_TOKEN='dev-session-bypass' `
+ -v "${PWD}/registry.json:/data/registry.json:ro" `
+ dcdr.ai/dcdr-runtime:latest --registry /data/registry.json
 ```
 
 #### Linux / macOS
@@ -182,10 +182,10 @@ docker run --rm -p 8000:8000 `
 ```bash
 docker pull dcdr.ai/dcdr-runtime:latest
 docker run --rm -p 8000:8000 \
-	-e API_TOKEN='dev-token' \
-	-e SESSION_BYPASS_TOKEN='dev-session-bypass' \
-	-v "$PWD/registry.json:/data/registry.json:ro" \
-	dcdr.ai/dcdr-runtime:latest --registry /data/registry.json
+ -e API_TOKEN='dev-token' \
+ -e SESSION_BYPASS_TOKEN='dev-session-bypass' \
+ -v "$PWD/registry.json:/data/registry.json:ro" \
+ dcdr.ai/dcdr-runtime:latest --registry /data/registry.json
 ```
 
 ### 3) Call the runtime (curl)
@@ -200,11 +200,11 @@ Execute the `HELLO_WORLD` intent:
 
 ```bash
 curl -sS \
-	-H 'Content-Type: application/json' \
-	-H 'token: dev-token' \
-	-H 'x-session-bypass: dev-session-bypass' \
-	-X POST http://localhost:8000/api/execution/run/HELLO_WORLD \
-	-d '{"vars":{"name":"Ada"}}'
+ -H 'Content-Type: application/json' \
+ -H 'token: dev-token' \
+ -H 'x-session-bypass: dev-session-bypass' \
+ -X POST http://localhost:8000/api/execution/run/HELLO_WORLD \
+ -d '{"vars":{"name":"Ada"}}'
 ```
 
 ### 4) Swagger / OpenAPI
@@ -367,10 +367,10 @@ Use this pattern when you need guaranteed machine-readable outputs.
 
 ```bash
 curl -sS \
-	-H 'Content-Type: application/json' \
-	-H 'token: dev-token' \
-	-X POST http://localhost:8000/api/execution/dry-run/HELLO_WORLD \
-	-d '{"vars":{"name":"Ada"}}'
+ -H 'Content-Type: application/json' \
+ -H 'token: dev-token' \
+ -X POST http://localhost:8000/api/execution/dry-run/HELLO_WORLD \
+ -d '{"vars":{"name":"Ada"}}'
 ```
 
 Shows rendered messages and resolved execution configuration, without calling an external provider.
@@ -398,6 +398,7 @@ See full feature matrix: [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRI
 ### Development
 
 - [docs/CLIENT.md](docs/CLIENT.md) — Full `DcdrRuntimeClient` reference (methods, auth options, errors).
+- [docs/EXECUTION_ERROR_CODES.md](docs/EXECUTION_ERROR_CODES.md) — Stable runtime execution error codes and their meanings.
 - [docs/CLI.md](docs/CLI.md) — CLI usage patterns (healthcheck, run, demo, dry-run).
 - [docs/STREAMING_EXECUTION_SSE.md](docs/STREAMING_EXECUTION_SSE.md) — Streaming intent execution over SSE (`/api/execution/stream/:intent`).
 - [docs/RUNTIME_ADVANCED_CONFIG.md](docs/RUNTIME_ADVANCED_CONFIG.md) — Runtime (self-hosted) env vars (SSL/HTTPS, networking, auth, logs, metrics).

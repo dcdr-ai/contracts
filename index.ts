@@ -15,3 +15,4 @@ export * from "./src/subscription.contract";
 export * from "./src/entitlements.contract";
 export * from "./src/runtime.client";
 export * from "./src/utils.contract";
+export * from "./src/prompt-variable-schema.contract";

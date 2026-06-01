@@ -374,6 +374,16 @@ export interface ProviderModelDefinition {
 
   /** Default model within its primaryCategory when a category is chosen but no specific model is selected. */
   isCategoryDefault?: boolean;
+
+  /**
+   * When true, this model has been verified (via E2E) to return token usage (`promptTokens`/`completionTokens`/`totalTokens`)
+   * in the runtime execution report.
+   *
+   * Notes
+   * - This is a billing invariant: public customer models must have token usage tracking.
+   * - Missing/undefined is treated as false (fail-closed).
+   */
+  tokenUsageCovered?: boolean;
   pricing?: ProviderModelPricing;
   runtimeSupport?: ProviderModelRuntimeSupportInfo;
   parameterSupport?: ProviderModelParameterSupportInfo;
@@ -390,6 +400,7 @@ export interface ProviderPublicCustomerModelDefinition extends ProviderModelDefi
   publicForCustomers: true;
   publicName: string;
   badge?: string;
+  tokenUsageCovered: boolean;
   primaryCategory: DcdrPublicModelCategory;
   categories: DcdrPublicModelCategory[];
   qualityTier: number;
@@ -413,6 +424,7 @@ interface ProviderModelDefinitionInput {
   publicForCustomers?: boolean;
   publicName?: string;
   badge?: string;
+  tokenUsageCovered?: boolean;
   primaryCategory?: DcdrPublicModelCategory;
   categories?: DcdrPublicModelCategory[];
   qualityTier?: number;
@@ -642,6 +654,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gpt-5.5",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Best",
       badge: "OpenAI",
       primaryCategory: DcdrPublicModelCategory.BEST,
@@ -730,6 +743,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gpt-5.4",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Smart",
       badge: "Recommended",
       primaryCategory: DcdrPublicModelCategory.SMART,
@@ -779,6 +793,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gpt-5.4-mini",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Fast",
       badge: "OpenAI",
       primaryCategory: DcdrPublicModelCategory.FAST,
@@ -822,6 +837,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gpt-5.4-nano",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Economy",
       badge: "OpenAI",
       primaryCategory: DcdrPublicModelCategory.ECONOMY,
@@ -2214,6 +2230,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gemini-2.5-flash",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Economy",
       badge: "Fast",
       primaryCategory: DcdrPublicModelCategory.ECONOMY,
@@ -2248,6 +2265,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gemini-3.5-flash",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Smart",
       badge: "Fast",
       primaryCategory: DcdrPublicModelCategory.SMART,
@@ -2304,6 +2322,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gemini-3.1-pro-preview",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Best",
       badge: "Gemini",
       primaryCategory: DcdrPublicModelCategory.BEST,
@@ -2494,6 +2513,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gemini-3-flash-preview",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Fast",
       badge: "Gemini",
       primaryCategory: DcdrPublicModelCategory.FAST,
@@ -2572,6 +2592,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "gemini-2.5-flash-lite",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Economy",
       badge: "Lowest cost",
       primaryCategory: DcdrPublicModelCategory.ECONOMY,
@@ -2947,6 +2968,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "claude-opus-4-7",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Best",
       badge: "Anthropic",
       primaryCategory: DcdrPublicModelCategory.BEST,
@@ -3001,6 +3023,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "claude-sonnet-4-6",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Smart",
       badge: "Anthropic",
       primaryCategory: DcdrPublicModelCategory.SMART,
@@ -3037,6 +3060,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "claude-haiku-4-5",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Fast",
       badge: "Anthropic",
       primaryCategory: DcdrPublicModelCategory.FAST,
@@ -3089,6 +3113,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       id: "Qwen3-4B-Instruct-2507",
       types: [IntentType.CHAT],
       publicForCustomers: true,
+      tokenUsageCovered: true,
       publicName: "DCDR Private",
       badge: "Local",
       primaryCategory: DcdrPublicModelCategory.PRIVATE,
@@ -3128,6 +3153,112 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
   [IntentProvider.HTTP_TOOL]: [],
   [IntentProvider.RULES]: [],
 };
+
+/**
+ * Token usage coverage overrides derived from provider E2E curation runs.
+ *
+ * Notes
+ * - This is intended to be filled iteratively (in batches) as we validate token usage reporting
+ *   for all `runtimeSupport.status=SUPPORTED` chat models.
+ * - These overrides only apply when a model definition omits `tokenUsageCovered`.
+ *   (Public customer models still require `tokenUsageCovered=true` on the definition itself.)
+ */
+const TOKEN_USAGE_COVERAGE_BY_PROVIDER_AND_ID: Partial<
+  Record<IntentProvider, Record<string, boolean>>
+> = {
+  [IntentProvider.OPEN_AI]: {
+    "gpt-5.5-2026-04-23": true,
+    "gpt-5.5-pro": true,
+    "gpt-5.5-pro-2026-04-23": true,
+    "gpt-5.4-2026-03-05": true,
+    "gpt-5.4-mini-2026-03-17": true,
+    "gpt-5.4-nano-2026-03-17": true,
+    "gpt-5.4-pro": true,
+    "gpt-5.4-pro-2026-03-05": true,
+    "gpt-5.3-chat-latest": true,
+    "gpt-5.3-codex": true,
+    "gpt-5.2": true,
+    "gpt-5.2-2025-12-11": true,
+    "gpt-5.2-chat-latest": true,
+    "gpt-5.2-codex": true,
+    "gpt-5.2-pro": true,
+    "gpt-5.2-pro-2025-12-11": true,
+    "gpt-5.1": true,
+    "gpt-5.1-2025-11-13": true,
+    "gpt-5.1-chat-latest": true,
+    "gpt-5.1-codex": true,
+    "gpt-5.1-codex-max": true,
+    "gpt-5.1-codex-mini": true,
+    "gpt-5": true,
+    "gpt-5-2025-08-07": true,
+    "gpt-5-chat-latest": true,
+    "gpt-5-codex": true,
+    "gpt-5-mini": true,
+    "gpt-5-mini-2025-08-07": true,
+    "gpt-5-nano": true,
+    "gpt-5-nano-2025-08-07": true,
+    "gpt-5-pro": true,
+    "gpt-5-pro-2025-10-06": true,
+    "gpt-4.1": true,
+    "gpt-4.1-2025-04-14": true,
+    "gpt-4.1-mini": true,
+    "gpt-4.1-mini-2025-04-14": true,
+    "gpt-4.1-nano": true,
+    "gpt-4.1-nano-2025-04-14": true,
+    "gpt-4o": true,
+    "gpt-4o-2024-08-06": true,
+    "gpt-4o-2024-11-20": true,
+    "gpt-4o-mini": true,
+    "gpt-4o-mini-2024-07-18": true,
+    "gpt-4o-2024-05-13": true,
+    "gpt-4-turbo": true,
+    "gpt-4-turbo-2024-04-09": true,
+    "gpt-4": true,
+    "gpt-4-0613": true,
+    "gpt-3.5-turbo": true,
+    "gpt-3.5-turbo-0125": true,
+    "gpt-3.5-turbo-1106": true,
+    "gpt-3.5-turbo-16k": true,
+    "o4-mini": true,
+    "o4-mini-2025-04-16": true,
+    "o3-pro": true,
+    "o3-pro-2025-06-10": true,
+    o3: true,
+    "o3-2025-04-16": true,
+    "o3-mini": true,
+    "o3-mini-2025-01-31": true,
+    "o1-pro": true,
+    "o1-pro-2025-03-19": true,
+    o1: true,
+    "o1-2024-12-17": true,
+  },
+  [IntentProvider.GEMINI]: {
+    "gemini-3.1-pro-preview-customtools": true,
+    "gemini-3.1-flash-lite-preview": true,
+    "gemini-3.1-flash-lite": true,
+    "gemini-3.1-flash-image-preview": true,
+    "gemini-3-pro-preview": false,
+    "gemini-2.5-flash-image": true,
+    "gemini-flash-latest": true,
+    "gemini-flash-lite-latest": true,
+    "gemini-pro-latest": true,
+  },
+  [IntentProvider.ANTHROPIC]: {
+    "claude-opus-4-6": true,
+    "claude-opus-4-5-20251101": true,
+    "claude-opus-4-1-20250805": true,
+    "claude-sonnet-4-5-20250929": true,
+    "claude-haiku-4-5-20251001": true,
+  },
+  [IntentProvider.OFFICE]: {},
+};
+
+function getTokenUsageCoveredOverride(
+  provider: IntentProvider,
+  modelId: string,
+): boolean | undefined {
+  return TOKEN_USAGE_COVERAGE_BY_PROVIDER_AND_ID[provider]?.[modelId];
+}
 
 /** Normalizes catalog entries so optional flags become required (fail-closed). */
 function normalizeProviderModelDefinitions(
@@ -3213,12 +3344,23 @@ function normalizeProviderModelDefinitions(
       }
       ids.add(def.id);
 
+      const tokenUsageCoveredOverride = getTokenUsageCoveredOverride(
+        provider,
+        def.id,
+      );
+
       const normalized: ProviderModelDefinition = {
         ...def,
         publicForCustomers: def.publicForCustomers === true,
+        tokenUsageCovered: def.tokenUsageCovered ?? tokenUsageCoveredOverride,
       };
 
       if (normalized.publicForCustomers) {
+        if (normalized.tokenUsageCovered !== true) {
+          throw new Error(
+            `Provider model catalog: ${provider}/${normalized.id} tokenUsageCovered=true is required for publicForCustomers models.`,
+          );
+        }
         if (!normalized.publicName?.trim()) {
           throw new Error(
             `Provider model catalog: ${provider}/${normalized.id} publicName is required for publicForCustomers models.`,

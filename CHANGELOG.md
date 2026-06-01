@@ -4,6 +4,33 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260601.1] — 09:44UTC
+
+<!--
+sourceCommit: 8d87045540db30f4437e2aa1ea944c4a98e844db
+queuedAtUtc: 
+previousMirroredBuild: 20260528.1 (2026-05-28)
+contractsSubmodule: ddce1349b70e..7256316914ac
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Added Prometheus gauges to compare backend customers registry rollups vs internal registry loaded in memory (gap + freshness + key totals).
+- <kbd>RUNTIME</kbd> Added `dcdr validate-registry <path>` CLI command to validate local registry files and report schema issues.
+- <kbd>CONTRACTS</kbd> Added `ProviderModelDefinition.tokenUsageCovered` to track which models have verified token usage reporting (billing invariant).
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.1`.
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.2`.
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.3`.
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.4` (test bump).
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.5`.
+- <kbd>CONTRACTS</kbd> Exported `ExecutionErrorCode` (and `isExecutionErrorCode`) and migrated runtime code to use the enum instead of hardcoded error-code string literals.
+- <kbd>CONTRACTS</kbd> Made `ExecutionError.code` strictly typed as `ExecutionErrorCode` (no string literals).
+### Fixed
+- <kbd>RUNTIME</kbd> Structured output schema builder now treats `PromptVariable.type/itemsType` case-insensitively (prevents accidental `anyOf` schemas).
+- <kbd>RUNTIME</kbd> Runtime `--registry` startup now validates intent input/output schemas and fails with an actionable issues report when invalid.
+- <kbd>RUNTIME</kbd> OpenAI Responses API executions now always propagate token usage (including on parse/schema failures when usage is available).
+- <kbd>RUNTIME</kbd> Gemini executions now preserve token usage on parse/schema failures when usage metadata is available.
+
 ## [20260528.1] — 14:24UTC
 
 <!--

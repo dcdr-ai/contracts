@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "1.9.0",
+  "version": "1.9.5",
   "description": "Interfaces for Dcdr Platform",
   "private": false,
   "license": "Apache-2.0",
@@ -35,6 +35,8 @@
     "./credentials.contract": "./dist/credentials.contract.js",
     "./subscription.contract": "./dist/subscription.contract.js",
     "./utils.contract": "./dist/utils.contract.js",
+    "./prompt-variable-schema.contract": "./dist/prompt-variable-schema.contract.js",
+    "./registry.stats.contract": "./dist/registry.stats.contract.js",
     "./http.contract": "./dist/http.contract.js",
     "./entitlements.contract": "./dist/entitlements.contract.js",
     "./errors.contract": "./dist/errors.contract.js",

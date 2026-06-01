@@ -1,6 +1,10 @@
 import * as contracts from "../src/index";
 
-import { createExecutionError } from "../src/errors.contract";
+import {
+  createExecutionError,
+  ExecutionErrorCode,
+  isExecutionErrorCode,
+} from "../src/errors.contract";
 import { ExecutionPolicyType } from "../src/policies.contract";
 import { PromptVariable, PromptVariableType } from "../src/prompts.contract";
 import { IntentProvider } from "../src/provider.contract";
@@ -14,6 +18,7 @@ describe("@dcdr/contracts exports", () => {
     expect(ExecutionPolicyType.WEIGHTED).toBe("WEIGHTED");
     expect(IntentProvider.OPEN_AI).toBe("OPEN_AI");
     expect(CapabilityKey.AI_PROMPTS_CANARY).toBe("AI_PROMPTS_CANARY");
+    expect(ExecutionErrorCode.BAD_REQUEST).toBe("BAD_REQUEST");
 
     // Classes exist at runtime
     const v = new PromptVariable(PromptVariableType.STRING, true, "name");
@@ -21,9 +26,14 @@ describe("@dcdr/contracts exports", () => {
     expect(v.required).toBe(true);
 
     // Factory functions exist at runtime
-    const err = createExecutionError("BAD_REQUEST", "missing");
-    expect(err.code).toBe("BAD_REQUEST");
+    const err = createExecutionError(ExecutionErrorCode.BAD_REQUEST, "missing");
+    expect(err.code).toBe(ExecutionErrorCode.BAD_REQUEST);
     expect(err.message).toBe("missing");
+
+    // Guards exist at runtime
+    expect(isExecutionErrorCode(ExecutionErrorCode.BAD_REQUEST)).toBe(true);
+    const unknown = `UNKNOWN_${ExecutionErrorCode.BAD_REQUEST}`;
+    expect(isExecutionErrorCode(unknown)).toBe(false);
   });
 
   it("keeps IntentProvider stable and non-empty", () => {

@@ -29,7 +29,6 @@ Quick navigation:
   - Optional token gate: if `DCDR_SYSTEM_METRICS_TOKEN` is set, callers must provide `?token=...` matching that value.
   - The TypeScript client method `DcdrRuntimeClient.metrics()` calls this endpoint and returns the raw text.
 
-
 ## 📊 Observability (Prometheus + Grafana example)
 
 DCDR Runtime exposes Prometheus metrics out of the box, allowing you to monitor:
@@ -56,7 +55,7 @@ If in your stack the service is named `dcdr-runtime`, a Prometheus job could loo
       type: A
       port: 5000
   tls_config:
-    insecure_skip_verify: true  # skip verification when using self-signed certs
+    insecure_skip_verify: true # skip verification when using self-signed certs
 ```
 
 Example Grafana dashboard (real cluster):
@@ -215,6 +214,66 @@ These metrics provide a stable overview of runtime HTTP traffic.
 
 These metrics track the **in-memory Registry** and model call outcomes.
 
+#### Registry parity (customers rollups vs internal registry)
+
+These gauges help compare:
+
+- **Customers registry rollups** (backend-derived aggregated stats across customer registries)
+- **Internal registry** (the control-plane registry snapshot currently loaded in memory)
+
+Why this matters
+
+- The backend might report that customers _could_ execute many implementations (theoretical capacity).
+- A single runtime process might only have a smaller internal registry snapshot loaded in memory.
+- A large gap can be expected in multi-tenant deployments where per-customer registries are cached on-demand, but it can also indicate unexpected filtering or sync issues.
+
+Metrics
+
+- `dcdr_runtime_registry_internal_intents_total` (Gauge)
+  - Total intents in the internal registry loaded in memory.
+
+- `dcdr_runtime_registry_internal_active_intents_total` (Gauge)
+  - Total active intents in the internal registry loaded in memory.
+
+- `dcdr_runtime_registry_internal_implementations_total` (Gauge)
+  - Total implementations in the internal registry loaded in memory.
+
+- `dcdr_runtime_registry_internal_active_implementations_total` (Gauge)
+  - Total active implementations in the internal registry loaded in memory.
+  - Active rule: an implementation counts as active only when BOTH the intent and the implementation are active.
+
+- `dcdr_runtime_registry_customers_intents_total` (Gauge)
+  - Total intents across customer registries as reported by backend rollups.
+
+- `dcdr_runtime_registry_customers_implementations_total` (Gauge)
+  - Total implementations across customer registries as reported by backend rollups.
+
+- `dcdr_runtime_registry_customers_active_customers_total` (Gauge)
+  - Active customers count in backend rollups.
+
+- `dcdr_runtime_registry_customers_total_customers_total` (Gauge)
+  - Total customers count in backend rollups.
+
+- `dcdr_runtime_registry_customers_active_customers_with_registry_total` (Gauge)
+  - Active customers that have a registry snapshot (backend rollups).
+
+- `dcdr_runtime_registry_customers_total_customers_with_registry_total` (Gauge)
+  - Total customers that have a registry snapshot (backend rollups).
+
+- `dcdr_runtime_registry_customers_stats_age_seconds` (Gauge)
+  - Age (seconds) since last successful customers-stats refresh.
+  - Value is `-1` when stats have never been refreshed.
+
+- `dcdr_runtime_registry_active_implementations_gap` (Gauge)
+  - Gap between customers implementations and internal active implementations:
+    $$\text{gap} = \text{customersImplementations} - \text{internalActiveImplementations}$$
+  - Can be negative.
+
+- `dcdr_runtime_registry_internal_vs_customers_implementations_ratio` (Gauge)
+  - Ratio of internal active implementations to customers total implementations:
+    $$\text{ratio} = \frac{\text{internalActiveImplementations}}{\text{customersImplementations}}$$
+  - When customers implementations is zero, ratio is `0`.
+
 #### Registry synchronization
 
 - `dcdr_runtime_model_active{intent,model,provider}` (Gauge)
@@ -308,7 +367,7 @@ This typically includes process + Node runtime metrics such as:
 - event loop lag
 - GC stats (if enabled by `prom-client` / Node version)
 
-Because the exact metric set can change between Node/prom-client versions, treat these as *platform metrics*.
+Because the exact metric set can change between Node/prom-client versions, treat these as _platform metrics_.
 
 To see the full set in your environment:
 

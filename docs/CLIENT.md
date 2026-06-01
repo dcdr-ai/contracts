@@ -8,35 +8,33 @@ This is the full reference for the TypeScript client. The README keeps only the 
 
 Quick map (method → HTTP surface):
 
-| Method | HTTP | Auth | When to use |
-|---|---|---|---|
-| `healthcheck()` | `GET /api/system/healthcheck` | none by default | Load balancers / basic diagnostics |
-| `metrics()` | `GET /api/system/metrics` | none by default | Prometheus scraping |
-| `executeIntent(intent, request)` | `POST /api/execution/run/:intent` | required | Normal intent execution |
-| `executeIntentStream(intent, request)` | `POST /api/execution/stream/:intent` | required | Streaming execution (SSE) |
-| `demo(intent, request)` | `POST /api/execution/demo/:intent` | required (except demo mode) | Demo-specific intent execution |
-| `dryRun(intent, vars)` | `POST /api/execution/dry-run/:intent` | required | Debug prompt rendering & resolved config |
-| `eval(intent, vars)` | `POST /api/execution/eval/:intent` | required | Cloud and Cloud Pro evaluation workflows |
-| `circuitBreakerStatus(provider, model?, tenantCid?)` | `GET /api/execution/circuit-breakers` | required | Observe breaker state (tenant-scoped) |
-| `resetCircuitBreaker(provider, model?, tenantCid?)` | `PUT /api/execution/circuit-breakers/reset` | internal only | Reset breaker state (ops) |
+| Method                                               | HTTP                                        | Auth                        | When to use                              |
+| ---------------------------------------------------- | ------------------------------------------- | --------------------------- | ---------------------------------------- |
+| `healthcheck()`                                      | `GET /api/system/healthcheck`               | none by default             | Load balancers / basic diagnostics       |
+| `metrics()`                                          | `GET /api/system/metrics`                   | none by default             | Prometheus scraping                      |
+| `executeIntent(intent, request)`                     | `POST /api/execution/run/:intent`           | required                    | Normal intent execution                  |
+| `executeIntentStream(intent, request)`               | `POST /api/execution/stream/:intent`        | required                    | Streaming execution (SSE)                |
+| `demo(intent, request)`                              | `POST /api/execution/demo/:intent`          | required (except demo mode) | Demo-specific intent execution           |
+| `dryRun(intent, vars)`                               | `POST /api/execution/dry-run/:intent`       | required                    | Debug prompt rendering & resolved config |
+| `eval(intent, vars)`                                 | `POST /api/execution/eval/:intent`          | required                    | Cloud and Cloud Pro evaluation workflows |
+| `circuitBreakerStatus(provider, model?, tenantCid?)` | `GET /api/execution/circuit-breakers`       | required                    | Observe breaker state (tenant-scoped)    |
+| `resetCircuitBreaker(provider, model?, tenantCid?)`  | `PUT /api/execution/circuit-breakers/reset` | internal only               | Reset breaker state (ops)                |
 
 What “auth required” means:
 
 - **Customer mode (Cloud and Cloud Pro)**: set `bearerToken` (sends `Authorization: Bearer <DcdrSessionToken>`)
-	- You create/get the token in the DCDR Cloud UI.
+  - You create/get the token in the DCDR Cloud UI.
 - **Internal/dev mode (Runtime (self-hosted))**: set `apiToken` (sends `token: <token>`)
-	- Note: `/api/execution/*` endpoints require a session. For dev/testing you can set `sessionBypassToken` (sends `x-session-bypass`) when the runtime is configured with `SESSION_BYPASS_TOKEN`.
+  - Note: `/api/execution/*` endpoints require a session. For dev/testing you can set `sessionBypassToken` (sends `x-session-bypass`) when the runtime is configured with `SESSION_BYPASS_TOKEN`.
 
 Common error patterns (all methods):
 
 - Network/timeout errors: thrown as `Error` by the client.
 - HTTP errors (non-2xx): thrown as `Error` with method/path/status and a body preview.
 
-Runtime error codes (not exhaustive)
+Runtime error codes
 
-- `INVALID_CREDENTIALS`: returned when the upstream provider rejects credentials (typically HTTP 401/403).
-	- Runtime HTTP: `401`
-	- Response: `ExecuteIntentResponse.status="ERROR"` with `error.code="INVALID_CREDENTIALS"`
+See: [EXECUTION_ERROR_CODES.md](EXECUTION_ERROR_CODES.md)
 
 ### `healthcheck()`
 

@@ -24,7 +24,7 @@ describe("utils.contract", () => {
     });
 
     it("omits undefined/function/symbol object properties", () => {
-      const input: any = {
+      const input: Record<string, unknown> = {
         ok: 1,
         skipU: undefined,
         skipF: () => 1,
