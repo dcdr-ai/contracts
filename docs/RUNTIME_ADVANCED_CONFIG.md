@@ -17,7 +17,7 @@ Behavior
 Example (Docker)
 
 ```bash
-docker run --rm -p 8443:5000 \
+docker run --rm -p 8443:8000 \
   -e BACKEND_SSL_CERT=/certs/tls.crt \
   -e BACKEND_SSL_KEY=/certs/tls.key \
   -v "$PWD/certs:/certs:ro" \
@@ -26,7 +26,7 @@ docker run --rm -p 8443:5000 \
 
 ## Networking
 
-- `BACKEND_PORT` (default `5000`): HTTP/HTTPS port the runtime listens on.
+- `BACKEND_PORT` (default `8000`): HTTP/HTTPS port the runtime listens on.
 
 ## API surface
 
