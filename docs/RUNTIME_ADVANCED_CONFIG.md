@@ -21,7 +21,7 @@ docker run --rm -p 8443:5000 \
   -e BACKEND_SSL_CERT=/certs/tls.crt \
   -e BACKEND_SSL_KEY=/certs/tls.key \
   -v "$PWD/certs:/certs:ro" \
-  dcdrai/dcdr-runtime:latest
+  dcdrai/runtime:latest
 ```
 
 ## Networking

@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260601.11] — 18:32UTC
+
+<!--
+sourceCommit: 8467cba589b410336af31d134625c74f12cddd09
+queuedAtUtc: 
+previousMirroredBuild: 20260601.10 (2026-06-01)
+contractsSubmodule: eb46c76c2127..8376d6f80e62
+-->
+
+### Changed
+- <kbd>RUNTIME</kbd> Runtime Docker image publishing migrated to `dcdrai/runtime` on Docker Hub.
+- <kbd>RUNTIME</kbd> Documentation and pipeline references updated to use `dcdrai/runtime` as the official Docker image.
+- <kbd>RUNTIME</kbd> Hardened npm publish pipeline to publish `@dcdr/contracts` from `src/contracts` (prevents accidental publishing of the root `dcdr-runtime` package).
+
 ## [20260601.10] — 18:15UTC
 
 <!--
