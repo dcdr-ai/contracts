@@ -2,7 +2,7 @@
 
 > ⚙️ Intent-based AI runtime + control plane for production systems
 
-[![version](https://img.shields.io/badge/version-1.9.5-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
+[![version](https://img.shields.io/badge/version-1.9.6-blue.svg)](https://www.npmjs.com/package/@dcdr/contracts)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![typescript](https://img.shields.io/badge/language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 
@@ -91,7 +91,7 @@ Run a working intent in seconds, no API key required:
 1. Run runtime container:
 
 ```bash
-docker run --rm -p 8000:8000 dcdr.ai/dcdr-runtime:latest --demo
+docker run --rm -p 8000:8000 dcdrai/dcdr-runtime:latest --demo
 ```
 
 1. Call a built-in demo Intent:
@@ -143,7 +143,7 @@ If you are using **Cloud** or **Cloud Pro**, skip this section and see [docs/PLA
 
 Docker image:
 
-- `dcdr.ai/dcdr-runtime:latest`
+- `dcdrai/dcdr-runtime:latest`
 
 ### 1) Create a local `registry.json` (HELLO_WORLD)
 
@@ -169,23 +169,23 @@ This example includes:
 #### Windows PowerShell
 
 ```powershell
-docker pull dcdr.ai/dcdr-runtime:latest
+docker pull dcdrai/dcdr-runtime:latest
 docker run --rm -p 8000:8000 `
  -e API_TOKEN='dev-token' `
  -e SESSION_BYPASS_TOKEN='dev-session-bypass' `
  -v "${PWD}/registry.json:/data/registry.json:ro" `
- dcdr.ai/dcdr-runtime:latest --registry /data/registry.json
+ dcdrai/dcdr-runtime:latest --registry /data/registry.json
 ```
 
 #### Linux / macOS
 
 ```bash
-docker pull dcdr.ai/dcdr-runtime:latest
+docker pull dcdrai/dcdr-runtime:latest
 docker run --rm -p 8000:8000 \
  -e API_TOKEN='dev-token' \
  -e SESSION_BYPASS_TOKEN='dev-session-bypass' \
  -v "$PWD/registry.json:/data/registry.json:ro" \
- dcdr.ai/dcdr-runtime:latest --registry /data/registry.json
+ dcdrai/dcdr-runtime:latest --registry /data/registry.json
 ```
 
 ### 3) Call the runtime (curl)

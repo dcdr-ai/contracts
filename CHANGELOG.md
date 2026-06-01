@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260601.10] — 18:15UTC
+
+<!--
+sourceCommit: 715ea107a35e052aac9d847c78b43f481843363a
+queuedAtUtc: 
+previousMirroredBuild: 20260601.1 (2026-06-01)
+contractsSubmodule: 7256316914ac..eb46c76c2127
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.6`.
+- <kbd>RUNTIME</kbd> Runtime Docker image publishing migrated to `dcdrai/dcdr-runtime` on Docker Hub.
+- <kbd>RUNTIME</kbd> Documentation and pipeline references updated to use `dcdrai/dcdr-runtime` as the official Docker image.
+
 ## [20260601.1] — 09:44UTC
 
 <!--
