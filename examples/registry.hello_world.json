@@ -7,8 +7,8 @@
       "provider": "OPEN_AI",
       "headers": [
         {
-          "name": "Authorization",
-          "value": "Bearer REPLACE_ME_OPENAI_API_KEY"
+          "name": "apiKey",
+          "value": "REPLACE_ME_OPENAI_API_KEY"
         }
       ]
     }
