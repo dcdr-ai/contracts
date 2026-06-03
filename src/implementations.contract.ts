@@ -2,34 +2,77 @@ import { IntentProvider } from "./provider.contract";
 import { HttpRequestParams } from "./http.contract";
 
 /**
- * Time window constraints for an implementation.
- * If present, the implementation is eligible ONLY within these windows.
+ * Condition operators for conditioned routing.
+ *
+ * Notes
+ * - Used by conditioned execution policies (context/input).
+ * - Keep values stable (wire-level behavior).
  */
-export interface ExecutionWindow {
+export enum ConditionOp {
+  /** Incorrect type (based on operator expectations and/or value1 type). */
+  INCORRECT = "INCORRECT",
 
-  /**
-   * UTC window: Bit 0..6 represent days of week (recommended: 0=Mon ... 6=Sun).
-   */
-  daysMask?: number;
+  // Boolean
+  TRUE = "TRUE",
+  FALSE = "FALSE",
 
-  /**
-   * UTC window: Bit 0..23 represent hour slots (bit0 = 00:00-01:00, bit23 = 23:00-00:00).
-   */
-  hoursMask?: number;
+  // Text
+  LENGTH_MIN = "LENGTH_MIN",
+  LENGTH_MAX = "LENGTH_MAX",
+  CONTAINS = "CONTAINS",
+  NOT_CONTAINS = "NOT_CONTAINS",
+  STARTS_WITH = "STARTS_WITH",
+  ENDS_WITH = "ENDS_WITH",
+  EMPTY = "EMPTY",
+  NOT_EMPTY = "NOT_EMPTY",
 
-  /**
-   * Whether the execution window must be enforced (if false, the gateway may ignore it and use the implementation anyway).
-   */
-  active?: boolean;
+  // Numeric
+  MORE_THAN = "MORE_THAN",
+  MORE_THAN_EQUAL = "MORE_THAN_EQUAL",
+  LESS_THAN = "LESS_THAN",
+  LESS_THAN_EQUAL = "LESS_THAN_EQUAL",
+  BETWEEN_RANGE = "BETWEEN_RANGE",
+  OUTSIDE_RANGE = "OUTSIDE_RANGE",
+
+  // Generic
+  NULL = "NULL",
+  EQUALS = "EQUALS",
+  NOT_EQUALS = "NOT_EQUALS",
+  VALID_URL = "VALID_URL",
 }
 
+/**
+ * Minimal condition contract for conditioned routing.
+ *
+ * Semantics
+ * - `path` is a dot-path relative to the evaluation scope.
+ * - `value1` and `value2` are generic operator parameters.
+ */
+export interface ImplementationCondition {
+  /** Dot-path relative to the evaluation scope (context or vars). */
+  path: string;
+
+  /** Operator to apply to the resolved value at `path`. */
+  op: ConditionOp;
+
+  /** Primary operator parameter. */
+  value1?: string | number | boolean | null;
+
+  /** Secondary operator parameter (e.g. max in a range). */
+  value2?: string | number | boolean | null;
+
+  /** Optional normalization for string operators. */
+  caseInsensitive?: boolean;
+
+  /** Optional trim for string operators. */
+  trim?: boolean;
+}
 
 /**
  * Time window constraints for an implementation.
  * If present, the implementation is eligible ONLY within these windows.
  */
 export interface ExecutionWindow {
-
   /**
    * UTC window: Bit 0..6 represent days of week (recommended: 0=Mon ... 6=Sun).
    */
@@ -46,13 +89,32 @@ export interface ExecutionWindow {
   active?: boolean;
 }
 
+/**
+ * Time window constraints for an implementation.
+ * If present, the implementation is eligible ONLY within these windows.
+ */
+export interface ExecutionWindow {
+  /**
+   * UTC window: Bit 0..6 represent days of week (recommended: 0=Mon ... 6=Sun).
+   */
+  daysMask?: number;
+
+  /**
+   * UTC window: Bit 0..23 represent hour slots (bit0 = 00:00-01:00, bit23 = 23:00-00:00).
+   */
+  hoursMask?: number;
+
+  /**
+   * Whether the execution window must be enforced (if false, the gateway may ignore it and use the implementation anyway).
+   */
+  active?: boolean;
+}
 
 /**
  * Implementation contract: describes how a given provider/model endpoint can be used.
  * This is pure configuration; provider adapters interpret it.
  */
 export interface ImplementationContract {
-
   /** Unique implementation ID (stable, e.g., UUID). */
   id: string;
 
@@ -99,10 +161,8 @@ export interface ImplementationContract {
    */
   authConfig?: HttpRequestParams;
 
-
   /** Optional reference to a credential contract (by id) for provider-specific auth config */
   credentialRef?: string;
-  
 
   /**
    * Provider-specific runtime defaults (modelName, temperature, top_p, max_tokens, response_format, etc).
@@ -150,5 +210,13 @@ export interface ImplementationContract {
   cacheTTLSeconds?: number; // If set, this implementation is cacheable for the given TTL (in seconds). Requires runHash and cacheable provider.
 
   /** Execution window constraints. */
-  executionWindow?: ExecutionWindow;  
+  executionWindow?: ExecutionWindow;
+
+  /**
+   * Optional condition used by conditioned execution policies.
+   *
+   * Notes
+   * - Only evaluated when the intent executionPolicy type is CONDITION_ON_CONTEXT or CONDITION_ON_INPUT.
+   */
+  condition?: ImplementationCondition;
 }

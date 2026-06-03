@@ -398,6 +398,7 @@ See full feature matrix: [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRI
 ### Core concepts
 
 - [docs/CONTRACTS.md](docs/CONTRACTS.md) — How Registries, Intents, implementations, policies, and capabilities fit together.
+- [docs/EXECUTION_POLICY.md](docs/EXECUTION_POLICY.md) — ExecutionPolicy reference (availability matrix + tie-breakers).
 - [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md) — Runtime (self-hosted) vs Cloud vs Cloud Pro (what runs where, who owns what).
 - [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRIX.md) — One-page feature/tier reference.
 - [docs/SUPPORTED_MODELS.md](docs/SUPPORTED_MODELS.md) — Provider model IDs currently marked as runtime-supported.

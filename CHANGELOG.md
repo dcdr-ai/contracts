@@ -4,6 +4,22 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260603.2] — 23:28UTC
+
+<!--
+sourceCommit: a572e64a4f3e3e1544d5a02051383d493bf83077
+queuedAtUtc: 
+previousMirroredBuild: 20260602.1 (2026-06-02)
+contractsSubmodule: f2c873f0b756..9b2c651e38b6
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.8`.
+- <kbd>CONTRACTS</kbd> Added conditioned execution policy types (`CONDITION_ON_CONTEXT`, `CONDITION_ON_INPUT`) and per-implementation routing conditions for explicit context/input-based eligibility.
+- <kbd>RUNTIME</kbd> Added conditioned execution policy planning support (Cloud/Cloud Pro), failing explicitly with `NO_ELIGIBLE_IMPLEMENTATION` + `details.reason="condition_not_matched"` when no condition matches.
+### Fixed
+- <kbd>RUNTIME</kbd> Added integration test coverage for conditioned routing no-match (`NO_ELIGIBLE_IMPLEMENTATION` + `details.reason=condition_not_matched`) to prevent regressions.
+
 ## [20260602.1] — 13:11UTC
 
 <!--

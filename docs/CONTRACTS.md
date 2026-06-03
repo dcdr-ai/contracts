@@ -205,6 +205,8 @@ Hashes:
 
 `executionPolicy` defines how the runtime should plan candidates before retries/fallback happen.
 
+Full reference (recommended): [EXECUTION_POLICY.md](EXECUTION_POLICY.md)
+
 The simplest and most common policy is:
 
 - `type: WEIGHTED` — use each implementation's `weight` for selection.

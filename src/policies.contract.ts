@@ -230,6 +230,24 @@ export enum ExecutionPolicyType {
      * Requires each implementation to expose a quality score.
      */
     QUALITY_FIRST = "QUALITY_FIRST",
+
+    /**
+     * Conditioned routing based on request context.
+     *
+     * Notes
+     * - Implementations must define `ImplementationContract.condition`.
+     * - When no conditions match, runtime should fail explicitly.
+     */
+    CONDITION_ON_CONTEXT = "CONDITION_ON_CONTEXT",
+
+    /**
+     * Conditioned routing based on interpolated input variables (`ExecuteIntentRequest.vars`).
+     *
+     * Notes
+     * - Implementations must define `ImplementationContract.condition`.
+     * - When no conditions match, runtime should fail explicitly.
+     */
+    CONDITION_ON_INPUT = "CONDITION_ON_INPUT",
 }
 
 /**
