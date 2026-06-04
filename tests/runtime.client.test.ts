@@ -348,10 +348,25 @@ describe("DcdrRuntimeClient", () => {
     const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
       expect(url).toBe("https://example.invalid/api/execution/eval/MY_INTENT");
       expect(init?.method).toBe("POST");
+
+      const bodyRaw = String(init?.body ?? "");
+      expect(bodyRaw).toContain('"request"');
+      expect(bodyRaw).toContain('"vars"');
+      expect(bodyRaw).toContain('"name":"Jose"');
+
       return makeMockResponse({
         ok: true,
         status: 200,
-        json: { intent: "MY_INTENT", total: 0, results: [] },
+        json: {
+          evaluationId: "eval-1",
+          intent: "MY_INTENT",
+          timing: {
+            startedAt: "2026-05-05T00:00:00Z",
+            endedAt: "2026-05-05T00:00:01Z",
+            latencyMs: 1000,
+          },
+          results: [],
+        },
       });
     });
 
@@ -361,8 +376,11 @@ describe("DcdrRuntimeClient", () => {
       fetchFn,
     });
 
-    const res = await client.eval("MY_INTENT", { name: "Jose" });
+    const res = await client.eval("MY_INTENT", {
+      request: { vars: { name: "Jose" } },
+    });
     expect(res.intent).toBe("MY_INTENT");
+    expect(res.evaluationId).toBe("eval-1");
   });
 
   it("calls /api/execution/circuit-breakers for circuitBreakerStatus()", async () => {

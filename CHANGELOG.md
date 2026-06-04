@@ -4,6 +4,21 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260604.4] — 16:49UTC
+
+<!--
+sourceCommit: 5f8fa805a5d19f2ebf15b8f72947f8d30553f1c9
+queuedAtUtc: 
+previousMirroredBuild: 20260604.1 (2026-06-04)
+contractsSubmodule: ef12b2e03847..e978205a52c0
+-->
+
+### Changed
+- <kbd>RUNTIME</kbd> `POST /api/execution/eval/:intent` now uses the formal contracts request/response (`ExecuteIntentEvalRequest`/`ExecuteIntentEvalResponse`) and supports bounded parallel evaluation via `options.maxConcurrency`.
+- <kbd>CONTRACTS</kbd> Clarified execution policy availability documentation (Cloud vs Cloud Pro) in `docs/EXECUTION_POLICY.md`.
+- <kbd>CONTRACTS</kbd> Added formal eval execution contracts (`ExecuteIntentEvalRequest`/`ExecuteIntentEvalResponse`) and updated the TypeScript client `DcdrRuntimeClient.eval()` signature accordingly.
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `2.0.0`.
+
 ## [20260604.1] — 09:20UTC
 
 <!--

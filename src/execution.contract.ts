@@ -8,16 +8,13 @@ import { IntentProvider } from "./provider.contract";
  * The backend typically calls this and later writes AICallLog itself.
  */
 export interface ExecuteIntentRequest {
-
   context?: ExecutionContext;
-
 
   /**
    * Optional template variables for prompt rendering.
    * If omitted, gateway derives variables from `input`.
    */
   vars?: Record<string, unknown>;
-
 
   /**
    * Optional routing hints from backend.
@@ -30,11 +27,7 @@ export interface ExecuteIntentRequest {
     allowFallback?: boolean;
     maxAttempts?: number;
   };
-
-
 }
-
-
 
 /**
  * One attempt in an execution (for retries/fallback reporting).
@@ -56,7 +49,7 @@ export interface ExecutionAttemptReport {
     completionTokens?: number;
     totalTokens?: number;
   };
-  
+
   runHash?: string | null;
 
   cached: boolean;
@@ -67,12 +60,10 @@ export interface ExecutionAttemptReport {
  * The backend should persist the relevant fields into AICallLog.
  */
 export interface ExecutionReport {
-  
   sessionId: string;
   appId: string;
   context?: ExecutionContext;
   gatewayRequestId: string;
-  
 
   intent: Intent;
 
@@ -126,9 +117,9 @@ export interface ExecutionReport {
     /**
      * Gateway-only overhead excluding provider execution time (best-effort).
      *
-      * Relationship (approx):
-      * - gatewayOverheadMs ≈ latencyMs - providerTotalMs
-      *
+     * Relationship (approx):
+     * - gatewayOverheadMs ≈ latencyMs - providerTotalMs
+     *
      * This includes (among other things):
      * - request validation
      * - configuration/registry lookup
@@ -176,12 +167,10 @@ export interface ExecutionReport {
   cached: boolean;
 }
 
-
 export enum ExecutionStatus {
   OK = "OK",
   ERROR = "ERROR",
 }
-
 
 /**
  * Response object returned by the gateway.
@@ -203,14 +192,12 @@ export interface ExecuteIntentResponse {
   report: ExecutionReport;
 }
 
-
 /**
  * Context info for logging and analytics.
  */
 export interface ExecutionContext {
   [key: string]: any;
 }
-
 
 /**
  * Streaming execution event type names.
@@ -294,4 +281,110 @@ export interface ExecutionStreamFinalEvent {
 export interface ExecutionStreamErrorEvent {
   type: ExecutionStreamEventType.ERROR;
   data: ExecutionStreamErrorEventData;
+}
+
+/**
+ * Eval execution mode.
+ *
+ * Notes
+ * - Keep values stable (wire-level behavior).
+ */
+export enum ExecuteIntentEvalMode {
+  /** Continue evaluating other implementations even if one fails. */
+  BEST_EFFORT = "BEST_EFFORT",
+
+  /** Stop as soon as the first implementation fails. */
+  FAIL_FAST = "FAIL_FAST",
+}
+
+/**
+ * Optional runtime overrides applied for a specific eval target.
+ *
+ * Design constraints
+ * - Keep JSON-safe.
+ * - Avoid introducing `any`/`unknown` in new contract surfaces.
+ */
+export interface ExecuteIntentEvalRuntimeOverride {
+  /** Standard prompt/runtime parameters (temperature, max_tokens, response_format...). */
+  promptParameters?: Record<string, string | number | boolean | null>;
+
+  /** Provider-specific runtime knobs (primitives-only). */
+  providerRuntime?: Record<string, string | number | boolean | null>;
+}
+
+/**
+ * Selects a concrete implementation to evaluate.
+ */
+export interface ExecuteIntentEvalTarget {
+  implementationId: string;
+
+  /** Optional per-target runtime override. */
+  runtimeOverride?: ExecuteIntentEvalRuntimeOverride;
+}
+
+/**
+ * Eval options.
+ */
+export interface ExecuteIntentEvalOptions {
+  /** Optional caller-provided eval id for correlation. */
+  evalId?: string;
+
+  /** Defaults to BEST_EFFORT. */
+  mode?: ExecuteIntentEvalMode;
+
+  /** Default true. If false, runtime may omit large outputs. */
+  includeOutput?: boolean;
+
+  /**
+   * Optional maximum concurrency for evaluating multiple implementations.
+   *
+   * Notes
+   * - Runtime may clamp to a safe range.
+   * - When `mode=FAIL_FAST`, runtime may force this to 1 to preserve semantics.
+   */
+  maxConcurrency?: number;
+}
+
+/**
+ * Request body for `POST /api/execution/eval/{intent}`.
+ *
+ * Semantics
+ * - `request` is the same payload used for normal execution.
+ * - `request.context` is used as the common context and is propagated to each sub-run.
+ * - If `targets` omitted/empty => evaluate all active implementations for the intent.
+ */
+export interface ExecuteIntentEvalRequest {
+  request: ExecuteIntentRequest;
+  targets?: ExecuteIntentEvalTarget[];
+  options?: ExecuteIntentEvalOptions;
+}
+
+/**
+ * A single eval result item.
+ */
+export interface ExecuteIntentEvalResultItem {
+  implementationId: string;
+  provider: IntentProvider;
+  model: string;
+
+  /** Full 1:1 execution result for this implementation. */
+  response: ExecuteIntentResponse;
+}
+
+/**
+ * Response for `POST /api/execution/eval/{intent}`.
+ */
+export interface ExecuteIntentEvalResponse {
+  /** Correlation id shared across all runs within this eval call. */
+  evaluationId: string;
+
+  intent: Intent;
+
+  timing: {
+    startedAt: string;
+    endedAt: string;
+    latencyMs: number;
+  };
+
+  results: ExecuteIntentEvalResultItem[];
 }

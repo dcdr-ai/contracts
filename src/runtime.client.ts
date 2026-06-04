@@ -1,4 +1,6 @@
 import {
+  ExecuteIntentEvalRequest,
+  ExecuteIntentEvalResponse,
   ExecuteIntentRequest,
   ExecuteIntentResponse,
   ExecutionStreamDeltaEvent,
@@ -85,16 +87,12 @@ export interface DcdrRuntimeDryRunResponse {
 }
 
 /**
- * Minimal eval response shape.
+ * Formal eval response shape.
  *
  * Notes
- * - Eval is cloud-only; runtime/freeware mode may return a 403 error.
+ * - Prefer this over ad-hoc eval responses.
  */
-export interface DcdrRuntimeEvalResponse {
-  intent: string;
-  total: number;
-  results: Array<{ ok: boolean }>;
-}
+export interface DcdrRuntimeEvalResponse extends ExecuteIntentEvalResponse {}
 
 /**
  * Circuit breaker status snapshot returned by the runtime.
@@ -207,7 +205,6 @@ interface RequestTextArgs {
   timeoutMs: number;
 }
 
-
 /**
  * HTTP client for interacting with the DCDR Runtime REST API.
  *
@@ -272,7 +269,10 @@ export class DcdrRuntimeClient {
   private readonly sessionBypassToken?: string;
   private readonly timeoutMs: number;
   private readonly extraHeaders: Record<string, string>;
-  private readonly fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
+  private readonly fetchFn: (
+    input: string,
+    init?: RequestInit,
+  ) => Promise<Response>;
 
   /**
    * Creates a new runtime client.
@@ -282,25 +282,40 @@ export class DcdrRuntimeClient {
     const resolvedBaseUrl = cfg?.baseUrl ?? "https://runtime.dcdr.ai";
     const resolvedBaseUrlTrimmed = String(resolvedBaseUrl).trim();
     if (!resolvedBaseUrlTrimmed) {
-      throw new Error("DcdrRuntimeClient requires baseUrl (or omit it to use https://runtime.dcdr.ai)");
+      throw new Error(
+        "DcdrRuntimeClient requires baseUrl (or omit it to use https://runtime.dcdr.ai)",
+      );
     }
 
     this.baseUrl = resolvedBaseUrlTrimmed.replace(/\/$/, "");
-    this.bearerToken = cfg.bearerToken ? String(cfg.bearerToken).trim() : undefined;
+    this.bearerToken = cfg.bearerToken
+      ? String(cfg.bearerToken).trim()
+      : undefined;
     this.apiToken = cfg.apiToken ? String(cfg.apiToken).trim() : undefined;
-    this.sessionBypassToken = cfg.sessionBypassToken ? String(cfg.sessionBypassToken).trim() : undefined;
-    this.timeoutMs = typeof cfg.timeoutMs === "number" && cfg.timeoutMs > 0 ? cfg.timeoutMs : 10_000;
+    this.sessionBypassToken = cfg.sessionBypassToken
+      ? String(cfg.sessionBypassToken).trim()
+      : undefined;
+    this.timeoutMs =
+      typeof cfg.timeoutMs === "number" && cfg.timeoutMs > 0
+        ? cfg.timeoutMs
+        : 10_000;
     this.extraHeaders = cfg.extraHeaders ? { ...cfg.extraHeaders } : {};
 
-    const f = cfg.fetchFn ?? (globalThis.fetch ? globalThis.fetch.bind(globalThis) : undefined);
+    const f =
+      cfg.fetchFn ??
+      (globalThis.fetch ? globalThis.fetch.bind(globalThis) : undefined);
     if (!f) {
-      throw new Error("DcdrRuntimeClient requires a fetch implementation (global fetch missing)");
+      throw new Error(
+        "DcdrRuntimeClient requires a fetch implementation (global fetch missing)",
+      );
     }
     this.fetchFn = f;
 
     // Basic config validation: do not silently pick an auth mode.
     if (this.bearerToken && this.apiToken) {
-      throw new Error("DcdrRuntimeClient config should not set both bearerToken and apiToken");
+      throw new Error(
+        "DcdrRuntimeClient config should not set both bearerToken and apiToken",
+      );
     }
   }
 
@@ -310,7 +325,10 @@ export class DcdrRuntimeClient {
    * @param request Execute request payload.
    * @returns Execution result.
    */
-  async executeIntent(intent: string, request: ExecuteIntentRequest): Promise<ExecuteIntentResponse> {
+  async executeIntent(
+    intent: string,
+    request: ExecuteIntentRequest,
+  ): Promise<ExecuteIntentResponse> {
     const safeIntent = encodeURIComponent(String(intent ?? "").trim());
     return this.requestJson<ExecuteIntentResponse>({
       method: "POST",
@@ -336,7 +354,14 @@ export class DcdrRuntimeClient {
     intent: string,
     request: ExecuteIntentRequest,
     opts?: DcdrRuntimeClientStreamOptions,
-  ): AsyncGenerator<ExecutionStreamMetaEvent | ExecutionStreamDeltaEvent | ExecutionStreamFinalEvent | ExecutionStreamErrorEvent, void, void> {
+  ): AsyncGenerator<
+    | ExecutionStreamMetaEvent
+    | ExecutionStreamDeltaEvent
+    | ExecutionStreamFinalEvent
+    | ExecutionStreamErrorEvent,
+    void,
+    void
+  > {
     const safeIntent = encodeURIComponent(String(intent ?? "").trim());
     const url = `${this.baseUrl}/api/execution/stream/${safeIntent}`;
 
@@ -356,7 +381,10 @@ export class DcdrRuntimeClient {
     }
 
     const controller = new AbortController();
-    const timeoutMs = typeof opts?.timeoutMs === "number" && opts.timeoutMs > 0 ? opts.timeoutMs : this.timeoutMs;
+    const timeoutMs =
+      typeof opts?.timeoutMs === "number" && opts.timeoutMs > 0
+        ? opts.timeoutMs
+        : this.timeoutMs;
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     const onAbort = () => controller.abort();
@@ -376,14 +404,18 @@ export class DcdrRuntimeClient {
       if (!resp.ok) {
         const text = await resp.text();
         const preview = buildBodyPreview(text);
-        throw new Error(`DcdrRuntimeClient request failed: POST /api/execution/stream/:intent status=${resp.status} body=${preview}`);
+        throw new Error(
+          `DcdrRuntimeClient request failed: POST /api/execution/stream/:intent status=${resp.status} body=${preview}`,
+        );
       }
 
       const ct = resp.headers.get("content-type") ?? "";
       if (!/text\/event-stream/i.test(ct)) {
         const text = await resp.text();
         const preview = buildBodyPreview(text);
-        throw new Error(`DcdrRuntimeClient expected text/event-stream but got content-type='${ct}' body=${preview}`);
+        throw new Error(
+          `DcdrRuntimeClient expected text/event-stream but got content-type='${ct}' body=${preview}`,
+        );
       }
 
       if (!resp.body) {
@@ -395,14 +427,26 @@ export class DcdrRuntimeClient {
         const json = evt.data ? JSON.parse(evt.data) : {};
 
         if (eventName === ExecutionStreamEventType.META) {
-          yield { type: ExecutionStreamEventType.META, data: json } as ExecutionStreamMetaEvent;
+          yield {
+            type: ExecutionStreamEventType.META,
+            data: json,
+          } as ExecutionStreamMetaEvent;
         } else if (eventName === ExecutionStreamEventType.DELTA) {
-          yield { type: ExecutionStreamEventType.DELTA, data: json } as ExecutionStreamDeltaEvent;
+          yield {
+            type: ExecutionStreamEventType.DELTA,
+            data: json,
+          } as ExecutionStreamDeltaEvent;
         } else if (eventName === ExecutionStreamEventType.FINAL) {
-          yield { type: ExecutionStreamEventType.FINAL, data: json } as ExecutionStreamFinalEvent;
+          yield {
+            type: ExecutionStreamEventType.FINAL,
+            data: json,
+          } as ExecutionStreamFinalEvent;
           return;
         } else if (eventName === ExecutionStreamEventType.ERROR) {
-          yield { type: ExecutionStreamEventType.ERROR, data: json } as ExecutionStreamErrorEvent;
+          yield {
+            type: ExecutionStreamEventType.ERROR,
+            data: json,
+          } as ExecutionStreamErrorEvent;
           return;
         }
       }
@@ -415,7 +459,9 @@ export class DcdrRuntimeClient {
   /**
    * Parses a ReadableStream of SSE bytes into discrete `{event,data}` frames.
    */
-  private async *parseSseStream(body: ReadableStream<Uint8Array>): AsyncGenerator<ParsedSseEvent, void, void> {
+  private async *parseSseStream(
+    body: ReadableStream<Uint8Array>,
+  ): AsyncGenerator<ParsedSseEvent, void, void> {
     const reader = body.getReader();
     const decoder = new TextDecoder();
 
@@ -482,7 +528,10 @@ export class DcdrRuntimeClient {
    * @param request Execute request payload.
    * @returns Execution result.
    */
-  async demo(intent: string, request: ExecuteIntentRequest): Promise<ExecuteIntentResponse> {
+  async demo(
+    intent: string,
+    request: ExecuteIntentRequest,
+  ): Promise<ExecuteIntentResponse> {
     const safeIntent = encodeURIComponent(String(intent ?? "").trim());
     return this.requestJson<ExecuteIntentResponse>({
       method: "POST",
@@ -554,7 +603,10 @@ export class DcdrRuntimeClient {
    * @param vars Template variables.
    * @returns Dry-run response.
    */
-  async dryRun(intent: string, vars: Record<string, unknown>): Promise<DcdrRuntimeDryRunResponse> {
+  async dryRun(
+    intent: string,
+    vars: Record<string, unknown>,
+  ): Promise<DcdrRuntimeDryRunResponse> {
     const safeIntent = encodeURIComponent(String(intent ?? "").trim());
     return this.requestJson<DcdrRuntimeDryRunResponse>({
       method: "POST",
@@ -571,15 +623,18 @@ export class DcdrRuntimeClient {
    * - Eval is disabled in freeware runtime mode (`--registry`).
    *
    * @param intent Intent name.
-   * @param vars Template variables.
+   * @param request Eval request payload.
    * @returns Eval response.
    */
-  async eval(intent: string, vars: Record<string, unknown>): Promise<DcdrRuntimeEvalResponse> {
+  async eval(
+    intent: string,
+    request: ExecuteIntentEvalRequest,
+  ): Promise<ExecuteIntentEvalResponse> {
     const safeIntent = encodeURIComponent(String(intent ?? "").trim());
-    return this.requestJson<DcdrRuntimeEvalResponse>({
+    return this.requestJson<ExecuteIntentEvalResponse>({
       method: "POST",
       path: `/api/execution/eval/${safeIntent}`,
-      body: { vars: vars ?? {} },
+      body: request,
       timeoutMs: this.timeoutMs,
     });
   }
@@ -596,10 +651,16 @@ export class DcdrRuntimeClient {
    * @param tenantCid Optional tenant/customer identifier (internal mode only).
    * @returns Circuit breaker snapshot.
    */
-  async circuitBreakerStatus(provider: string, model?: string, tenantCid?: string): Promise<DcdrRuntimeCircuitBreakerStatusSnapshot> {
+  async circuitBreakerStatus(
+    provider: string,
+    model?: string,
+    tenantCid?: string,
+  ): Promise<DcdrRuntimeCircuitBreakerStatusSnapshot> {
     const safeProvider = encodeURIComponent(String(provider ?? "").trim());
     const safeModel = model ? encodeURIComponent(String(model).trim()) : "";
-    const safeTenant = tenantCid ? encodeURIComponent(String(tenantCid).trim()) : "";
+    const safeTenant = tenantCid
+      ? encodeURIComponent(String(tenantCid).trim())
+      : "";
     const qp: string[] = [];
     if (safeTenant) qp.push(`tenantCid=${safeTenant}`);
     qp.push(`provider=${safeProvider}`);
@@ -626,7 +687,11 @@ export class DcdrRuntimeClient {
    * @param tenantCid Optional tenant/customer identifier (internal mode only).
    * @returns Reset operation result.
    */
-  async resetCircuitBreaker(provider: string, model?: string, tenantCid?: string): Promise<DcdrRuntimeCircuitBreakerResetResponse> {
+  async resetCircuitBreaker(
+    provider: string,
+    model?: string,
+    tenantCid?: string,
+  ): Promise<DcdrRuntimeCircuitBreakerResetResponse> {
     return this.requestJson<DcdrRuntimeCircuitBreakerResetResponse>({
       method: "PUT",
       path: "/api/execution/circuit-breakers/reset",
@@ -681,11 +746,15 @@ export class DcdrRuntimeClient {
       });
 
       const text = await resp.text();
-      const isJson = /application\/json/i.test(resp.headers.get("content-type") ?? "");
+      const isJson = /application\/json/i.test(
+        resp.headers.get("content-type") ?? "",
+      );
 
       if (!resp.ok) {
         const preview = buildBodyPreview(text);
-        throw new Error(`DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${resp.status} body=${preview}`);
+        throw new Error(
+          `DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${resp.status} body=${preview}`,
+        );
       }
 
       if (!text) {
@@ -694,16 +763,16 @@ export class DcdrRuntimeClient {
       }
 
       if (!isJson) {
-        throw new Error(`DcdrRuntimeClient expected JSON but got content-type='${resp.headers.get("content-type") ?? ""}'`);
+        throw new Error(
+          `DcdrRuntimeClient expected JSON but got content-type='${resp.headers.get("content-type") ?? ""}'`,
+        );
       }
 
       return JSON.parse(text) as T;
-
     } finally {
       clearTimeout(timeout);
     }
   }
-
 
   /**
    * Performs an HTTP request and returns the response body as plain text.
@@ -720,7 +789,7 @@ export class DcdrRuntimeClient {
    * @param args - Request configuration including method, path, and timeout.
    * @returns The response body as text.
    * @throws {@link Error} If the response status is not OK (`resp.ok === false`). The error message includes the
-  * HTTP method, path, status code, and a bounded preview of the response body.
+   * HTTP method, path, status code, and a bounded preview of the response body.
    */
   private async requestText(args: RequestTextArgs): Promise<string> {
     const url = `${this.baseUrl}${args.path}`;
@@ -752,7 +821,9 @@ export class DcdrRuntimeClient {
 
       if (!resp.ok) {
         const preview = buildBodyPreview(text);
-        throw new Error(`DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${resp.status} body=${preview}`);
+        throw new Error(
+          `DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${resp.status} body=${preview}`,
+        );
       }
 
       return text;
@@ -773,4 +844,3 @@ function buildBodyPreview(text: string): string {
     ? t.slice(0, ERROR_BODY_PREVIEW_MAX_CHARS) + "…"
     : t;
 }
-

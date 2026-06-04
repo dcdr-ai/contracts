@@ -16,7 +16,7 @@ Quick map (method → HTTP surface):
 | `executeIntentStream(intent, request)`               | `POST /api/execution/stream/:intent`        | required                    | Streaming execution (SSE)                |
 | `demo(intent, request)`                              | `POST /api/execution/demo/:intent`          | required (except demo mode) | Demo-specific intent execution           |
 | `dryRun(intent, vars)`                               | `POST /api/execution/dry-run/:intent`       | required                    | Debug prompt rendering & resolved config |
-| `eval(intent, vars)`                                 | `POST /api/execution/eval/:intent`          | required                    | Cloud and Cloud Pro evaluation workflows |
+| `eval(intent, request)`                              | `POST /api/execution/eval/:intent`          | required                    | Cloud and Cloud Pro evaluation workflows |
 | `circuitBreakerStatus(provider, model?, tenantCid?)` | `GET /api/execution/circuit-breakers`       | required                    | Observe breaker state (tenant-scoped)    |
 | `resetCircuitBreaker(provider, model?, tenantCid?)`  | `PUT /api/execution/circuit-breakers/reset` | internal only               | Reset breaker state (ops)                |
 
@@ -72,10 +72,20 @@ See: [STREAMING_EXECUTION_SSE.md](STREAMING_EXECUTION_SSE.md)
 - Endpoint: `POST /api/execution/dry-run/:intent`
 - Purpose: validate and render prompt inputs without executing a provider/model call.
 
-### `eval(intent, vars)`
+### `eval(intent, request)`
 
 - Endpoint: `POST /api/execution/eval/:intent`
 - Cloud and Cloud Pro only: this endpoint is disabled in Runtime (self-hosted) and can return a `403`.
+- Input contract: `ExecuteIntentEvalRequest`
+- Output contract: `ExecuteIntentEvalResponse`
+
+`ExecuteIntentEvalRequest` wraps a normal execution request:
+
+- `request: ExecuteIntentRequest` — the same payload used by `/run/:intent` (including `request.context`)
+- `targets?: Array<{ implementationId, runtimeOverride? }>` — optional explicit list of implementation ids; if omitted, runtime evaluates all active implementations
+- `options?: { evalId?, mode?, includeOutput?, maxConcurrency? }`
+  - `evalId` can be provided for correlation (returned as `evaluationId`)
+  - `maxConcurrency` bounds parallel execution in BEST_EFFORT mode
 
 ### `circuitBreakerStatus(provider, model?, tenantCid?)`
 

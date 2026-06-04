@@ -28,6 +28,13 @@ npm run dcdr -- stream HELLO_WORLD --base-url http://localhost:8000 --api-token 
 # Demo
 npm run dcdr -- demo DCDR_LOCAL_DEMO --base-url http://localhost:8000 --api-token dev-token --vars-file ./vars.json
 
+# Dry-run (validate prompt rendering without provider calls)
+npm run dcdr -- dry-run HELLO_WORLD --base-url http://localhost:8000 --api-token dev-token --vars-json '{"name":"Ada"}'
+
+# Eval (cloud-only): run an intent across implementations
+# Note: this endpoint is disabled in freeware runtime mode (--registry) and may return 403.
+npm run dcdr -- eval HELLO_WORLD --base-url https://runtime.dcdr.ai --bearer-token <TOKEN> --vars-json '{"name":"Ada"}'
+
 # Circuit breaker status
 npm run dcdr -- circuit-breaker openai --base-url http://localhost:8000 --api-token dev-token
 
