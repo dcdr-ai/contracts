@@ -42,6 +42,19 @@ export enum ConditionOp {
 }
 
 /**
+ * Boolean operators for composing multiple conditions.
+ *
+ * Notes
+ * - Used only when an intent uses a conditioned execution policy.
+ * - Keep values stable (wire-level behavior).
+ */
+export enum ConditionLogicOp {
+  NOT = "NOT",
+  AND = "AND",
+  OR = "OR",
+}
+
+/**
  * Minimal condition contract for conditioned routing.
  *
  * Semantics
@@ -52,7 +65,7 @@ export interface ImplementationCondition {
   /** Dot-path relative to the evaluation scope (context or vars). */
   path: string;
 
-  /** Operator to apply to the resolved value at `path`. */
+  /** Leaf operator to apply to the resolved value at `path`. */
   op: ConditionOp;
 
   /** Primary operator parameter. */
@@ -66,6 +79,28 @@ export interface ImplementationCondition {
 
   /** Optional trim for string operators. */
   trim?: boolean;
+}
+
+/**
+ * Recursive boolean condition used to compose multiple leaf conditions.
+ *
+ * Notes
+ * - The evaluation scope is still determined by the execution policy type:
+ *   - CONDITION_ON_CONTEXT => request.context
+ *   - CONDITION_ON_INPUT   => effective vars
+ * - Children can be either leaf ImplementationCondition or another LogicalImplementationCondition.
+ */
+export interface LogicalImplementationCondition {
+  op: ConditionLogicOp;
+
+  /**
+   * Child conditions.
+   *
+   * Rules
+   * - NOT: must include exactly 1 child
+   * - AND/OR: must include 1+ children
+   */
+  conditions?: Array<ImplementationCondition | LogicalImplementationCondition>;
 }
 
 /**
@@ -218,5 +253,5 @@ export interface ImplementationContract {
    * Notes
    * - Only evaluated when the intent executionPolicy type is CONDITION_ON_CONTEXT or CONDITION_ON_INPUT.
    */
-  condition?: ImplementationCondition;
+  condition?: ImplementationCondition | LogicalImplementationCondition;
 }

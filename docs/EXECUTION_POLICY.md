@@ -83,6 +83,26 @@ Semantics
   - then `id`
 - If no conditions match, the runtime fails explicitly with `NO_ELIGIBLE_IMPLEMENTATION` and includes `error.details.reason="condition_not_matched"`.
 
+Condition contract
+
+- Leaf condition (single check):
+  - `path`: dot-path relative to the evaluation scope
+  - `op`: `ConditionOp` (e.g. `EQUALS`, `MORE_THAN`, `TRUE`, `VALID_URL`)
+  - `value1` / `value2`: optional operator parameters
+- Boolean composition (recursive):
+  - `op`: `ConditionLogicOp` (`AND` | `OR` | `NOT`)
+  - `conditions`: array of child conditions (leaf or nested logical)
+  - Arity rules:
+    - `NOT` must include exactly **1** child
+    - `AND` / `OR` must include **1+** children
+
+Dot-path scoping
+
+- `path` is always relative to the scope chosen by the policy type.
+  - `CONDITION_ON_CONTEXT` evaluates against `ExecuteIntentRequest.context`.
+  - `CONDITION_ON_INPUT` evaluates against effective interpolated vars.
+- Do not prefix `path` with `context.` or `vars.`.
+
 Availability
 
 - Cloud / Cloud Pro: supported.

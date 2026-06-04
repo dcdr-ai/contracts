@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260604.1] — 09:20UTC
+
+<!--
+sourceCommit: a973fbd0bcc87c96a18f61bde08e814a7d779338
+queuedAtUtc: 
+previousMirroredBuild: 20260603.2 (2026-06-03)
+contractsSubmodule: 9b2c651e38b6..ef12b2e03847
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `1.9.9`.
+### Fixed
+- <kbd>RUNTIME</kbd> `dcdr validate-registry` now validates conditioned-routing boolean condition trees (`AND`/`OR`/`NOT`) and fails with actionable configuration errors.
+
 ## [20260603.2] — 23:28UTC
 
 <!--
