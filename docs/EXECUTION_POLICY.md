@@ -50,10 +50,10 @@ DCDR has different operating modes. The most important distinction for routing i
 | `WEIGHTED`                                           |                                  ✅ |    ✅ |        ✅ |
 | `FALLBACK_CHAIN`                                     |  ❌ (rejected by capability gating) |    ✅ |        ✅ |
 | `LOCAL_FIRST`                                        |  ❌ (rejected by capability gating) |    ✅ |        ✅ |
-| `CHEAPEST_FIRST` / `FASTEST_FIRST` / `QUALITY_FIRST` |  ❌ (rejected by capability gating) |    ✅ |        ✅ |
-| `executionPolicy.exploration`                        |  ❌ (rejected by capability gating) |    ✅ |        ✅ |
-| `CONDITION_ON_CONTEXT`                               |  ❌ (rejected by capability gating) |    ✅ |        ✅ |
-| `CONDITION_ON_INPUT`                                 |  ❌ (rejected by capability gating) |    ✅ |        ✅ |
+| `CHEAPEST_FIRST` / `FASTEST_FIRST` / `QUALITY_FIRST` |  ❌ (rejected by capability gating) |    ❌ |        ✅ |
+| `CONDITION_ON_CONTEXT`                               |  ❌ (rejected by capability gating) |    ❌ |        ✅ |
+| `CONDITION_ON_INPUT`                                 |  ❌ (rejected by capability gating) |    ❌ |        ✅ |
+| `executionPolicy.exploration`                        |  ❌ (rejected by capability gating) |    ❌ |        ✅ |
 
 Why runtime mode is restricted
 
