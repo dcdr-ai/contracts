@@ -1,0 +1,186 @@
+{
+  "generatedAt": "2026-06-04T00:00:00.000Z",
+  "credentials": [
+    {
+      "id": "cred_openai",
+      "name": "OpenAI API Key (INLINE)",
+      "provider": "OPEN_AI",
+      "headers": [
+        {
+          "name": "apiKey",
+          "value": "REPLACE_ME_OPENAI_API_KEY"
+        }
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "id": "intent_nutrition_protein_suggestion",
+      "intent": "NUTRITION_PROTEIN_SUGGESTION",
+      "type": "CHAT",
+      "active": true,
+      "description": "Suggests the protein type and daily amount based on user data.",
+      "inputSchema": {
+        "age": {
+          "type": "integer",
+          "required": true,
+          "min": 10,
+          "max": 100,
+          "description": "Age (years)"
+        },
+        "weightKg": {
+          "type": "float",
+          "required": true,
+          "min": 30,
+          "max": 250,
+          "description": "Weight (kg)"
+        },
+        "sex": {
+          "type": "enum",
+          "required": true,
+          "values": ["MALE", "FEMALE", "OTHER"],
+          "description": "Sex"
+        },
+        "heightCm": {
+          "type": "integer",
+          "required": true,
+          "min": 120,
+          "max": 230,
+          "description": "Height (cm)"
+        },
+        "activityLevel": {
+          "type": "enum",
+          "required": true,
+          "values": ["SEDENTARY", "LIGHT", "MODERATE", "HIGH", "ATHLETE"],
+          "description": "Physical activity level"
+        },
+        "includeWeeklyDiet": {
+          "type": "boolean",
+          "required": false,
+          "description": "If true, include a simple weekly plan (optional)."
+        }
+      },
+      "outputSchema": {
+        "proteinType": {
+          "type": "enum",
+          "required": true,
+          "values": ["WHEY", "CASEIN", "PLANT", "EGG", "BEEF"],
+          "description": "Suggested protein type"
+        },
+        "dailyGrams": {
+          "type": "float",
+          "required": true,
+          "min": 10,
+          "max": 400,
+          "description": "Total daily amount (grams/day)"
+        },
+        "weeklyDiet": {
+          "type": "array",
+          "required": false,
+          "description": "Optional: simple weekly plan as an array of meal entries.",
+          "itemsType": "object",
+          "properties": {
+            "day": {
+              "type": "enum",
+              "required": true,
+              "values": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+              "description": "Day of week"
+            },
+            "meal": {
+              "type": "enum",
+              "required": true,
+              "values": ["breakfast", "lunch", "dinner", "snack"],
+              "description": "Meal"
+            },
+            "starter": {
+              "type": "string",
+              "required": false,
+              "description": "Starter"
+            },
+            "main": {
+              "type": "string",
+              "required": true,
+              "description": "Main"
+            },
+            "seconds": {
+              "type": "string",
+              "required": false,
+              "description": "Seconds"
+            },
+            "dessert": {
+              "type": "string",
+              "required": false,
+              "description": "Dessert"
+            },
+            "drink": {
+              "type": "string",
+              "required": true,
+              "description": "Drink"
+            }
+          }
+        }
+      },
+      "defaultPrompt": {
+        "id": "prompt_nutrition_protein_v1",
+        "name": "nutrition_protein_v1",
+        "version": "1.0",
+        "variablesInterpolationType": "MUSTACHE",
+        "params": {
+          "response_format": "json_schema",
+          "temperature": 0.2,
+          "max_tokens": 2000
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a sports nutrition assistant. Return ONLY valid JSON strictly following this format: {\"proteinType\":\"WHEY|CASEIN|PLANT|EGG|BEEF\",\"dailyGrams\":number,\"weeklyDiet\"?:Array<{day:\"mon|tue|wed|thu|fri|sat|sun\",meal:\"breakfast|lunch|dinner|snack\",starter:string,main:string,seconds:string,dessert:string,drink:string}>}. Do not add extra keys. If includeWeeklyDiet is not true, omit weeklyDiet. If includeWeeklyDiet=true, weeklyDiet MUST be an array of objects using ONLY the allowed enum values for day/meal."
+          },
+          {
+            "role": "user",
+            "content": "User: age={{age}} years, weight={{weightKg}} kg, sex={{sex}}, height={{heightCm}} cm, activity={{activityLevel}}.\n\nTask: recommend the protein type (enum) and total daily grams.\n\nIf includeWeeklyDiet=true, add weeklyDiet as an array of meal entries. Each entry MUST be: {day, meal, starter, main, seconds, dessert, drink} where day is one of mon/tue/wed/thu/fri/sat/sun and meal is one of breakfast/lunch/dinner/snack. Not all meals are mandatory, pick the right diet to meet the protein needs."
+          }
+        ]
+      },
+      "executionPolicy": {
+        "type": "WEIGHTED"
+      },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "maxPerCandidate": 2,
+        "allowFallback": true,
+        "retryOn": [
+          "TIMEOUT",
+          "UPSTREAM_5XX",
+          "NETWORK",
+          "PARSE_FAIL",
+          "SCHEMA_FAIL"
+        ],
+        "repairOnParseFail": true
+      },
+      "implementations": [
+        {
+          "id": "impl_openai_nano",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (nano)",
+          "version": "1.0",
+          "model": "gpt-4.1-nano",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        },
+        {
+          "id": "impl_openai_mini",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (mini)",
+          "version": "1.0",
+          "model": "gpt-4.1-mini",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        }
+      ]
+    }
+  ]
+}

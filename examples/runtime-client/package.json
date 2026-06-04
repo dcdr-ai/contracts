@@ -1,0 +1,19 @@
+{
+  "name": "dcdr-runtime-client-example",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "ts-node ./run-nutrition-protein.ts"
+  },
+  "dependencies": {
+    "@dcdr/contracts": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "volta": {
+    "node": "22.22.0"
+  }
+}

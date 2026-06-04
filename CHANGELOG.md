@@ -4,6 +4,17 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260604.2] — 19:34UTC
+
+<!--
+sourceCommit: 9d63004e113bd025adf630e92e837805194e1a35
+queuedAtUtc: 
+previousMirroredBuild: 20260604.4 (2026-06-04)
+contractsSubmodule: e978205a52c0..9914fd4a70c2
+-->
+
+(No user-facing changes since previous build.)
+
 ## [20260604.4] — 16:49UTC
 
 <!--

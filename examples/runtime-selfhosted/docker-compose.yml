@@ -1,0 +1,11 @@
+services:
+  dcdr-runtime:
+    image: dcdrai/runtime:latest
+    ports:
+      - "8000:8000"
+    environment:
+      API_TOKEN: "dev-token"
+      SESSION_BYPASS_TOKEN: "dev-session-bypass"
+    volumes:
+      - ../registry.nutrition_protein.json:/data/registry.json:ro
+    command: ["--registry", "/data/registry.json"]

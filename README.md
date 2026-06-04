@@ -240,7 +240,7 @@ npm i @dcdr/contracts
 Example (internal/dev mode):
 
 ```ts
-import { DcdrRuntimeClient } from "@dcdr/contracts/runtime.client";
+import { DcdrRuntimeClient } from "@dcdr/contracts";
 
 const client = new DcdrRuntimeClient({
   baseUrl: "http://localhost:8000",
@@ -260,7 +260,7 @@ console.log(res.status, res.output);
 Example (customer mode / live):
 
 ```ts
-import { DcdrRuntimeClient } from "@dcdr/contracts/runtime.client";
+import { DcdrRuntimeClient } from "@dcdr/contracts";
 
 const client = new DcdrRuntimeClient({
   // baseUrl defaults to https://runtime.dcdr.ai
