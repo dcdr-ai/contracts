@@ -4,6 +4,22 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260605.1] — 22:29UTC
+
+<!--
+sourceCommit: 2ab7eb7fc2aeddc6757aa449f178712b179d6e4c
+queuedAtUtc: 
+previousMirroredBuild: 20260604.2 (2026-06-04)
+contractsSubmodule: 9914fd4a70c2..1b49cecf1c24
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Optional Redis Pub/Sub tenant registry invalidation hints to reduce cross-node staleness in cluster deployments (cloud mode).
+- <kbd>CONTRACTS</kbd> Exported `DCDR_TENANT_REGISTRY_INVALIDATION_CHANNEL` for cross-service Redis Pub/Sub coordination.
+### Changed
+- <kbd>RUNTIME</kbd> Reduced default tenant registry cache max age to 60s (from 5m) for customer-mode registry refresh.
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `2.0.1`.
+
 ## [20260604.2] — 19:34UTC
 
 <!--
