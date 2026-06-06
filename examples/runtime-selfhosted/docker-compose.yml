@@ -7,5 +7,5 @@ services:
       API_TOKEN: "dev-token"
       SESSION_BYPASS_TOKEN: "dev-session-bypass"
     volumes:
-      - ../registry.nutrition_protein.json:/data/registry.json:ro
+      - ../${DCDR_REGISTRY_FILE:-registry.nutrition_protein.json}:/data/registry.json:ro
     command: ["--registry", "/data/registry.json"]

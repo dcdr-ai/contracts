@@ -1,0 +1,289 @@
+{
+  "generatedAt": "2026-06-06T00:00:00.000Z",
+  "credentials": [
+    {
+      "id": "cred_openai",
+      "name": "OpenAI API Key (INLINE)",
+      "provider": "OPEN_AI",
+      "headers": [
+        {
+          "name": "apiKey",
+          "value": "REPLACE_ME_OPENAI_API_KEY"
+        }
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "id": "intent_banking_incident_classifier",
+      "intent": "BANKING_INCIDENT_CLASSIFIER",
+      "type": "CHAT",
+      "active": true,
+      "description": "Classifies a banking security incident and proposes actions.",
+      "inputSchema": {
+        "incidentId": {
+          "type": "string",
+          "required": true,
+          "description": "Internal incident identifier"
+        },
+        "customerTier": {
+          "type": "enum",
+          "required": true,
+          "values": ["RETAIL", "SME", "CORPORATE", "PRIVATE"],
+          "description": "Commercial segment"
+        },
+        "channel": {
+          "type": "enum",
+          "required": true,
+          "values": ["MOBILE", "WEB", "ATM", "BRANCH", "API"],
+          "description": "Origin channel"
+        },
+        "isFraudSuspected": {
+          "type": "boolean",
+          "required": true,
+          "description": "Whether fraud is currently suspected"
+        },
+        "amountEur": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 500000,
+          "description": "Potential financial impact (EUR)"
+        },
+        "failedLoginCount": {
+          "type": "integer",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "description": "Failed login attempts in last 24h"
+        },
+        "geoDistanceKm": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 20000,
+          "description": "Distance from usual user location"
+        },
+        "eventTimestampIso": {
+          "type": "string",
+          "required": true,
+          "description": "Event timestamp in ISO 8601"
+        },
+        "device": {
+          "type": "object",
+          "required": true,
+          "description": "Device metadata",
+          "properties": {
+            "deviceType": {
+              "type": "enum",
+              "required": true,
+              "values": ["PHONE", "TABLET", "LAPTOP", "DESKTOP"],
+              "description": "Primary device category"
+            },
+            "os": {
+              "type": "string",
+              "required": true,
+              "description": "Operating system"
+            },
+            "appVersion": {
+              "type": "string",
+              "required": false,
+              "description": "App version when applicable"
+            },
+            "isJailbroken": {
+              "type": "boolean",
+              "required": false,
+              "description": "Security posture hint"
+            }
+          }
+        },
+        "signals": {
+          "type": "array",
+          "required": true,
+          "itemsType": "object",
+          "min": 1,
+          "max": 20,
+          "description": "Fraud and security signals",
+          "properties": {
+            "code": {
+              "type": "enum",
+              "required": true,
+              "values": [
+                "VELOCITY_SPIKE",
+                "NEW_DEVICE",
+                "IP_REPUTATION_LOW",
+                "PASSWORD_RESET_RECENT",
+                "UNUSUAL_LOCATION"
+              ],
+              "description": "Signal code"
+            },
+            "weight": {
+              "type": "float",
+              "required": true,
+              "min": 0,
+              "max": 1,
+              "description": "Signal importance"
+            },
+            "source": {
+              "type": "string",
+              "required": true,
+              "description": "Subsystem that produced the signal"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "incidentType": {
+          "type": "enum",
+          "required": true,
+          "values": [
+            "ACCOUNT_TAKEOVER",
+            "CARD_FRAUD",
+            "AML_ALERT",
+            "PAYMENT_DISPUTE",
+            "TECHNICAL_ISSUE"
+          ],
+          "description": "Final incident category"
+        },
+        "priority": {
+          "type": "enum",
+          "required": true,
+          "values": ["P1", "P2", "P3", "P4"],
+          "description": "Operational priority"
+        },
+        "severityScore": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "description": "Severity score from 0 to 100"
+        },
+        "confidence": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 1,
+          "description": "Model confidence from 0 to 1"
+        },
+        "requiresManualReview": {
+          "type": "boolean",
+          "required": true,
+          "description": "If true, escalation to analyst is mandatory"
+        },
+        "summary": {
+          "type": "string",
+          "required": true,
+          "description": "One-line rationale"
+        },
+        "recommendedActions": {
+          "type": "array",
+          "required": true,
+          "itemsType": "object",
+          "min": 1,
+          "max": 6,
+          "description": "Actionable response plan",
+          "properties": {
+            "action": {
+              "type": "enum",
+              "required": true,
+              "values": [
+                "BLOCK_CARD",
+                "STEP_UP_AUTH",
+                "FREEZE_ACCOUNT",
+                "CALL_CUSTOMER",
+                "OPEN_CASE",
+                "MONITOR"
+              ],
+              "description": "Recommended action"
+            },
+            "ownerTeam": {
+              "type": "enum",
+              "required": true,
+              "values": [
+                "FRAUD_OPS",
+                "SOC",
+                "CONTACT_CENTER",
+                "PAYMENTS",
+                "CORE_BANKING"
+              ],
+              "description": "Owning team"
+            },
+            "dueInHours": {
+              "type": "integer",
+              "required": true,
+              "min": 1,
+              "max": 72,
+              "description": "Deadline in hours"
+            },
+            "rationale": {
+              "type": "string",
+              "required": true,
+              "description": "Why this action is necessary"
+            }
+          }
+        }
+      },
+      "defaultPrompt": {
+        "id": "prompt_banking_incident_classifier_v1",
+        "name": "banking_incident_classifier_v1",
+        "version": "1.0",
+        "variablesInterpolationType": "MUSTACHE",
+        "params": {
+          "response_format": "json_schema",
+          "temperature": 0.15,
+          "max_tokens": 2200
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a banking incident triage assistant for a SOC/FraudOps team. Return ONLY valid JSON that strictly matches this shape: {\"incidentType\":\"ACCOUNT_TAKEOVER|CARD_FRAUD|AML_ALERT|PAYMENT_DISPUTE|TECHNICAL_ISSUE\",\"priority\":\"P1|P2|P3|P4\",\"severityScore\":number,\"confidence\":number,\"requiresManualReview\":boolean,\"summary\":string,\"recommendedActions\":Array<{\"action\":\"BLOCK_CARD|STEP_UP_AUTH|FREEZE_ACCOUNT|CALL_CUSTOMER|OPEN_CASE|MONITOR\",\"ownerTeam\":\"FRAUD_OPS|SOC|CONTACT_CENTER|PAYMENTS|CORE_BANKING\",\"dueInHours\":number,\"rationale\":string}>}. Do not add extra keys."
+          },
+          {
+            "role": "user",
+            "content": "Incident {{incidentId}} in channel {{channel}} for tier {{customerTier}}. Fraud suspected={{isFraudSuspected}}, amount={{amountEur}} EUR, failedLogins={{failedLoginCount}}, geoDistanceKm={{geoDistanceKm}}, eventTimestamp={{eventTimestampIso}}. Device={{device}}. Signals={{signals}}. Classify and propose a concrete action plan."
+          }
+        ]
+      },
+      "executionPolicy": {
+        "type": "WEIGHTED"
+      },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "maxPerCandidate": 2,
+        "allowFallback": true,
+        "retryOn": [
+          "TIMEOUT",
+          "UPSTREAM_5XX",
+          "NETWORK",
+          "PARSE_FAIL",
+          "SCHEMA_FAIL"
+        ],
+        "repairOnParseFail": true
+      },
+      "implementations": [
+        {
+          "id": "impl_openai_nano",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (nano)",
+          "version": "1.0",
+          "model": "gpt-4.1-nano",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        },
+        {
+          "id": "impl_openai_mini",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (mini)",
+          "version": "1.0",
+          "model": "gpt-4.1-mini",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        }
+      ]
+    }
+  ]
+}

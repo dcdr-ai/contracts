@@ -1,0 +1,291 @@
+{
+  "generatedAt": "2026-06-06T00:00:00.000Z",
+  "credentials": [
+    {
+      "id": "cred_openai",
+      "name": "OpenAI API Key (INLINE)",
+      "provider": "OPEN_AI",
+      "headers": [
+        {
+          "name": "apiKey",
+          "value": "REPLACE_ME_OPENAI_API_KEY"
+        }
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "id": "intent_support_ticket_classifier",
+      "intent": "SUPPORT_TICKET_CLASSIFIER",
+      "type": "CHAT",
+      "active": true,
+      "description": "Classifies support tickets and recommends next actions for the service desk.",
+      "inputSchema": {
+        "ticketId": {
+          "type": "string",
+          "required": true,
+          "description": "Support ticket id"
+        },
+        "customerPlan": {
+          "type": "enum",
+          "required": true,
+          "values": ["FREE", "PRO", "BUSINESS", "ENTERPRISE"],
+          "description": "Customer subscription level"
+        },
+        "channel": {
+          "type": "enum",
+          "required": true,
+          "values": ["EMAIL", "CHAT", "PHONE", "PORTAL"],
+          "description": "How the ticket was created"
+        },
+        "language": {
+          "type": "enum",
+          "required": true,
+          "values": ["en", "es", "fr", "de", "pt"],
+          "description": "Ticket language"
+        },
+        "title": {
+          "type": "string",
+          "required": true,
+          "description": "Ticket title"
+        },
+        "description": {
+          "type": "string",
+          "required": true,
+          "min": 10,
+          "max": 4000,
+          "description": "Full ticket description"
+        },
+        "openedHoursAgo": {
+          "type": "integer",
+          "required": true,
+          "min": 0,
+          "max": 720,
+          "description": "Hours since creation"
+        },
+        "businessImpactUsd": {
+          "type": "float",
+          "required": false,
+          "min": 0,
+          "max": 1000000,
+          "description": "Estimated financial impact"
+        },
+        "isProductionDown": {
+          "type": "boolean",
+          "required": true,
+          "description": "Whether production is impacted"
+        },
+        "reporter": {
+          "type": "object",
+          "required": true,
+          "description": "Reporter metadata",
+          "properties": {
+            "role": {
+              "type": "enum",
+              "required": true,
+              "values": ["END_USER", "ADMIN", "DEVELOPER", "PARTNER"],
+              "description": "Reporter role"
+            },
+            "region": {
+              "type": "enum",
+              "required": true,
+              "values": ["NA", "LATAM", "EMEA", "APAC"],
+              "description": "Geographic region"
+            },
+            "isDecisionMaker": {
+              "type": "boolean",
+              "required": false,
+              "description": "Commercial urgency indicator"
+            }
+          }
+        },
+        "attachments": {
+          "type": "array",
+          "required": false,
+          "itemsType": "object",
+          "min": 0,
+          "max": 10,
+          "description": "Attached files summary",
+          "properties": {
+            "kind": {
+              "type": "enum",
+              "required": true,
+              "values": ["SCREENSHOT", "LOG", "VIDEO", "HAR", "OTHER"],
+              "description": "Attachment type"
+            },
+            "sizeKb": {
+              "type": "float",
+              "required": true,
+              "min": 0,
+              "max": 102400,
+              "description": "Attachment size in KB"
+            },
+            "containsSensitiveData": {
+              "type": "boolean",
+              "required": true,
+              "description": "If true, data handling must be careful"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "category": {
+          "type": "enum",
+          "required": true,
+          "values": [
+            "BUG",
+            "INCIDENT",
+            "HOW_TO",
+            "BILLING",
+            "FEATURE_REQUEST",
+            "ACCESS_ISSUE"
+          ],
+          "description": "Primary category"
+        },
+        "subCategory": {
+          "type": "enum",
+          "required": true,
+          "values": [
+            "AUTH",
+            "PAYMENTS",
+            "PERFORMANCE",
+            "DATA_INTEGRITY",
+            "ONBOARDING",
+            "INTEGRATION"
+          ],
+          "description": "Secondary category"
+        },
+        "priority": {
+          "type": "enum",
+          "required": true,
+          "values": ["LOW", "MEDIUM", "HIGH", "URGENT"],
+          "description": "Support priority"
+        },
+        "slaTargetHours": {
+          "type": "integer",
+          "required": true,
+          "min": 1,
+          "max": 168,
+          "description": "Target SLA in hours"
+        },
+        "confidence": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 1,
+          "description": "Confidence score"
+        },
+        "requiresEscalation": {
+          "type": "boolean",
+          "required": true,
+          "description": "Whether to escalate immediately"
+        },
+        "queue": {
+          "type": "enum",
+          "required": true,
+          "values": ["L1_GENERAL", "L2_TECH", "SRE", "BILLING_OPS", "SECURITY"],
+          "description": "Routing destination"
+        },
+        "routingHints": {
+          "type": "array",
+          "required": true,
+          "itemsType": "object",
+          "min": 1,
+          "max": 5,
+          "description": "What to do next",
+          "properties": {
+            "step": {
+              "type": "enum",
+              "required": true,
+              "values": [
+                "ACKNOWLEDGE",
+                "ASK_LOGS",
+                "REQUEST_REPRO",
+                "ESCALATE",
+                "WORKAROUND"
+              ],
+              "description": "Suggested immediate step"
+            },
+            "owner": {
+              "type": "enum",
+              "required": true,
+              "values": ["AGENT", "L2", "SRE", "SECURITY", "BILLING"],
+              "description": "Owner role"
+            },
+            "reason": {
+              "type": "string",
+              "required": true,
+              "description": "Reason for this step"
+            }
+          }
+        },
+        "summary": {
+          "type": "string",
+          "required": true,
+          "description": "One-line decision summary"
+        }
+      },
+      "defaultPrompt": {
+        "id": "prompt_support_ticket_classifier_v1",
+        "name": "support_ticket_classifier_v1",
+        "version": "1.0",
+        "variablesInterpolationType": "MUSTACHE",
+        "params": {
+          "response_format": "json_schema",
+          "temperature": 0.2,
+          "max_tokens": 2200
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a senior support triage assistant. Return ONLY valid JSON with exactly this shape: {\"category\":\"BUG|INCIDENT|HOW_TO|BILLING|FEATURE_REQUEST|ACCESS_ISSUE\",\"subCategory\":\"AUTH|PAYMENTS|PERFORMANCE|DATA_INTEGRITY|ONBOARDING|INTEGRATION\",\"priority\":\"LOW|MEDIUM|HIGH|URGENT\",\"slaTargetHours\":number,\"confidence\":number,\"requiresEscalation\":boolean,\"queue\":\"L1_GENERAL|L2_TECH|SRE|BILLING_OPS|SECURITY\",\"routingHints\":Array<{\"step\":\"ACKNOWLEDGE|ASK_LOGS|REQUEST_REPRO|ESCALATE|WORKAROUND\",\"owner\":\"AGENT|L2|SRE|SECURITY|BILLING\",\"reason\":string}>,\"summary\":string}. No extra keys."
+          },
+          {
+            "role": "user",
+            "content": "Ticket {{ticketId}} from plan {{customerPlan}} via {{channel}} (language={{language}}). title={{title}} description={{description}} openedHoursAgo={{openedHoursAgo}} businessImpactUsd={{businessImpactUsd}} isProductionDown={{isProductionDown}} reporter={{reporter}} attachments={{attachments}}. Classify, prioritize and route the ticket."
+          }
+        ]
+      },
+      "executionPolicy": {
+        "type": "WEIGHTED"
+      },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "maxPerCandidate": 2,
+        "allowFallback": true,
+        "retryOn": [
+          "TIMEOUT",
+          "UPSTREAM_5XX",
+          "NETWORK",
+          "PARSE_FAIL",
+          "SCHEMA_FAIL"
+        ],
+        "repairOnParseFail": true
+      },
+      "implementations": [
+        {
+          "id": "impl_openai_nano",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (nano)",
+          "version": "1.0",
+          "model": "gpt-4.1-nano",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        },
+        {
+          "id": "impl_openai_mini",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (mini)",
+          "version": "1.0",
+          "model": "gpt-4.1-mini",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        }
+      ]
+    }
+  ]
+}

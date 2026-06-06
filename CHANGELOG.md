@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260606.1] — 02:52UTC
+
+<!--
+sourceCommit: da0b152bbf02947224f3f8b0ea3039c2479ef5d6
+queuedAtUtc: 
+previousMirroredBuild: 20260606.3 (2026-06-06)
+contractsSubmodule: 5f584ddf926c..77abd6dcd59b
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Added 1-minute onboarding runtime-client examples with typed `ExecuteIntentRequest` scripts for nutrition, banking incident classification, support ticket classification, product format parsing, and supplier risk assessment.
+
 ## [20260606.3] — 01:45UTC
 
 <!--

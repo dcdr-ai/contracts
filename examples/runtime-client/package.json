@@ -3,7 +3,11 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "start": "ts-node ./run-nutrition-protein.ts"
+    "start:nutrition-protein": "ts-node ./run-nutrition-protein-example.ts",
+    "start:banking-incident-classifier": "ts-node ./run-banking-incident-classifier-example.ts",
+    "start:support-ticket-classifier": "ts-node ./run-support-ticket-classifier-example.ts",
+    "start:product-format-parser": "ts-node ./run-product-format-parser-example.ts",
+    "start:supplier-risk-assessment": "ts-node ./run-supplier-risk-assessment-example.ts"
   },
   "dependencies": {
     "@dcdr/contracts": "^2.0.0"

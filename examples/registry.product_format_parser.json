@@ -1,0 +1,276 @@
+{
+  "generatedAt": "2026-06-06T00:00:00.000Z",
+  "credentials": [
+    {
+      "id": "cred_openai",
+      "name": "OpenAI API Key (INLINE)",
+      "provider": "OPEN_AI",
+      "headers": [
+        {
+          "name": "apiKey",
+          "value": "REPLACE_ME_OPENAI_API_KEY"
+        }
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "id": "intent_product_format_parser",
+      "intent": "PRODUCT_FORMAT_PARSER",
+      "type": "CHAT",
+      "active": true,
+      "description": "Parses unstructured product descriptions into normalized catalog fields.",
+      "inputSchema": {
+        "rawTitle": {
+          "type": "string",
+          "required": true,
+          "min": 5,
+          "max": 240,
+          "description": "Raw title from source feed"
+        },
+        "rawDescription": {
+          "type": "string",
+          "required": true,
+          "min": 10,
+          "max": 8000,
+          "description": "Long description"
+        },
+        "sourceMarketplace": {
+          "type": "enum",
+          "required": true,
+          "values": [
+            "AMAZON",
+            "SHOPIFY",
+            "MAGENTO",
+            "WOOCOMMERCE",
+            "CSV_IMPORT"
+          ],
+          "description": "Origin system"
+        },
+        "currency": {
+          "type": "enum",
+          "required": true,
+          "values": ["EUR", "USD", "GBP", "JPY"],
+          "description": "Price currency"
+        },
+        "rawPrice": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 100000,
+          "description": "Raw listed price"
+        },
+        "unitsInStock": {
+          "type": "integer",
+          "required": false,
+          "min": 0,
+          "max": 1000000,
+          "description": "Current stock"
+        },
+        "attributes": {
+          "type": "object",
+          "required": false,
+          "description": "Optional source attributes",
+          "properties": {
+            "brandHint": {
+              "type": "string",
+              "required": false,
+              "description": "Brand hint from feed"
+            },
+            "gtin": {
+              "type": "string",
+              "required": false,
+              "description": "Global Trade Item Number"
+            },
+            "isRefurbished": {
+              "type": "boolean",
+              "required": false,
+              "description": "Refurbishment hint"
+            }
+          }
+        },
+        "rawBullets": {
+          "type": "array",
+          "required": false,
+          "itemsType": "string",
+          "min": 0,
+          "max": 20,
+          "description": "Feature bullets"
+        }
+      },
+      "outputSchema": {
+        "normalizedTitle": {
+          "type": "string",
+          "required": true,
+          "description": "Cleaned canonical title"
+        },
+        "brand": {
+          "type": "string",
+          "required": true,
+          "description": "Detected brand"
+        },
+        "category": {
+          "type": "enum",
+          "required": true,
+          "values": [
+            "ELECTRONICS",
+            "HOME",
+            "SPORT",
+            "FOOD",
+            "FASHION",
+            "HEALTH"
+          ],
+          "description": "Top-level catalog category"
+        },
+        "price": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 100000,
+          "description": "Normalized price"
+        },
+        "currency": {
+          "type": "enum",
+          "required": true,
+          "values": ["EUR", "USD", "GBP", "JPY"],
+          "description": "Output currency"
+        },
+        "packSize": {
+          "type": "integer",
+          "required": false,
+          "min": 1,
+          "max": 500,
+          "description": "Detected units per pack"
+        },
+        "dimensions": {
+          "type": "object",
+          "required": false,
+          "description": "Product dimensions in centimeters",
+          "properties": {
+            "lengthCm": {
+              "type": "float",
+              "required": false,
+              "min": 0,
+              "max": 500,
+              "description": "Length"
+            },
+            "widthCm": {
+              "type": "float",
+              "required": false,
+              "min": 0,
+              "max": 500,
+              "description": "Width"
+            },
+            "heightCm": {
+              "type": "float",
+              "required": false,
+              "min": 0,
+              "max": 500,
+              "description": "Height"
+            },
+            "weightKg": {
+              "type": "float",
+              "required": false,
+              "min": 0,
+              "max": 200,
+              "description": "Weight in kg"
+            }
+          }
+        },
+        "materials": {
+          "type": "array",
+          "required": false,
+          "itemsType": "string",
+          "min": 0,
+          "max": 10,
+          "description": "Detected main materials"
+        },
+        "complianceTags": {
+          "type": "array",
+          "required": true,
+          "itemsType": "enum",
+          "values": ["CE", "FCC", "ROHS", "FDA", "NONE"],
+          "min": 1,
+          "max": 5,
+          "description": "Detected compliance tags"
+        },
+        "qualityScore": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 1,
+          "description": "Extraction quality score"
+        },
+        "warnings": {
+          "type": "array",
+          "required": false,
+          "itemsType": "string",
+          "min": 0,
+          "max": 8,
+          "description": "Warnings for catalog operators"
+        }
+      },
+      "defaultPrompt": {
+        "id": "prompt_product_format_parser_v1",
+        "name": "product_format_parser_v1",
+        "version": "1.0",
+        "variablesInterpolationType": "MUSTACHE",
+        "params": {
+          "response_format": "json_schema",
+          "temperature": 0.1,
+          "max_tokens": 2400
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a product catalog normalization assistant. Return ONLY valid JSON with exactly this shape: {\"normalizedTitle\":string,\"brand\":string,\"category\":\"ELECTRONICS|HOME|SPORT|FOOD|FASHION|HEALTH\",\"price\":number,\"currency\":\"EUR|USD|GBP|JPY\",\"packSize\"?:number,\"dimensions\"?:{\"lengthCm\"?:number,\"widthCm\"?:number,\"heightCm\"?:number,\"weightKg\"?:number},\"materials\"?:string[],\"complianceTags\":Array<\"CE|FCC|ROHS|FDA|NONE\">,\"qualityScore\":number,\"warnings\"?:string[]}. No extra keys."
+          },
+          {
+            "role": "user",
+            "content": "Normalize this product listing. rawTitle={{rawTitle}} rawDescription={{rawDescription}} sourceMarketplace={{sourceMarketplace}} currency={{currency}} rawPrice={{rawPrice}} unitsInStock={{unitsInStock}} attributes={{attributes}} rawBullets={{rawBullets}}."
+          }
+        ]
+      },
+      "executionPolicy": {
+        "type": "WEIGHTED"
+      },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "maxPerCandidate": 2,
+        "allowFallback": true,
+        "retryOn": [
+          "TIMEOUT",
+          "UPSTREAM_5XX",
+          "NETWORK",
+          "PARSE_FAIL",
+          "SCHEMA_FAIL"
+        ],
+        "repairOnParseFail": true
+      },
+      "implementations": [
+        {
+          "id": "impl_openai_nano",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (nano)",
+          "version": "1.0",
+          "model": "gpt-4.1-nano",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        },
+        {
+          "id": "impl_openai_mini",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (mini)",
+          "version": "1.0",
+          "model": "gpt-4.1-mini",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        }
+      ]
+    }
+  ]
+}

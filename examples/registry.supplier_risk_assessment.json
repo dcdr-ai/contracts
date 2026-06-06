@@ -1,0 +1,343 @@
+{
+  "generatedAt": "2026-06-06T00:00:00.000Z",
+  "credentials": [
+    {
+      "id": "cred_openai",
+      "name": "OpenAI API Key (INLINE)",
+      "provider": "OPEN_AI",
+      "headers": [
+        {
+          "name": "apiKey",
+          "value": "REPLACE_ME_OPENAI_API_KEY"
+        }
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "id": "intent_supplier_risk_assessment",
+      "intent": "SUPPLIER_RISK_ASSESSMENT",
+      "type": "CHAT",
+      "active": true,
+      "description": "Assesses supplier operational and compliance risk for procurement decisions.",
+      "inputSchema": {
+        "supplierId": {
+          "type": "string",
+          "required": true,
+          "description": "Internal supplier id"
+        },
+        "supplierName": {
+          "type": "string",
+          "required": true,
+          "description": "Legal supplier name"
+        },
+        "country": {
+          "type": "enum",
+          "required": true,
+          "values": ["ES", "PT", "FR", "DE", "US", "MX", "CN", "IN"],
+          "description": "Supplier operating country"
+        },
+        "segment": {
+          "type": "enum",
+          "required": true,
+          "values": [
+            "RAW_MATERIAL",
+            "LOGISTICS",
+            "MANUFACTURING",
+            "SOFTWARE",
+            "PROFESSIONAL_SERVICES"
+          ],
+          "description": "Supplier segment"
+        },
+        "annualSpendEur": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 100000000,
+          "description": "Annual spend with this supplier"
+        },
+        "criticality": {
+          "type": "enum",
+          "required": true,
+          "values": ["LOW", "MEDIUM", "HIGH", "MISSION_CRITICAL"],
+          "description": "Business criticality"
+        },
+        "financials": {
+          "type": "object",
+          "required": true,
+          "description": "Supplier financial indicators",
+          "properties": {
+            "revenueM": {
+              "type": "float",
+              "required": true,
+              "min": 0,
+              "max": 100000,
+              "description": "Revenue in millions"
+            },
+            "ebitdaMargin": {
+              "type": "float",
+              "required": true,
+              "min": -1,
+              "max": 1,
+              "description": "EBITDA margin"
+            },
+            "debtRatio": {
+              "type": "float",
+              "required": true,
+              "min": 0,
+              "max": 10,
+              "description": "Debt / equity proxy"
+            },
+            "lateFilingCount": {
+              "type": "integer",
+              "required": true,
+              "min": 0,
+              "max": 20,
+              "description": "Delayed filing count"
+            }
+          }
+        },
+        "deliveryMetrics": {
+          "type": "object",
+          "required": true,
+          "description": "Operational delivery performance",
+          "properties": {
+            "onTimeRate": {
+              "type": "float",
+              "required": true,
+              "min": 0,
+              "max": 1,
+              "description": "On-time delivery rate"
+            },
+            "defectRate": {
+              "type": "float",
+              "required": true,
+              "min": 0,
+              "max": 1,
+              "description": "Defect ratio"
+            },
+            "avgLeadTimeDays": {
+              "type": "float",
+              "required": true,
+              "min": 0,
+              "max": 365,
+              "description": "Average lead time"
+            }
+          }
+        },
+        "complianceFlags": {
+          "type": "array",
+          "required": true,
+          "itemsType": "enum",
+          "values": [
+            "SANCTIONS_MATCH",
+            "MISSING_ISO27001",
+            "MISSING_ISO9001",
+            "ESG_CONTROVERSY",
+            "NO_MAJOR_FLAG"
+          ],
+          "min": 1,
+          "max": 10,
+          "description": "Compliance and governance signals"
+        },
+        "recentIncidents": {
+          "type": "array",
+          "required": false,
+          "itemsType": "object",
+          "min": 0,
+          "max": 12,
+          "description": "Recent supplier incidents",
+          "properties": {
+            "incidentType": {
+              "type": "enum",
+              "required": true,
+              "values": [
+                "QUALITY",
+                "SECURITY",
+                "LEGAL",
+                "DELIVERY",
+                "FINANCIAL"
+              ],
+              "description": "Incident category"
+            },
+            "daysAgo": {
+              "type": "integer",
+              "required": true,
+              "min": 0,
+              "max": 3650,
+              "description": "How long ago it happened"
+            },
+            "impactEur": {
+              "type": "float",
+              "required": false,
+              "min": 0,
+              "max": 5000000,
+              "description": "Estimated impact"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "riskLevel": {
+          "type": "enum",
+          "required": true,
+          "values": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "description": "Overall risk level"
+        },
+        "riskScore": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "description": "Overall risk score"
+        },
+        "financialRisk": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "description": "Financial pillar score"
+        },
+        "operationalRisk": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "description": "Operational pillar score"
+        },
+        "complianceRisk": {
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "description": "Compliance pillar score"
+        },
+        "recommendation": {
+          "type": "enum",
+          "required": true,
+          "values": [
+            "APPROVE",
+            "APPROVE_WITH_MONITORING",
+            "REMEDIATION_PLAN",
+            "REJECT"
+          ],
+          "description": "Sourcing recommendation"
+        },
+        "reviewInDays": {
+          "type": "integer",
+          "required": true,
+          "min": 7,
+          "max": 365,
+          "description": "Next review period"
+        },
+        "mitigationPlan": {
+          "type": "array",
+          "required": true,
+          "itemsType": "object",
+          "min": 1,
+          "max": 8,
+          "description": "Mitigation actions",
+          "properties": {
+            "action": {
+              "type": "enum",
+              "required": true,
+              "values": [
+                "REQUEST_AUDIT",
+                "ADD_SECOND_SOURCE",
+                "INCREASE_SAFETY_STOCK",
+                "REQUEST_FINANCIAL_GUARANTEE",
+                "CONTRACT_CLAUSE_UPDATE",
+                "MONTHLY_MONITORING"
+              ],
+              "description": "Recommended mitigation"
+            },
+            "owner": {
+              "type": "enum",
+              "required": true,
+              "values": ["PROCUREMENT", "LEGAL", "QUALITY", "RISK", "FINANCE"],
+              "description": "Action owner"
+            },
+            "deadlineDays": {
+              "type": "integer",
+              "required": true,
+              "min": 1,
+              "max": 180,
+              "description": "Execution deadline"
+            },
+            "note": {
+              "type": "string",
+              "required": true,
+              "description": "Action rationale"
+            }
+          }
+        },
+        "summary": {
+          "type": "string",
+          "required": true,
+          "description": "Executive summary"
+        }
+      },
+      "defaultPrompt": {
+        "id": "prompt_supplier_risk_assessment_v1",
+        "name": "supplier_risk_assessment_v1",
+        "version": "1.0",
+        "variablesInterpolationType": "MUSTACHE",
+        "params": {
+          "response_format": "json_schema",
+          "temperature": 0.15,
+          "max_tokens": 2400
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a supplier risk committee assistant. Return ONLY valid JSON with exactly this shape: {\"riskLevel\":\"LOW|MEDIUM|HIGH|CRITICAL\",\"riskScore\":number,\"financialRisk\":number,\"operationalRisk\":number,\"complianceRisk\":number,\"recommendation\":\"APPROVE|APPROVE_WITH_MONITORING|REMEDIATION_PLAN|REJECT\",\"reviewInDays\":number,\"mitigationPlan\":Array<{\"action\":\"REQUEST_AUDIT|ADD_SECOND_SOURCE|INCREASE_SAFETY_STOCK|REQUEST_FINANCIAL_GUARANTEE|CONTRACT_CLAUSE_UPDATE|MONTHLY_MONITORING\",\"owner\":\"PROCUREMENT|LEGAL|QUALITY|RISK|FINANCE\",\"deadlineDays\":number,\"note\":string}>,\"summary\":string}. Do not add extra keys."
+          },
+          {
+            "role": "user",
+            "content": "Assess supplier {{supplierId}}/{{supplierName}} from {{country}} in segment {{segment}} with annualSpendEur={{annualSpendEur}} criticality={{criticality}} financials={{financials}} deliveryMetrics={{deliveryMetrics}} complianceFlags={{complianceFlags}} recentIncidents={{recentIncidents}}."
+          }
+        ]
+      },
+      "executionPolicy": {
+        "type": "WEIGHTED"
+      },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "maxPerCandidate": 2,
+        "allowFallback": true,
+        "retryOn": [
+          "TIMEOUT",
+          "UPSTREAM_5XX",
+          "NETWORK",
+          "PARSE_FAIL",
+          "SCHEMA_FAIL"
+        ],
+        "repairOnParseFail": true
+      },
+      "implementations": [
+        {
+          "id": "impl_openai_nano",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (nano)",
+          "version": "1.0",
+          "model": "gpt-4.1-nano",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        },
+        {
+          "id": "impl_openai_mini",
+          "provider": "OPEN_AI",
+          "name": "OpenAI (mini)",
+          "version": "1.0",
+          "model": "gpt-4.1-mini",
+          "endpoint": "https://api.openai.com/v1",
+          "active": true,
+          "weight": 0.5,
+          "credentialRef": "cred_openai"
+        }
+      ]
+    }
+  ]
+}
