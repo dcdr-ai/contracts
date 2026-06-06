@@ -83,7 +83,7 @@ From the repo root:
 ```powershell
 cd src/contracts/examples/runtime-client
 npm install
-npm run start:nutrition
+npm run start:nutrition-protein
 npm run start:banking-incident-classifier
 npm run start:support-ticket-classifier
 npm run start:product-format-parser

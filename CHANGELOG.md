@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260606.5] — 23:46UTC
+
+<!--
+sourceCommit: 3cd78af9f1543faa8b71b6148ed99a448ef59de1
+queuedAtUtc: 
+previousMirroredBuild: 20260606.2 (2026-06-06)
+contractsSubmodule: e2a7b0a539c1..9aaff9c55a6d
+-->
+
+### Fixed
+- <kbd>RUNTIME</kbd> `POST /api/execution/dry-run/:intent` is now tenant-aware in customer mode (Bearer + `cid`) and resolves intents from the same tenant-scoped registry path used by `runIntent`; missing/inactive intents now surface as `404` (`NO_ACTIVE_MODEL`) instead of generic `500`.
+- <kbd>RUNTIME</kbd> Consolidated duplicate onboarding asset tests into a single canonical test and fixed docker-compose registry path resolution with `${VAR:-fallback}` placeholder support for stable Linux/Ubuntu CI runs.
+
 ## [20260606.2] — 03:20UTC
 
 <!--

@@ -18,7 +18,7 @@ All scripts follow the same pattern:
 
 ## Available examples
 
-- `npm run start:nutrition`
+- `npm run start:nutrition-protein`
   - Intent: `NUTRITION_PROTEIN_SUGGESTION`
   - Registry: `src/contracts/examples/registry.nutrition_protein.json`
 - `npm run start:banking-incident-classifier`
@@ -57,7 +57,7 @@ Make sure the runtime is running (default: `http://localhost:8000`) and started 
 Then run one script (examples):
 
 ```powershell
-npm run start:nutrition
+npm run start:nutrition-protein
 npm run start:banking-incident-classifier
 npm run start:support-ticket-classifier
 npm run start:product-format-parser
@@ -79,5 +79,5 @@ $env:DCDR_BASE_URL = "http://localhost:8000"
 $env:DCDR_API_TOKEN = "dev-token"
 $env:DCDR_SESSION_BYPASS_TOKEN = "dev-session-bypass"
 
-npm run start:nutrition
+npm run start:nutrition-protein
 ```
