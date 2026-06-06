@@ -327,6 +327,9 @@ describe("DcdrRuntimeClient", () => {
         "https://example.invalid/api/execution/dry-run/MY_INTENT",
       );
       expect(init?.method).toBe("POST");
+      const bodyRaw = String(init?.body ?? "");
+      expect(bodyRaw).toContain('"vars"');
+      expect(bodyRaw).toContain('"name":"Jose"');
       return makeMockResponse({
         ok: true,
         status: 200,
@@ -340,7 +343,7 @@ describe("DcdrRuntimeClient", () => {
       fetchFn,
     });
 
-    const res = await client.dryRun("MY_INTENT", { name: "Jose" });
+    const res = await client.dryRun("MY_INTENT", { vars: { name: "Jose" } });
     expect(res.status).toBe("OK");
   });
 

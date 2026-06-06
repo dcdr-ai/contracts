@@ -4,6 +4,26 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260606.3] — 01:45UTC
+
+<!--
+sourceCommit: 659514e9f79181dd6ab0aa49c4ccfbf8265464aa
+queuedAtUtc: 
+previousMirroredBuild: 20260605.1 (2026-06-05)
+contractsSubmodule: 1b49cecf1c24..5f584ddf926c
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Optional durable tenant-registry marker + marker lookaside (runtime-owned) to improve cross-node convergence when Pub/Sub messages are missed.
+### Changed
+- <kbd>CONTRACTS</kbd> Updated cache contract surface and exports for the Redis tenant-registry invalidation channel.
+- <kbd>RUNTIME</kbd> Backend log sync now uses a no-drop strategy when in-memory queue reaches cap: overflow spills to a durable NDJSON disk spool (`LOGS_SPOOL_FILE_PATH`) and is retried on subsequent flush cycles.
+- <kbd>RUNTIME</kbd> Tuned default log in-memory buffer cap back to `LOGS_MAX_BUFFER_SIZE=2000` now that durable disk spool overflow is enabled.
+- <kbd>CONTRACTS</kbd> Updated `DcdrRuntimeClient.dryRun()` to accept `ExecuteIntentRequest` explicitly (no vars-only compatibility overload).
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `2.0.2`.
+### Fixed
+- <kbd>RUNTIME</kbd> Improved Jest test stability for Redis-related features by preventing timer/metrics open-handle leaks during test runs.
+
 ## [20260605.1] — 22:29UTC
 
 <!--

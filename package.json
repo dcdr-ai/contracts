@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "homepage": "https://dcdr.ai",
   "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,

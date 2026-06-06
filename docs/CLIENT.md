@@ -15,7 +15,7 @@ Quick map (method → HTTP surface):
 | `executeIntent(intent, request)`                     | `POST /api/execution/run/:intent`           | required                    | Normal intent execution                  |
 | `executeIntentStream(intent, request)`               | `POST /api/execution/stream/:intent`        | required                    | Streaming execution (SSE)                |
 | `demo(intent, request)`                              | `POST /api/execution/demo/:intent`          | required (except demo mode) | Demo-specific intent execution           |
-| `dryRun(intent, vars)`                               | `POST /api/execution/dry-run/:intent`       | required                    | Debug prompt rendering & resolved config |
+| `dryRun(intent, request)`                            | `POST /api/execution/dry-run/:intent`       | required                    | Debug prompt rendering & resolved config |
 | `eval(intent, request)`                              | `POST /api/execution/eval/:intent`          | required                    | Cloud and Cloud Pro evaluation workflows |
 | `circuitBreakerStatus(provider, model?, tenantCid?)` | `GET /api/execution/circuit-breakers`       | required                    | Observe breaker state (tenant-scoped)    |
 | `resetCircuitBreaker(provider, model?, tenantCid?)`  | `PUT /api/execution/circuit-breakers/reset` | internal only               | Reset breaker state (ops)                |
@@ -67,10 +67,11 @@ See: [STREAMING_EXECUTION_SSE.md](STREAMING_EXECUTION_SSE.md)
 - Intended for curated demo intents (e.g. `DCDR_LOCAL_DEMO`).
 - When the runtime is started in demo mode (for example `dcdr-runtime:latest --demo`), demo intents are intended to be callable without auth.
 
-### `dryRun(intent, vars)`
+### `dryRun(intent, request)`
 
 - Endpoint: `POST /api/execution/dry-run/:intent`
 - Purpose: validate and render prompt inputs without executing a provider/model call.
+- Input contract: `ExecuteIntentRequest`
 
 ### `eval(intent, request)`
 

@@ -600,18 +600,19 @@ export class DcdrRuntimeClient {
   /**
    * Calls `POST /api/execution/dry-run/:intent`.
    * @param intent Intent name.
-   * @param vars Template variables.
+   * @param request Execute request payload.
    * @returns Dry-run response.
    */
   async dryRun(
     intent: string,
-    vars: Record<string, unknown>,
+    request: ExecuteIntentRequest,
   ): Promise<DcdrRuntimeDryRunResponse> {
     const safeIntent = encodeURIComponent(String(intent ?? "").trim());
+
     return this.requestJson<DcdrRuntimeDryRunResponse>({
       method: "POST",
       path: `/api/execution/dry-run/${safeIntent}`,
-      body: { vars: vars ?? {} },
+      body: request ?? {},
       timeoutMs: this.timeoutMs,
     });
   }
