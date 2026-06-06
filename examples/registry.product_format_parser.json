@@ -142,41 +142,6 @@
           "max": 500,
           "description": "Detected units per pack"
         },
-        "dimensions": {
-          "type": "object",
-          "required": false,
-          "description": "Product dimensions in centimeters",
-          "properties": {
-            "lengthCm": {
-              "type": "float",
-              "required": false,
-              "min": 0,
-              "max": 500,
-              "description": "Length"
-            },
-            "widthCm": {
-              "type": "float",
-              "required": false,
-              "min": 0,
-              "max": 500,
-              "description": "Width"
-            },
-            "heightCm": {
-              "type": "float",
-              "required": false,
-              "min": 0,
-              "max": 500,
-              "description": "Height"
-            },
-            "weightKg": {
-              "type": "float",
-              "required": false,
-              "min": 0,
-              "max": 200,
-              "description": "Weight in kg"
-            }
-          }
-        },
         "materials": {
           "type": "array",
           "required": false,
@@ -185,14 +150,16 @@
           "max": 10,
           "description": "Detected main materials"
         },
-        "complianceTags": {
-          "type": "array",
+        "dimensionsText": {
+          "type": "string",
+          "required": false,
+          "description": "Dimensions/weight summary as a plain string"
+        },
+        "complianceTag": {
+          "type": "enum",
           "required": true,
-          "itemsType": "enum",
           "values": ["CE", "FCC", "ROHS", "FDA", "NONE"],
-          "min": 1,
-          "max": 5,
-          "description": "Detected compliance tags"
+          "description": "Primary compliance tag"
         },
         "qualityScore": {
           "type": "float",
@@ -216,14 +183,14 @@
         "version": "1.0",
         "variablesInterpolationType": "MUSTACHE",
         "params": {
-          "response_format": "json_schema",
+          "response_format": "json_object",
           "temperature": 0.1,
           "max_tokens": 2400
         },
         "messages": [
           {
             "role": "system",
-            "content": "You are a product catalog normalization assistant. Return ONLY valid JSON with exactly this shape: {\"normalizedTitle\":string,\"brand\":string,\"category\":\"ELECTRONICS|HOME|SPORT|FOOD|FASHION|HEALTH\",\"price\":number,\"currency\":\"EUR|USD|GBP|JPY\",\"packSize\"?:number,\"dimensions\"?:{\"lengthCm\"?:number,\"widthCm\"?:number,\"heightCm\"?:number,\"weightKg\"?:number},\"materials\"?:string[],\"complianceTags\":Array<\"CE|FCC|ROHS|FDA|NONE\">,\"qualityScore\":number,\"warnings\"?:string[]}. No extra keys."
+            "content": "You are a product catalog normalization assistant. Return ONLY valid JSON with exactly this shape: {\"normalizedTitle\":string,\"brand\":string,\"category\":\"ELECTRONICS|HOME|SPORT|FOOD|FASHION|HEALTH\",\"price\":number,\"currency\":\"EUR|USD|GBP|JPY\",\"packSize\"?:number,\"materials\"?:string[],\"dimensionsText\"?:string,\"complianceTag\":\"CE|FCC|ROHS|FDA|NONE\",\"qualityScore\":number,\"warnings\"?:string[]}. No extra keys."
           },
           {
             "role": "user",

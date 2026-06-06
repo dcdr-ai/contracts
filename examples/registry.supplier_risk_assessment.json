@@ -128,17 +128,10 @@
         "complianceFlags": {
           "type": "array",
           "required": true,
-          "itemsType": "enum",
-          "values": [
-            "SANCTIONS_MATCH",
-            "MISSING_ISO27001",
-            "MISSING_ISO9001",
-            "ESG_CONTROVERSY",
-            "NO_MAJOR_FLAG"
-          ],
+          "itemsType": "string",
           "min": 1,
           "max": 10,
-          "description": "Compliance and governance signals"
+          "description": "Compliance and governance signals. Allowed values: SANCTIONS_MATCH, MISSING_ISO27001, MISSING_ISO9001, ESG_CONTROVERSY, NO_MAJOR_FLAG"
         },
         "recentIncidents": {
           "type": "array",

@@ -28,20 +28,31 @@ async function main(): Promise<void> {
   const request: ExecuteIntentRequest = {
     vars: {
       incidentId: "INC-2026-06-00042",
-      customerSegment: "CORPORATE",
-      region: "EU",
-      affectedAccounts: 1240,
-      estimatedExposureEur: 248500.75,
-      fraudSignalsCount: 11,
-      containsPii: true,
-      description:
-        "Unusual payment velocity detected after privileged API key rotation. Several transfers were initiated from new device fingerprints.",
-      sourceSystem: {
-        systemName: "payments-gateway",
-        criticalityTier: "TIER_0",
-        isExternalFacing: true,
+      customerTier: "CORPORATE",
+      channel: "API",
+      isFraudSuspected: true,
+      amountEur: 248500.75,
+      failedLoginCount: 11,
+      geoDistanceKm: 1324.2,
+      eventTimestampIso: "2026-06-06T02:43:00.000Z",
+      device: {
+        deviceType: "LAPTOP",
+        os: "Windows 11",
+        appVersion: "web-2.41.0",
+        isJailbroken: false,
       },
-      channels: ["API", "WEB"],
+      signals: [
+        {
+          code: "VELOCITY_SPIKE",
+          weight: 0.92,
+          source: "transaction-monitor",
+        },
+        {
+          code: "NEW_DEVICE",
+          weight: 0.78,
+          source: "identity-risk",
+        },
+      ],
     },
   };
 
