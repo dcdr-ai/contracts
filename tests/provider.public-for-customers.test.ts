@@ -53,7 +53,7 @@ describe("ProviderModelRegistry.listProviderModels onlyPublicForCustomers", () =
 
   it("listPublicCustomerModels returns models with required public metadata", () => {
     const items = ProviderModelRegistry.listPublicCustomerModels();
-    expect(items.length).toBe(13);
+    expect(items.length).toBe(15);
 
     const globalDefaults = items.filter(
       (i) => i.model.isGlobalDefault === true,
@@ -95,16 +95,17 @@ describe("ProviderModelRegistry.listProviderModels onlyPublicForCustomers", () =
     const grouped =
       ProviderModelRegistry.listPublicCustomerModelsByPrimaryCategory();
 
-    expect(grouped[DcdrPublicModelCategory.BEST].length).toBe(3);
+    expect(grouped[DcdrPublicModelCategory.BEST].length).toBe(4);
     expect(grouped[DcdrPublicModelCategory.SMART].length).toBe(3);
-    expect(grouped[DcdrPublicModelCategory.FAST].length).toBe(3);
+    expect(grouped[DcdrPublicModelCategory.FAST].length).toBe(4);
     expect(grouped[DcdrPublicModelCategory.ECONOMY].length).toBe(3);
     expect(grouped[DcdrPublicModelCategory.PRIVATE].length).toBe(1);
 
     const bestIds = grouped[DcdrPublicModelCategory.BEST].map((m) => m.modelId);
     expect(bestIds).toContain("gpt-5.5");
-    expect(bestIds).toContain("claude-opus-4-7");
+    expect(bestIds).toContain("claude-opus-4-8");
     expect(bestIds).toContain("gemini-3.1-pro-preview");
+    expect(bestIds).toContain("grok-4.3");
 
     // Each primaryCategory with models should have at least one category default.
     for (const c of Object.values(DcdrPublicModelCategory)) {

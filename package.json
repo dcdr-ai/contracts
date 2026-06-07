@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "homepage": "https://dcdr.ai",
   "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,
@@ -39,10 +39,10 @@
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "jest": "^30.3.0",
-    "jest-junit": "^16.0.0",
-    "ts-jest": "^29.4.9",
-    "typescript": "^5.7.2"
+    "jest": "^30.4.2",
+    "jest-junit": "^17.0.0",
+    "ts-jest": "^29.4.11",
+    "typescript": "^6.0.3"
   },
   "volta": {
     "node": "22.22.0"

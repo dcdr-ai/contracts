@@ -4,6 +4,37 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260607.1] — 03:36UTC
+
+<!--
+sourceCommit: df928d1ade9ab63c3b07b0e174410aa5dab5c5df
+queuedAtUtc: 
+previousMirroredBuild: 20260606.5 (2026-06-06)
+contractsSubmodule: 9aaff9c55a6d..5f153edbf115
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Added native Mistral CHAT provider execution via `@mistralai/mistralai` and enabled Grok CHAT via the OpenAI-compatible adapter path.
+- <kbd>RUNTIME</kbd> Added Grok model sync tooling (`npm run grok-models:sync`) and Grok support in provider catalog diff tooling for official model curation workflows.
+### Changed
+- <kbd>RUNTIME</kbd> Completed a full dependency refresh wave across runtime and contracts toolchains, including runtime updates for `jest`, `ts-jest`, `mime`, `mime-types`, `@types/mime-types`, and `@types/node`, with non-E2E validation kept green.
+- <kbd>CONTRACTS</kbd> Marked Anthropic `claude-opus-4-8` as `SUPPORTED` after provider E2E validation (text + structured) and documented model-specific sampling parameter constraints.
+- <kbd>RUNTIME</kbd> Updated provider SDK dependency `@google/genai` to `^2.8.0` and validated Gemini provider adapter compatibility with focused provider tests.
+- <kbd>CONTRACTS</kbd> Re-curated Gemini CHAT runtime support after full E2E matrix run with `@google/genai` `2.8.0`: kept `gemini-2.5-pro` as `FAILING` (requires thinking mode and structured path can return empty output) and marked `gemini-3-pro-preview` as `FAILING` due to upstream model-not-found (404) on this account/endpoint.
+- <kbd>CONTRACTS</kbd> Selected new public candidate models/categories for Grok while keeping Mistral out of public DCDR categories for now.
+- <kbd>CONTRACTS</kbd> Promoted Anthropic `claude-opus-4-8` as the public `BEST` candidate and backfilled pricing only when grounded by an existing priced model in the same family.
+- <kbd>CONTRACTS</kbd> Normalized pricing sources to canonical public pricing pages (`docs.x.ai/developers/pricing`, `platform.claude.com/docs/en/about-claude/pricing`) and added Mistral pricing only where explicitly stated on `mistral.ai/pricing` (Mistral Large).
+- <kbd>CONTRACTS</kbd> Refreshed Grok and Mistral model prices from official public API pricing pages (including xAI cached-input rate where published) without renaming backend provider identifiers.
+- <kbd>CONTRACTS</kbd> Made Anthropic legacy/dated CHAT model prices explicit in raw catalog entries and corrected deprecated `claude-opus-4-1-20250805` to official Opus 4.1 pricing ($15 input / $75 output per MTok).
+- <kbd>CONTRACTS</kbd> Added initial Grok CHAT model catalog entries (pricing + `runtimeSupport=IN_PROGRESS`) to start controlled E2E curation.
+- <kbd>CONTRACTS</kbd> `SUPPORTED_MODELS.md` generation now includes Grok/Mistral provider sections and no longer relies on a stale 3-provider hardcoded list.
+- <kbd>CONTRACTS</kbd> Curated Grok CHAT runtime support statuses from provider E2E: four models marked `SUPPORTED` and `grok-4.20-multi-agent-0309` marked `FAILING` with explicit upstream-400 reason.
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `2.1.0` (intermediate minor for provider-surface expansion).
+- <kbd>RUNTIME</kbd> Provider E2E matrices now treat GROK and MISTRAL as implemented adapters; canonical CHAT smoke set includes a Grok model and streaming suite supports Grok model overrides.
+### Fixed
+- <kbd>CONTRACTS</kbd> Updated contracts test toolchain dependencies (`jest-junit`, `typescript`, `jest`, `ts-jest`) and verified deterministic contracts CI stability (`npm --prefix src/contracts run test:ci`).
+- <kbd>RUNTIME</kbd> Hardened customer-mode rate-limit key generation to be IPv6-safe using `express-rate-limit` v8 helpers, preventing `ERR_ERL_KEY_GEN_IPV6` validation errors and ensuring stable limiter behavior behind proxy/forwarded-IP setups.
+
 ## [20260606.5] — 23:46UTC
 
 <!--

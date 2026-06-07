@@ -9,7 +9,9 @@ Rules
 - Excludes the virtual provider `IntentProvider.DCDR` (those are aliases like `openai/gpt-...`).
 - Generated from the contracts catalog; do not edit by hand.
 
-Generated: **2026-06-01**
+Generated: **2026-06-07**
+
+> Total officially supported models: **102**
 
 ## OpenAI
 
@@ -84,6 +86,7 @@ Generated: **2026-06-01**
 
 ## Anthropic
 
+- `claude-opus-4-8`
 - `claude-opus-4-7`
 - `claude-opus-4-6`
 - `claude-opus-4-5-20251101`
@@ -101,11 +104,28 @@ Generated: **2026-06-01**
 - `gemini-3.1-pro-preview`
 - `gemini-3.1-flash-lite-preview`
 - `gemini-3.1-flash-lite`
-- `gemini-3.1-flash-image-preview`
-- `gemini-3-pro-preview`
 - `gemini-3-flash-preview`
 - `gemini-2.5-flash-lite`
-- `gemini-2.5-flash-image`
 - `gemini-flash-latest`
 - `gemini-flash-lite-latest`
 - `gemini-pro-latest`
+
+## Grok
+
+- `grok-4.3`
+- `grok-4.20-0309-non-reasoning`
+- `grok-4.20-0309-reasoning`
+- `grok-build-0.1`
+
+## Mistral
+
+- `mistral-large-latest`
+- `mistral-medium-latest`
+- `mistral-small-latest`
+- `mistral-tiny-latest`
+- `ministral-14b-latest`
+- `ministral-8b-latest`
+- `ministral-3b-latest`
+- `codestral-latest`
+- `mistral-code-latest`
+- `mistral-vibe-cli-latest`

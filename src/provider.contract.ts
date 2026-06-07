@@ -473,9 +473,10 @@ const PRICING_UPDATED_AT_20260430 = Date.UTC(2026, 3, 30);
 const PRICING_UPDATED_AT_20260519 = Date.UTC(2026, 4, 19);
 const PRICING_UPDATED_AT_20260522 = Date.UTC(2026, 4, 22);
 const OPENAI_PRICING_URL = "https://developers.openai.com/api/docs/pricing";
-const XAI_PRICING_URL = "https://docs.x.ai/developers/models";
-const ANTHROPIC_MODELS_URL =
-  "https://platform.claude.com/docs/en/docs/about-claude/models";
+const XAI_PRICING_URL = "https://docs.x.ai/developers/pricing";
+const ANTHROPIC_PRICING_URL =
+  "https://platform.claude.com/docs/en/about-claude/pricing";
+const MISTRAL_PRICING_URL = "https://mistral.ai/pricing";
 const MISTRAL_MODELS_URL = "https://docs.mistral.ai/getting-started/models/";
 const GEMINI_PRICING_URL = "https://ai.google.dev/gemini-api/docs/pricing";
 
@@ -495,6 +496,40 @@ const OPENAI_GPT5_PARAMETER_SUPPORT: ProviderModelParameterSupportInfo = {
   notes:
     "GPT-5 family: avoid custom sampling params; ensure sufficient max_tokens budget.",
   updatedAt: "2026-04-28",
+};
+
+const GROK_CHAT_PARAMETER_SUPPORT: ProviderModelParameterSupportInfo = {
+  parameters: {
+    [PromptParameterKey.PRESENCE_PENALTY]:
+      ProviderModelParameterSupportStatus.NOT_SUPPORTED,
+    [PromptParameterKey.FREQUENCY_PENALTY]:
+      ProviderModelParameterSupportStatus.NOT_SUPPORTED,
+  },
+  notes:
+    "Grok chat models reject presence/frequency penalties on current OpenAI-compatible endpoint.",
+  updatedAt: "2026-06-07",
+};
+
+const ANTHROPIC_OPUS47_PARAMETER_SUPPORT: ProviderModelParameterSupportInfo = {
+  parameters: {
+    [PromptParameterKey.TEMPERATURE]:
+      ProviderModelParameterSupportStatus.NOT_SUPPORTED,
+    [PromptParameterKey.TOP_P]:
+      ProviderModelParameterSupportStatus.NOT_SUPPORTED,
+  },
+  notes:
+    "Opus 4.7 rejects explicit temperature/top_p in provider E2E on current Anthropic Messages API.",
+  updatedAt: "2026-06-07",
+};
+
+const ANTHROPIC_OPUS48_PARAMETER_SUPPORT: ProviderModelParameterSupportInfo = {
+  parameters: {
+    [PromptParameterKey.TOP_P]:
+      ProviderModelParameterSupportStatus.NOT_SUPPORTED,
+  },
+  notes:
+    "Opus 4.8 reports top_p as deprecated; runtime should avoid sending top_p.",
+  updatedAt: "2026-06-07",
 };
 
 const PRICING_FALLBACK_RULES_BY_PROVIDER: Record<
@@ -988,6 +1023,12 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.2-chat-latest",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.75,
+        cachedInput: 0.175,
+        output: 14.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.RESPONSES,
@@ -999,6 +1040,12 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.2-codex",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.75,
+        cachedInput: 0.175,
+        output: 14.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.RESPONSES,
@@ -1077,6 +1124,12 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.1-chat-latest",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.125,
+        output: 10.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.RESPONSES,
@@ -1088,6 +1141,12 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.1-codex",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.125,
+        output: 10.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.RESPONSES,
@@ -1099,6 +1158,12 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.1-codex-max",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.125,
+        output: 10.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.RESPONSES,
@@ -1110,6 +1175,12 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5.1-codex-mini",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.125,
+        output: 10.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.RESPONSES,
@@ -1155,6 +1226,12 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5-chat-latest",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.125,
+        output: 10.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.RESPONSES,
@@ -1166,6 +1243,12 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-5-codex",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.125,
+        output: 10.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.RESPONSES,
@@ -1529,6 +1612,11 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-4-turbo",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 10.0,
+        output: 30.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS,
@@ -1554,6 +1642,11 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gpt-4",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 30.0,
+        output: 60.0,
+        sourceUrl: OPENAI_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         preferredApi: ProviderModelPreferredApi.CHAT_COMPLETIONS,
@@ -2422,6 +2515,13 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "gemini-3.1-flash-lite",
       types: [IntentType.CHAT],
+      pricing: pricingGeminiPerMillionTokens({
+        input: 0.25,
+        output: 1.5,
+        tiers: [{ name: "audio", condition: "audio", input: 0.5, output: 1.5 }],
+        notes:
+          "Prices may differ by modality; output includes thinking tokens.",
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         reason: "Validated via provider E2E (text + structured)",
@@ -2430,7 +2530,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     },
     {
       id: "gemini-3.1-flash-image-preview",
-      types: [IntentType.CHAT],
+      types: [IntentType.IMAGE_GENERATION],
       pricing: pricingGeminiPerMillionTokens({
         input: 0.5,
         output: 3.0,
@@ -2442,6 +2542,16 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
         reason:
           "Validated via provider E2E (text + structured + streaming SSE)",
         updatedAt: "2026-05-04",
+      },
+    },
+    {
+      id: "gemini-3.1-flash-image",
+      types: [IntentType.IMAGE_GENERATION],
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered in provider drift check; pending provider E2E curation for runtime image behavior.",
+        updatedAt: "2026-06-07",
       },
     },
 
@@ -2473,15 +2583,25 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
           "Not explicitly listed on pricing page; approximated from Gemini 3.1 Pro Preview.",
       },
       runtimeSupport: {
-        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        status: ProviderModelRuntimeSupportStatus.FAILING,
         reason:
-          "Validated via provider E2E (text + structured + streaming SSE)",
-        updatedAt: "2026-05-04",
+          "Provider E2E returns MODEL_NOT_FOUND (upstream 404) for this account/endpoint.",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "gemini-3-pro-image",
+      types: [IntentType.IMAGE_GENERATION],
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered in provider drift check; pending provider E2E curation for runtime image behavior.",
+        updatedAt: "2026-06-07",
       },
     },
     {
       id: "gemini-3-pro-image-preview",
-      types: [IntentType.CHAT],
+      types: [IntentType.IMAGE_GENERATION],
       pricing: pricingGeminiPerMillionTokens({
         input: 2.0,
         output: 12.0,
@@ -2569,8 +2689,8 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.FAILING,
         reason:
-          "Provider E2E: empty output in text + structured (streaming SSE OK)",
-        updatedAt: "2026-05-04",
+          "Provider E2E is unstable: model requires thinking mode, and structured path can still return empty visible text.",
+        updatedAt: "2026-06-07",
       },
     },
     {
@@ -2624,7 +2744,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     },
     {
       id: "gemini-2.5-flash-image",
-      types: [IntentType.CHAT],
+      types: [IntentType.IMAGE_GENERATION],
       pricing: pricingGeminiPerMillionTokens({
         input: 0.3,
         output: 2.5,
@@ -2959,14 +3079,133 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     },
   ],
 
-  [IntentProvider.GROK]: [],
+  [IntentProvider.GROK]: [
+    // Source: xAI pricing page (snapshot 2026-06-07)
+    // Runtime posture: curated public candidates are enabled for customer-facing BEST/FAST options.
+    {
+      id: "grok-4.3",
+      types: [IntentType.CHAT],
+      parameterSupport: GROK_CHAT_PARAMETER_SUPPORT,
+      publicForCustomers: true,
+      tokenUsageCovered: true,
+      publicName: "DCDR Best",
+      badge: "Grok",
+      primaryCategory: DcdrPublicModelCategory.BEST,
+      categories: [DcdrPublicModelCategory.BEST, DcdrPublicModelCategory.SMART],
+      qualityTier: 5,
+      speedTier: 4,
+      costTier: 3,
+      recommendedUseCases: ["reasoning", "analysis", "production_chat"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.2,
+        output: 2.5,
+        sourceUrl: XAI_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (run + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "grok-4.20-0309-non-reasoning",
+      types: [IntentType.CHAT],
+      parameterSupport: GROK_CHAT_PARAMETER_SUPPORT,
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.2,
+        output: 2.5,
+        sourceUrl: XAI_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (run + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "grok-4.20-0309-reasoning",
+      types: [IntentType.CHAT],
+      parameterSupport: GROK_CHAT_PARAMETER_SUPPORT,
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.2,
+        output: 2.5,
+        sourceUrl: XAI_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (run + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "grok-4.20-multi-agent-0309",
+      types: [IntentType.CHAT],
+      parameterSupport: GROK_CHAT_PARAMETER_SUPPORT,
+      pricing: pricingPerMillionTokens({
+        input: 1.25,
+        cachedInput: 0.2,
+        output: 2.5,
+        sourceUrl: XAI_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.FAILING,
+        reason:
+          "Provider E2E returns upstream 400 on both run and structured paths (OpenAI-compatible chat endpoint).",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "grok-build-0.1",
+      types: [IntentType.CHAT],
+      parameterSupport: GROK_CHAT_PARAMETER_SUPPORT,
+      publicForCustomers: true,
+      tokenUsageCovered: true,
+      publicName: "DCDR Fast",
+      badge: "Grok",
+      primaryCategory: DcdrPublicModelCategory.FAST,
+      categories: [
+        DcdrPublicModelCategory.FAST,
+        DcdrPublicModelCategory.ECONOMY,
+      ],
+      qualityTier: 3,
+      speedTier: 5,
+      costTier: 4,
+      recommendedUseCases: ["interactive_chat", "classification", "support"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
+      pricing: pricingPerMillionTokens({
+        input: 1.0,
+        cachedInput: 0.2,
+        output: 2.0,
+        sourceUrl: XAI_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (run + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+  ],
 
   [IntentProvider.ANTHROPIC]: [
     // Source: Anthropic Models overview (latest models comparison), updated 2026-05-04
     // Note: DCDR runtime v1 treats Anthropic as CHAT-only; multimodal/vision intent types are intentionally not listed yet.
     {
-      id: "claude-opus-4-7",
+      id: "claude-opus-4-8",
       types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_OPUS48_PARAMETER_SUPPORT,
       publicForCustomers: true,
       tokenUsageCovered: true,
       publicName: "DCDR Best",
@@ -2983,7 +3222,23 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       pricing: pricingPerMillionTokens({
         input: 5.0,
         output: 25.0,
-        sourceUrl: ANTHROPIC_MODELS_URL,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E (text + structured) with model-specific sampling parameter filtering.",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "claude-opus-4-7",
+      types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_OPUS47_PARAMETER_SUPPORT,
+      pricing: pricingPerMillionTokens({
+        input: 5.0,
+        output: 25.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
       }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
@@ -2995,6 +3250,11 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "claude-opus-4-6",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 5.0,
+        output: 25.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         reason: "Validated via provider E2E (run + structured + streaming SSE)",
@@ -3004,6 +3264,11 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "claude-opus-4-5-20251101",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 5.0,
+        output: 25.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         reason: "Validated via provider E2E (run + structured + streaming SSE)",
@@ -3013,6 +3278,11 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "claude-opus-4-1-20250805",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 15.0,
+        output: 75.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         reason: "Validated via provider E2E (run + structured + streaming SSE)",
@@ -3038,7 +3308,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       pricing: pricingPerMillionTokens({
         input: 3.0,
         output: 15.0,
-        sourceUrl: ANTHROPIC_MODELS_URL,
+        sourceUrl: ANTHROPIC_PRICING_URL,
       }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
@@ -3049,6 +3319,11 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     {
       id: "claude-sonnet-4-5-20250929",
       types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 3.0,
+        output: 15.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+      }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
         reason: "Validated via provider E2E (run + structured + streaming SSE)",
@@ -3078,7 +3353,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       pricing: pricingPerMillionTokens({
         input: 1.0,
         output: 5.0,
-        sourceUrl: ANTHROPIC_MODELS_URL,
+        sourceUrl: ANTHROPIC_PRICING_URL,
       }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
@@ -3092,7 +3367,7 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
       pricing: pricingPerMillionTokens({
         input: 1.0,
         output: 5.0,
-        sourceUrl: ANTHROPIC_MODELS_URL,
+        sourceUrl: ANTHROPIC_PRICING_URL,
       }),
       runtimeSupport: {
         status: ProviderModelRuntimeSupportStatus.SUPPORTED,
@@ -3102,7 +3377,142 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     },
   ],
 
-  [IntentProvider.MISTRAL]: [],
+  [IntentProvider.MISTRAL]: [
+    // Source: Mistral API pricing page + models API snapshot (2026-06-07).
+    // Keep this catalog CHAT-focused for runtime v1; embedding/moderation/ocr families are intentionally excluded.
+    {
+      id: "mistral-large-latest",
+      types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 0.5,
+        output: 1.5,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "mistral-medium-latest",
+      types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 1.5,
+        output: 7.5,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "mistral-small-latest",
+      types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 0.1,
+        output: 0.3,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "mistral-tiny-latest",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "ministral-14b-latest",
+      types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 0.2,
+        output: 0.2,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "ministral-8b-latest",
+      types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 0.15,
+        output: 0.15,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "ministral-3b-latest",
+      types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 0.1,
+        output: 0.1,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "codestral-latest",
+      types: [IntentType.CHAT],
+      pricing: pricingPerMillionTokens({
+        input: 0.3,
+        output: 0.9,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: PRICING_UPDATED_AT_20260522,
+      }),
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "mistral-code-latest",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+    {
+      id: "mistral-vibe-cli-latest",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: ProviderModelRuntimeSupportStatus.SUPPORTED,
+        reason: "Validated via provider E2E (text + structured)",
+        updatedAt: "2026-06-07",
+      },
+    },
+  ],
 
   [IntentProvider.COHERE]: [],
 
