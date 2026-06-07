@@ -21,7 +21,7 @@ export enum IntentProvider {
    * Virtual provider managed by DCDR.
    *
    * Notes
-   * - Cloud-only concept: the registry/runtime can resolve the underlying real provider (OpenAI/Anthropic/Gemini/Office).
+   * - Cloud-only concept: the registry/runtime can resolve the underlying real provider (OpenAI/Anthropic/Gemini/Grok/Mistral/Office).
    * - Model IDs are namespaced as `provider/model` (e.g. `openai/gpt-4o-mini`) for deterministic resolution.
    */
   DCDR = "DCDR",
@@ -566,6 +566,8 @@ const DCDR_VIRTUAL_PROVIDER_PREFIX_BY_PROVIDER: Partial<
   [IntentProvider.OPEN_AI]: "openai",
   [IntentProvider.ANTHROPIC]: "anthropic",
   [IntentProvider.GEMINI]: "gemini",
+  [IntentProvider.GROK]: "grok",
+  [IntentProvider.MISTRAL]: "mistral",
   [IntentProvider.OFFICE]: "office",
 };
 
@@ -573,6 +575,9 @@ const DCDR_VIRTUAL_PROVIDER_BY_PREFIX: Record<string, IntentProvider> = {
   openai: IntentProvider.OPEN_AI,
   anthropic: IntentProvider.ANTHROPIC,
   gemini: IntentProvider.GEMINI,
+  grok: IntentProvider.GROK,
+  xai: IntentProvider.GROK,
+  mistral: IntentProvider.MISTRAL,
   office: IntentProvider.OFFICE,
 };
 
@@ -629,7 +634,7 @@ export function parseDcdrVirtualModelId(
  * - Allow DCDR to reference any model that DCDR runtime explicitly supports.
  *
  * Rules
- * - For hosted providers (OpenAI/Anthropic/Gemini): include only models marked `runtimeSupport.status=SUPPORTED`.
+ * - For hosted providers (OpenAI/Anthropic/Gemini/Grok/Mistral): include only models marked `runtimeSupport.status=SUPPORTED`.
  * - For `OFFICE`: include all declared models (local/runtime-managed; support is deployment-dependent).
  * - Stable deterministic ordering: provider order then model declaration order.
  */
@@ -640,6 +645,8 @@ function buildDcdrVirtualProviderModelDefinitions(
     IntentProvider.OPEN_AI,
     IntentProvider.ANTHROPIC,
     IntentProvider.GEMINI,
+    IntentProvider.GROK,
+    IntentProvider.MISTRAL,
     IntentProvider.OFFICE,
   ];
 

@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260607.2] — 04:20UTC
+
+<!--
+sourceCommit: ac3e9a2a8baba7a0af298ccc751804458c16a759
+queuedAtUtc: 
+previousMirroredBuild: 20260607.1 (2026-06-07)
+contractsSubmodule: 5f153edbf115..1ee42b5364fa
+-->
+
+### Fixed
+- <kbd>CONTRACTS</kbd> `@dcdr/contracts` DCDR virtual model-id helpers now support GROK and MISTRAL prefixes (`grok/*`, `mistral/*`) and parse `xai/*` as GROK, restoring UI persistence for these provider cards.
+
 ## [20260607.1] — 03:36UTC
 
 <!--
