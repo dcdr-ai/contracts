@@ -4,6 +4,29 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260613.2] — 23:14UTC
+
+<!--
+sourceCommit: 4da67652fb5069ca63b2f9f6cab63ec355249bcf
+queuedAtUtc: 
+previousMirroredBuild: 20260607.2 (2026-06-07)
+contractsSubmodule: 1ee42b5364fa..c8b48151182f
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> Added optional top-level execution `workflow` metadata to `ExecuteIntentRequest`/`ExecutionReport`, keeping `context` open for caller business context and `CONDITION_ON_CONTEXT` features.
+- <kbd>CONTRACTS</kbd> Added optional service-token `limits[]` metadata with `FIXED`, hourly, daily, and monthly execution-call windows plus optional multi-intent `scopes` matching.
+- <kbd>RUNTIME</kbd> Added optional service-token execution-limit enforcement for customer bearer tokens using shared Redis/in-memory counters, returning `429` with `RATE_LIMIT` on exhaustion while leaving `/api/auth/check` non-consuming.
+### Changed
+- <kbd>RUNTIME</kbd> Updated the `dcdr` CLI execution commands to accept top-level workflow correlation flags (`--workflow-id`, `--run-id`, `--node-id`, `--step-id`, `--parent-execution-id`, `--idempotency-key`) plus `--workflow-json`, with explicit flags overriding JSON fields before forwarding the formal execution request shape.
+- <kbd>RUNTIME</kbd> Hardened execution HTTP request validation so `workflow` is rejected with a stable 400/`VALIDATION_ERROR` when it is not a plain object, when typed workflow fields are not strings, or when unsupported workflow fields are supplied.
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `2.1.2`.
+- <kbd>CONTRACTS</kbd> Bumped `@dcdr/contracts` package version to `2.2.0`.
+- <kbd>RUNTIME</kbd> Expanded streaming OpenAPI schemas to document typed SSE event envelopes (`meta`, `delta`, `final`, `error`) via reusable component refs instead of a single opaque string schema.
+- <kbd>RUNTIME</kbd> Tightened OpenAPI execution schemas to reuse strongly typed component refs for workflow, messages, errors, status, report sections, and routing metadata instead of broad anonymous objects where the contract is already explicit.
+### Fixed
+- <kbd>RUNTIME</kbd> Unified tenant scope resolution across execution entrypoints and related middleware (`run`/`dry-run`/`eval`/`stream`, circuit-breaker endpoints, tenant middleware, and customer CID rate-limit keys) to remove drift between customer and internal path handling.
+
 ## [20260607.2] — 04:20UTC
 
 <!--

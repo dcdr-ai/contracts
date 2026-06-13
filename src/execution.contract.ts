@@ -8,6 +8,16 @@ import { IntentProvider } from "./provider.contract";
  * The backend typically calls this and later writes AICallLog itself.
  */
 export interface ExecuteIntentRequest {
+  /**
+   * Optional orchestration metadata supplied by a higher-level workflow/agent system.
+   *
+   * Notes
+   * - This is distinct from `context`, which remains an open caller-controlled bag.
+   * - Treat these fields as correlation/idempotency metadata, not content.
+   * - Runtime features that evaluate `context` should not assume `workflow` is part of that surface.
+   */
+  workflow?: ExecutionWorkflowContext;
+
   context?: ExecutionContext;
 
   /**
@@ -62,6 +72,7 @@ export interface ExecutionAttemptReport {
 export interface ExecutionReport {
   sessionId: string;
   appId: string;
+  workflow?: ExecutionWorkflowContext;
   context?: ExecutionContext;
   gatewayRequestId: string;
 
@@ -193,7 +204,39 @@ export interface ExecuteIntentResponse {
 }
 
 /**
+ * Optional orchestration metadata for callers that execute the runtime as one atomic step
+ * inside a larger workflow, graph, or agent loop.
+ *
+ * Notes
+ * - This metadata is intentionally separated from `context` so business/customer context can remain open.
+ * - Fields are identifiers only; they must not be used as a hidden content channel.
+ */
+export interface ExecutionWorkflowContext {
+  /** Stable logical workflow identifier across multiple runs. */
+  workflowId?: string;
+
+  /** Specific workflow run/execution identifier. */
+  runId?: string;
+
+  /** Logical graph/state-machine node identifier. */
+  nodeId?: string;
+
+  /** Specific step identifier inside a workflow run. */
+  stepId?: string;
+
+  /** Parent execution identifier when this execution was spawned by another step. */
+  parentExecutionId?: string;
+
+  /** Caller-provided idempotency/correlation key for deduplication or replay safety. */
+  idempotencyKey?: string;
+}
+
+/**
  * Context info for logging and analytics.
+ *
+ * Notes
+ * - This remains intentionally open for caller/business context.
+ * - Runtime features such as CONDITION_ON_CONTEXT may evaluate arbitrary keys from this object.
  */
 export interface ExecutionContext {
   [key: string]: any;

@@ -9,6 +9,30 @@
 
 export type DcdrServiceTokenStatus = "ACTIVE" | "REVOKED";
 
+export enum DcdrServiceTokenLimitType {
+  FIXED = "FIXED",
+  LIMITED_BY_HOUR = "LIMITED_BY_HOUR",
+  LIMITED_BY_DAY = "LIMITED_BY_DAY",
+  LIMITED_BY_MONTH = "LIMITED_BY_MONTH",
+}
+
+export interface DcdrServiceTokenLimit {
+  /**
+   * Maximum number of execution endpoint calls allowed for this limit window.
+   */
+  maxCalls: number;
+
+  /**
+   * Limit window type.
+   */
+  type: DcdrServiceTokenLimitType;
+
+  /**
+   * Optional execution intent scopes for this limit. Defaults to `*` when omitted.
+   */
+  scopes?: string[];
+}
+
 export type DcdrServiceTokenSnapshotItem = {
   /** Human-friendly identifier ("ci-pipeline", "mobile-app", etc.). */
   id: string;
@@ -23,6 +47,9 @@ export type DcdrServiceTokenSnapshotItem = {
 
   /** Optional snapshot-side expiry hint (unix ms). Token exp enforcement remains the token payload exp. */
   exp?: number;
+
+  /** Optional runtime-enforced execution limits for this token. */
+  limits?: DcdrServiceTokenLimit[];
 
   /** Optional note for operators. */
   note?: string;

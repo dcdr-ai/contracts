@@ -273,11 +273,21 @@ console.log(auth.valid, auth.authMode, auth.cid);
 
 // 2) Execute your first Intent (must exist in your Registry)
 const res = await client.executeIntent("MY_FIRST_INTENT", {
+  workflow: {
+    workflowId: "ticket-triage",
+    runId: "run-20260613-001",
+    stepId: "classify",
+  },
   vars: { topic: "hello", language: "es" },
+  context: { channel: "support", priority: "normal" },
 });
 
 console.log(res.status, res.output);
 ```
+
+`workflow` is optional and is intended for higher-level orchestration layers such as agent runners, graph/state-machine systems, and multi-step workflows. It is metadata for coordination/correlation, while `context` remains the open functional/business context for the execution itself.
+
+`workflow` is a strongly typed top-level surface: supported keys are `workflowId`, `runId`, `nodeId`, `stepId`, `parentExecutionId`, and `idempotencyKey`. Unsupported `workflow` keys are rejected at the runtime boundary; open-ended caller/business metadata should go into `context` instead.
 
 Full client reference: [docs/CLIENT.md](docs/CLIENT.md)
 

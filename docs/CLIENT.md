@@ -100,8 +100,35 @@ See: [STREAMING_EXECUTION_SSE.md](STREAMING_EXECUTION_SSE.md)
 
 The most common payload is `ExecuteIntentRequest`:
 
+- `workflow?: { ... }` — optional top-level workflow/agent orchestration metadata (correlation, run/node/step ids, idempotency)
 - `vars?: Record<string, unknown>` — template variables (e.g. `{ name: "Ada" }`)
+- `context?: Record<string, any>` — open caller/business context (and the input surface used by `CONDITION_ON_CONTEXT` features)
 - `routing?: { ... }` — optional routing hints (force provider/implementation, tune retries)
+
+### Workflow metadata
+
+`ExecuteIntentRequest.workflow` is intended for **higher-level orchestration/programming layers** that use the runtime as one atomic step inside a larger system.
+
+Typical examples:
+
+- agent runners
+- graph/state-machine orchestration
+- multi-step workflow engines
+- idempotent job/execution coordination
+
+Recommended use:
+
+- correlation ids across multi-step runs
+- workflow/run/node/step identity
+- parent-child execution linkage
+- idempotency/replay safety keys
+
+Important boundary:
+
+- `workflow` is **not** a replacement for `context`
+- `workflow` is orchestration metadata, not business/customer context
+- `workflow` is a closed typed surface; unsupported keys should be treated as invalid request metadata
+- `context` remains the open caller-controlled bag used for functional/business metadata and features such as `CONDITION_ON_CONTEXT`
 
 The response is `ExecuteIntentResponse`:
 

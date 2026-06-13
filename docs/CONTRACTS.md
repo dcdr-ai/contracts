@@ -128,6 +128,7 @@ Prefer models with stable availability (not preview-only), published pricing, pr
 Runtime API shapes:
 
 - `ExecuteIntentRequest`: [../src/execution.contract.ts](../src/execution.contract.ts#L10)
+- `ExecutionWorkflowContext`: [../src/execution.contract.ts](../src/execution.contract.ts#L207)
 - `ExecutionReport`: [../src/execution.contract.ts](../src/execution.contract.ts#L69)
 - `ExecuteIntentResponse`: [../src/execution.contract.ts](../src/execution.contract.ts#L190)
 - `Message`: [../src/messages.contract.ts](../src/messages.contract.ts#L13)

@@ -255,6 +255,72 @@ describe("DcdrRuntimeClient", () => {
     expect(res.status).toBe("OK");
   });
 
+  it("passes top-level workflow metadata through executeIntent()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/execution/run/MY_INTENT");
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBeDefined();
+
+      const parsed = JSON.parse(String(init?.body)) as {
+        workflow?: {
+          workflowId?: string;
+          runId?: string;
+          nodeId?: string;
+        };
+        context?: { cid?: string };
+      };
+
+      expect(parsed.workflow).toEqual({
+        workflowId: "wf-1",
+        runId: "run-1",
+        nodeId: "node-a",
+      });
+      expect(parsed.context).toEqual({ cid: "customer-1" });
+
+      return makeMockResponse({
+        ok: true,
+        status: 200,
+        json: {
+          status: "OK",
+          input: [],
+          output: {},
+          report: {
+            attempts: [],
+            timing: { startedAt: "", endedAt: "", latencyMs: 0 },
+            sessionId: "",
+            appId: "",
+            gatewayRequestId: "",
+            intent: "MY_INTENT",
+            prompt: { id: "", version: "", sha256: "" },
+            finalImplementation: {
+              provider: "RULES",
+              model: "",
+              implementationId: "",
+              latencyMs: 0,
+            },
+          },
+        },
+      });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.executeIntent("MY_INTENT", {
+      workflow: {
+        workflowId: "wf-1",
+        runId: "run-1",
+        nodeId: "node-a",
+      },
+      context: { cid: "customer-1" },
+    });
+
+    expect(res.status).toBe("OK");
+  });
+
   it("calls /api/system/metrics for metrics()", async () => {
     const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
       expect(url).toBe("https://example.invalid/api/system/metrics");
