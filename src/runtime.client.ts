@@ -1,4 +1,7 @@
 import {
+  ExecutionInputPart,
+  ExecutionPartSourceKind,
+  ExecutionPartType,
   ExecuteIntentEvalRequest,
   ExecuteIntentEvalResponse,
   ExecuteIntentRequest,
@@ -9,6 +12,15 @@ import {
   ExecutionStreamFinalEvent,
   ExecutionStreamMetaEvent,
 } from "./execution.contract";
+import {
+  DcdrAssetMetadata,
+  DcdrAssetDeleteRequest,
+  DcdrAssetDeleteResponse,
+  DcdrAssetGetRequest,
+  DcdrAssetGetResponse,
+  DcdrAssetUploadRequest,
+  DcdrAssetUploadResponse,
+} from "./asset.contract";
 import { DcdrEntitlementsContract } from "./entitlements.contract";
 
 /**
@@ -35,6 +47,127 @@ interface ParsedSseEvent {
  * - Reduces the chance of leaking large/sensitive upstream HTML or debug payloads.
  */
 const ERROR_BODY_PREVIEW_MAX_CHARS = 4000;
+const DEFAULT_ASSET_UPLOAD_MIME_TYPE = "application/octet-stream";
+
+const EXTENSION_TO_MIME_TYPE: Record<string, string> = {
+  csv: "text/csv",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  gif: "image/gif",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  json: "application/json",
+  m4a: "audio/mp4",
+  md: "text/markdown",
+  mov: "video/quicktime",
+  mp3: "audio/mpeg",
+  mp4: "video/mp4",
+  pdf: "application/pdf",
+  png: "image/png",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  svg: "image/svg+xml",
+  txt: "text/plain",
+  wav: "audio/wav",
+  webm: "video/webm",
+  webp: "image/webp",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+
+/**
+ * Simplified client-side upload input.
+ */
+export interface DcdrRuntimeAssetUploadInput {
+  intent?: string;
+  partType?: ExecutionPartType;
+  mimeType?: string;
+  dataBase64: string;
+  name?: string;
+  metadata?: DcdrAssetMetadata;
+  storageId?: string;
+  assetCacheKey?: string;
+}
+
+/**
+ * Input used to build an asset-backed execution input part.
+ */
+export interface DcdrRuntimeAssetInputPartSource {
+  asset: DcdrAssetUploadResponse["asset"];
+  variableName?: string;
+  mimeType?: string;
+  name?: string;
+  partType?: ExecutionPartType;
+  sizeBytes?: number;
+}
+
+/**
+ * Builds a complete runtime upload payload from a simplified client request.
+ */
+export function prepareAssetUploadRequest(
+  input: DcdrRuntimeAssetUploadInput,
+): DcdrAssetUploadRequest {
+  const name = normalizeOptionalString(input.name);
+  const mimeType =
+    normalizeOptionalString(input.mimeType) ||
+    inferMimeTypeFromAssetName(name) ||
+    DEFAULT_ASSET_UPLOAD_MIME_TYPE;
+  const partType =
+    input.partType || inferExecutionPartTypeForAsset({ mimeType, name });
+
+  const request: DcdrAssetUploadRequest = {
+    partType,
+    mimeType,
+    dataBase64: String(input.dataBase64 ?? "").trim(),
+  };
+
+  const intent = normalizeOptionalString(input.intent);
+  const storageId = normalizeOptionalString(input.storageId);
+  const assetCacheKey = normalizeOptionalString(input.assetCacheKey);
+
+  if (intent) request.intent = intent;
+  if (name) request.name = name;
+  if (input.metadata) request.metadata = cloneAssetMetadata(input.metadata);
+  if (storageId) request.storageId = storageId;
+  if (assetCacheKey) request.assetCacheKey = assetCacheKey;
+
+  return request;
+}
+
+/**
+ * Converts a managed asset reference into an execution input part.
+ */
+export function prepareAssetInputPart(
+  input: DcdrRuntimeAssetInputPartSource,
+): ExecutionInputPart {
+  const name = normalizeOptionalString(input.name);
+  const mimeType =
+    normalizeOptionalString(input.mimeType) ||
+    inferMimeTypeFromAssetName(name) ||
+    inferMimeTypeFromAssetName(
+      normalizeOptionalString(input.asset.assetPath),
+    ) ||
+    DEFAULT_ASSET_UPLOAD_MIME_TYPE;
+  const partType =
+    input.partType || inferExecutionPartTypeForAsset({ mimeType, name });
+
+  return {
+    variableName: normalizeOptionalString(input.variableName),
+    type: partType,
+    mimeType,
+    name,
+    sizeBytes: input.sizeBytes ?? input.asset.sizeBytes,
+    source: {
+      kind: ExecutionPartSourceKind.ASSET,
+      asset: {
+        ...input.asset,
+        datasource: input.asset.datasource
+          ? { ...input.asset.datasource }
+          : undefined,
+      },
+    },
+  };
+}
 
 /**
  * Runtime healthcheck response shape.
@@ -193,7 +326,7 @@ export interface DcdrRuntimeClientConfig {
 }
 
 interface RequestJsonArgs {
-  method: "GET" | "POST" | "PUT";
+  method: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   body?: object;
   timeoutMs: number;
@@ -334,6 +467,50 @@ export class DcdrRuntimeClient {
       method: "POST",
       path: `/api/execution/run/${safeIntent}`,
       body: request ?? {},
+      timeoutMs: this.timeoutMs,
+    });
+  }
+
+  /**
+   * Calls `POST /api/assets/upload`.
+   *
+   * Notes
+   * - Cloud-only managed feature.
+   * - When `storageId` is omitted, runtime resolves the tenant default storage.
+   */
+  async uploadAsset(
+    request: DcdrRuntimeAssetUploadInput,
+  ): Promise<DcdrAssetUploadResponse> {
+    return this.requestJson<DcdrAssetUploadResponse>({
+      method: "POST",
+      path: "/api/assets/upload",
+      body: prepareAssetUploadRequest(request),
+      timeoutMs: this.timeoutMs,
+    });
+  }
+
+  /**
+   * Calls `GET /api/assets?assetPath=...&storageId=...`.
+   */
+  async getAsset(request: DcdrAssetGetRequest): Promise<DcdrAssetGetResponse> {
+    const query = this.buildAssetQuery(request.assetPath, request.storageId);
+    return this.requestJson<DcdrAssetGetResponse>({
+      method: "GET",
+      path: `/api/assets${query}`,
+      timeoutMs: this.timeoutMs,
+    });
+  }
+
+  /**
+   * Calls `DELETE /api/assets?assetPath=...&storageId=...`.
+   */
+  async deleteAsset(
+    request: DcdrAssetDeleteRequest,
+  ): Promise<DcdrAssetDeleteResponse> {
+    const query = this.buildAssetQuery(request.assetPath, request.storageId);
+    return this.requestJson<DcdrAssetDeleteResponse>({
+      method: "DELETE",
+      path: `/api/assets${query}`,
       timeoutMs: this.timeoutMs,
     });
   }
@@ -832,6 +1009,20 @@ export class DcdrRuntimeClient {
       clearTimeout(timeout);
     }
   }
+
+  /**
+   * Builds a stable query string for asset get/delete operations.
+   */
+  private buildAssetQuery(assetPath: string, storageId?: string): string {
+    const safeAssetPath = encodeURIComponent(String(assetPath ?? "").trim());
+    const qp = [`assetPath=${safeAssetPath}`];
+    const safeStorageId = String(storageId ?? "").trim();
+    if (safeStorageId) {
+      qp.push(`storageId=${encodeURIComponent(safeStorageId)}`);
+    }
+
+    return `?${qp.join("&")}`;
+  }
 }
 
 /**
@@ -844,4 +1035,63 @@ function buildBodyPreview(text: string): string {
   return t.length > ERROR_BODY_PREVIEW_MAX_CHARS
     ? t.slice(0, ERROR_BODY_PREVIEW_MAX_CHARS) + "…"
     : t;
+}
+
+/**
+ * Infers a likely MIME type from a common file extension.
+ */
+function inferMimeTypeFromAssetName(name?: string): string | undefined {
+  const trimmed = normalizeOptionalString(name);
+  if (!trimmed) return undefined;
+
+  const lastDot = trimmed.lastIndexOf(".");
+  if (lastDot < 0 || lastDot === trimmed.length - 1) return undefined;
+
+  const extension = trimmed
+    .slice(lastDot + 1)
+    .trim()
+    .toLowerCase();
+  return EXTENSION_TO_MIME_TYPE[extension];
+}
+
+/**
+ * Infers the execution part type from MIME type or common file naming.
+ */
+function inferExecutionPartTypeForAsset(args: {
+  mimeType?: string;
+  name?: string;
+}): ExecutionPartType {
+  const mimeType =
+    normalizeOptionalString(args.mimeType) ||
+    inferMimeTypeFromAssetName(args.name) ||
+    DEFAULT_ASSET_UPLOAD_MIME_TYPE;
+
+  if (mimeType.startsWith("image/")) return ExecutionPartType.IMAGE;
+  if (mimeType.startsWith("audio/")) return ExecutionPartType.AUDIO;
+  if (mimeType.startsWith("video/")) return ExecutionPartType.VIDEO;
+  if (mimeType.startsWith("text/")) return ExecutionPartType.TEXT;
+  return ExecutionPartType.DOCUMENT;
+}
+
+/**
+ * Trims optional strings and collapses empty values to `undefined`.
+ */
+function normalizeOptionalString(
+  value: string | undefined,
+): string | undefined {
+  const normalized = String(value ?? "").trim();
+  return normalized || undefined;
+}
+
+/**
+ * Clones semantic asset metadata so callers can safely reuse their objects.
+ */
+function cloneAssetMetadata(metadata: DcdrAssetMetadata): DcdrAssetMetadata {
+  return {
+    title: metadata.title,
+    description: metadata.description,
+    alt: metadata.alt,
+    tags: Array.isArray(metadata.tags) ? [...metadata.tags] : undefined,
+    attributes: metadata.attributes ? { ...metadata.attributes } : undefined,
+  };
 }

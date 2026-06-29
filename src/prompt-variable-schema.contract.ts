@@ -1,4 +1,5 @@
 import { PromptVariable, PromptVariableType } from "./prompts.contract";
+import { ASSET_TYPE_VALUES, AssetType } from "./asset.contract";
 
 export enum PromptVariableSchemaIssueCode {
   ROOT_OBJECT = "ROOT_OBJECT",
@@ -29,6 +30,13 @@ export enum PromptVariableSchemaIssueCode {
   ARRAY_FIELDS_DISALLOWED = "ARRAY_FIELDS_DISALLOWED",
   ARRAY_OBJECT_PROPERTIES_REQUIRED = "ARRAY_OBJECT_PROPERTIES_REQUIRED",
   OBJECT_REQUIRES_FULL = "OBJECT_REQUIRES_FULL",
+  ASSET_FIELDS_DISALLOWED = "ASSET_FIELDS_DISALLOWED",
+  ASSET_PART_TYPES_ARRAY = "ASSET_PART_TYPES_ARRAY",
+  ASSET_PART_TYPES_REQUIRED = "ASSET_PART_TYPES_REQUIRED",
+  ASSET_PART_TYPES_STRING = "ASSET_PART_TYPES_STRING",
+  ASSET_PART_TYPES_EMPTY = "ASSET_PART_TYPES_EMPTY",
+  ASSET_PART_TYPES_INVALID = "ASSET_PART_TYPES_INVALID",
+  ASSET_PART_TYPES_UNIQUE = "ASSET_PART_TYPES_UNIQUE",
 }
 
 export interface PromptVariableSchemaIssue {
@@ -67,6 +75,7 @@ interface PromptVariableDefinitionObject {
   description?: unknown;
   itemsType?: unknown;
   properties?: unknown;
+  assetPartTypes?: unknown;
   values?: unknown;
   min?: unknown;
   max?: unknown;
@@ -87,6 +96,7 @@ const PROMPT_VARIABLE_TYPES: readonly PromptVariableType[] = [
   PromptVariableType.ANY,
   PromptVariableType.ARRAY,
   PromptVariableType.OBJECT,
+  PromptVariableType.ASSET,
   PromptVariableType.ENUM,
 ];
 
@@ -99,7 +109,70 @@ const PROMPT_VARIABLE_TYPES_SHORTHAND: readonly PromptVariableType[] = [
   PromptVariableType.ANY,
   PromptVariableType.ARRAY,
   PromptVariableType.OBJECT,
+  PromptVariableType.ASSET,
 ];
+
+function explainAssetPartTypes(
+  value: unknown,
+  fieldPath: string,
+  push: (issue: PromptVariableSchemaIssue) => void,
+): { valid: boolean; normalized?: string[] } {
+  if (!Array.isArray(value)) {
+    push({
+      path: fieldPath,
+      code: PromptVariableSchemaIssueCode.ASSET_PART_TYPES_ARRAY,
+    });
+    return { valid: false };
+  }
+
+  if (value.length === 0) {
+    push({
+      path: fieldPath,
+      code: PromptVariableSchemaIssueCode.ASSET_PART_TYPES_REQUIRED,
+    });
+    return { valid: false };
+  }
+
+  const normalized: string[] = [];
+  for (const rawPartType of value) {
+    if (typeof rawPartType !== "string") {
+      push({
+        path: fieldPath,
+        code: PromptVariableSchemaIssueCode.ASSET_PART_TYPES_STRING,
+      });
+      return { valid: false };
+    }
+
+    const normalizedPartType = rawPartType.trim().toLowerCase();
+    if (!normalizedPartType) {
+      push({
+        path: fieldPath,
+        code: PromptVariableSchemaIssueCode.ASSET_PART_TYPES_EMPTY,
+      });
+      return { valid: false };
+    }
+
+    if (!ASSET_TYPE_VALUES.includes(normalizedPartType as AssetType)) {
+      push({
+        path: fieldPath,
+        code: PromptVariableSchemaIssueCode.ASSET_PART_TYPES_INVALID,
+        params: { type: normalizedPartType },
+      });
+      return { valid: false };
+    }
+
+    normalized.push(normalizedPartType);
+  }
+
+  if (new Set(normalized).size !== normalized.length) {
+    push({
+      path: fieldPath,
+      code: PromptVariableSchemaIssueCode.ASSET_PART_TYPES_UNIQUE,
+    });
+  }
+
+  return { valid: true, normalized };
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || value === undefined) return false;
@@ -458,6 +531,50 @@ export function validatePromptVariableSchemaRecord(
       return;
     }
 
+    // ASSET
+    if (t === PromptVariableType.ASSET) {
+      if (obj.itemsType !== undefined && obj.itemsType !== null) {
+        push({
+          path: `${path}.itemsType`,
+          code: PromptVariableSchemaIssueCode.ASSET_FIELDS_DISALLOWED,
+        });
+      }
+      if (obj.properties !== undefined && obj.properties !== null) {
+        push({
+          path: `${path}.properties`,
+          code: PromptVariableSchemaIssueCode.ASSET_FIELDS_DISALLOWED,
+        });
+      }
+      if (obj.values !== undefined && obj.values !== null) {
+        push({
+          path: `${path}.values`,
+          code: PromptVariableSchemaIssueCode.ASSET_FIELDS_DISALLOWED,
+        });
+      }
+      if (hasMin) {
+        push({
+          path: `${path}.min`,
+          code: PromptVariableSchemaIssueCode.ASSET_FIELDS_DISALLOWED,
+        });
+      }
+      if (hasMax) {
+        push({
+          path: `${path}.max`,
+          code: PromptVariableSchemaIssueCode.ASSET_FIELDS_DISALLOWED,
+        });
+      }
+
+      if (obj.assetPartTypes !== undefined && obj.assetPartTypes !== null) {
+        explainAssetPartTypes(
+          obj.assetPartTypes,
+          `${path}.assetPartTypes`,
+          push,
+        );
+      }
+
+      return;
+    }
+
     // ARRAY
     if (t === PromptVariableType.ARRAY) {
       const itemsTypeRaw: unknown = obj.itemsType;
@@ -647,6 +764,7 @@ export function canonicalizePromptVariableSchemaRecord(
         description,
         undefined,
         undefined,
+        undefined,
         values,
         min,
         max,
@@ -666,6 +784,28 @@ export function canonicalizePromptVariableSchemaRecord(
         description,
         undefined,
         props,
+        undefined,
+        undefined,
+        min,
+        max,
+      );
+    }
+
+    if (type === PromptVariableType.ASSET) {
+      const assetPartTypes =
+        obj.assetPartTypes !== undefined
+          ? explainAssetPartTypes(obj.assetPartTypes, "assetPartTypes", () => {
+              /* already validated */
+            }).normalized
+          : undefined;
+
+      return new PromptVariable(
+        type,
+        required,
+        description,
+        undefined,
+        undefined,
+        assetPartTypes as AssetType[] | undefined,
         undefined,
         min,
         max,
@@ -701,6 +841,7 @@ export function canonicalizePromptVariableSchemaRecord(
         description,
         itemsType,
         props,
+        undefined,
         values,
         min,
         max,
@@ -714,6 +855,7 @@ export function canonicalizePromptVariableSchemaRecord(
       required,
       description,
       itemsType,
+      undefined,
       undefined,
       undefined,
       min,

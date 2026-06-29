@@ -1,7 +1,16 @@
 /// <reference types="jest" />
 
-import { DcdrRuntimeClient } from "../src/runtime.client";
-import { ExecutionStreamEventType } from "../src/execution.contract";
+import {
+  DcdrRuntimeClient,
+  prepareAssetInputPart,
+  prepareAssetUploadRequest,
+} from "../src/runtime.client";
+import { DcdrAssetScope } from "../src/asset.contract";
+import {
+  ExecutionPartSourceKind,
+  ExecutionPartType,
+  ExecutionStreamEventType,
+} from "../src/execution.contract";
 
 function makeMockResponse(args: {
   ok: boolean;
@@ -321,6 +330,82 @@ describe("DcdrRuntimeClient", () => {
     expect(res.status).toBe("OK");
   });
 
+  it("passes multimodal input parts through executeIntent()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/execution/run/MY_INTENT");
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBeDefined();
+
+      const parsed = JSON.parse(String(init?.body)) as {
+        inputParts?: Array<{
+          variableName?: string;
+          type?: string;
+          mimeType?: string;
+          source?: { kind?: string; asset?: { assetPath?: string } };
+        }>;
+      };
+
+      expect(parsed.inputParts).toEqual([
+        {
+          variableName: "contractPdf",
+          type: "document",
+          mimeType: "application/pdf",
+          source: {
+            kind: "ASSET",
+            asset: { assetPath: "tenant-a/docs/report.pdf" },
+          },
+        },
+      ]);
+
+      return makeMockResponse({
+        ok: true,
+        status: 200,
+        json: {
+          status: "OK",
+          input: [],
+          output: {},
+          report: {
+            attempts: [],
+            timing: { startedAt: "", endedAt: "", latencyMs: 0 },
+            sessionId: "",
+            appId: "",
+            gatewayRequestId: "",
+            intent: "MY_INTENT",
+            prompt: { id: "", version: "", sha256: "" },
+            finalImplementation: {
+              provider: "RULES",
+              model: "",
+              implementationId: "",
+              latencyMs: 0,
+            },
+          },
+        },
+      });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.executeIntent("MY_INTENT", {
+      inputParts: [
+        {
+          variableName: "contractPdf",
+          type: ExecutionPartType.DOCUMENT,
+          mimeType: "application/pdf",
+          source: {
+            kind: ExecutionPartSourceKind.ASSET,
+            asset: { assetPath: "tenant-a/docs/report.pdf" },
+          },
+        },
+      ],
+    });
+
+    expect(res.status).toBe("OK");
+  });
+
   it("calls /api/system/metrics for metrics()", async () => {
     const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
       expect(url).toBe("https://example.invalid/api/system/metrics");
@@ -411,6 +496,203 @@ describe("DcdrRuntimeClient", () => {
 
     const res = await client.dryRun("MY_INTENT", { vars: { name: "Jose" } });
     expect(res.status).toBe("OK");
+  });
+
+  it("calls /api/assets/upload for uploadAsset()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe("https://example.invalid/api/assets/upload");
+      expect(init?.method).toBe("POST");
+
+      const parsed = JSON.parse(String(init?.body)) as {
+        storageId?: string;
+        intent?: string;
+        partType?: string;
+        mimeType?: string;
+      };
+      expect(parsed.intent).toBe("MY_INTENT");
+      expect(parsed.storageId).toBe("managed-default");
+      expect(parsed.partType).toBe("document");
+      expect(parsed.mimeType).toBe("application/pdf");
+
+      return makeMockResponse({
+        ok: true,
+        status: 200,
+        json: {
+          ok: true,
+          created: true,
+          storageId: "managed-default",
+          mimeType: "application/pdf",
+          asset: {
+            assetPath: "tenants/customer-1/intents/MY_INTENT/docs/report.pdf",
+          },
+        },
+      });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.uploadAsset({
+      intent: "MY_INTENT",
+      partType: ExecutionPartType.DOCUMENT,
+      mimeType: "application/pdf",
+      dataBase64: "ZmFrZS1wZGY=",
+      storageId: "managed-default",
+      name: "report.pdf",
+    });
+
+    expect(res.ok).toBe(true);
+    expect(res.asset.assetPath).toContain("MY_INTENT");
+  });
+
+  it("infers uploadAsset mimeType and partType from the file name", async () => {
+    const fetchFn = jest.fn(async (_url: string, init?: RequestInit) => {
+      const parsed = JSON.parse(String(init?.body)) as {
+        intent?: string;
+        partType?: string;
+        mimeType?: string;
+      };
+
+      expect(parsed.intent).toBeUndefined();
+      expect(parsed.partType).toBe("document");
+      expect(parsed.mimeType).toBe("application/pdf");
+
+      return makeMockResponse({
+        ok: true,
+        status: 200,
+        json: {
+          ok: true,
+          created: true,
+          storageId: "managed-default",
+          mimeType: "application/pdf",
+          name: "report.pdf",
+          asset: {
+            assetPath: "customer-1/document/ab/abcd/report.pdf",
+          },
+        },
+      });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.uploadAsset({
+      name: "report.pdf",
+      dataBase64: "ZmFrZS1wZGY=",
+    });
+
+    expect(res.ok).toBe(true);
+  });
+
+  it("prepareAssetUploadRequest infers common file metadata", () => {
+    const prepared = prepareAssetUploadRequest({
+      name: "photo.png",
+      dataBase64: "ZmFrZS1pbWFnZQ==",
+    });
+
+    expect(prepared.partType).toBe(ExecutionPartType.IMAGE);
+    expect(prepared.mimeType).toBe("image/png");
+    expect(prepared.intent).toBeUndefined();
+  });
+
+  it("prepareAssetInputPart builds an asset-backed execution part", () => {
+    const prepared = prepareAssetInputPart({
+      variableName: "handbookAsset",
+      mimeType: "application/pdf",
+      name: "handbook.pdf",
+      asset: {
+        assetPath: "customer-1/document/ab/abcd/handbook.pdf",
+      },
+    });
+
+    expect(prepared).toEqual({
+      variableName: "handbookAsset",
+      type: ExecutionPartType.DOCUMENT,
+      mimeType: "application/pdf",
+      name: "handbook.pdf",
+      sizeBytes: undefined,
+      source: {
+        kind: ExecutionPartSourceKind.ASSET,
+        asset: {
+          assetPath: "customer-1/document/ab/abcd/handbook.pdf",
+        },
+      },
+    });
+  });
+
+  it("calls /api/assets for getAsset()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe(
+        "https://example.invalid/api/assets?assetPath=tenants%2Fcustomer-1%2Fdoc.pdf&storageId=managed-default",
+      );
+      expect(init?.method).toBe("GET");
+      return makeMockResponse({
+        ok: true,
+        status: 200,
+        json: {
+          ok: true,
+          storageId: "managed-default",
+          mimeType: "application/pdf",
+          dataBase64: "ZmFrZS1wZGY=",
+          asset: {
+            assetPath: "tenants/customer-1/doc.pdf",
+          },
+        },
+      });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.getAsset({
+      assetPath: "tenants/customer-1/doc.pdf",
+      storageId: "managed-default",
+    });
+
+    expect(res.ok).toBe(true);
+    expect(res.dataBase64).toBe("ZmFrZS1wZGY=");
+  });
+
+  it("calls DELETE /api/assets for deleteAsset()", async () => {
+    const fetchFn = jest.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe(
+        "https://example.invalid/api/assets?assetPath=tenants%2Fcustomer-1%2Fdoc.pdf&storageId=managed-default",
+      );
+      expect(init?.method).toBe("DELETE");
+      return makeMockResponse({
+        ok: true,
+        status: 200,
+        json: {
+          ok: true,
+          storageId: "managed-default",
+          assetPath: "tenants/customer-1/doc.pdf",
+          deleted: true,
+        },
+      });
+    });
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn,
+    });
+
+    const res = await client.deleteAsset({
+      assetPath: "tenants/customer-1/doc.pdf",
+      storageId: "managed-default",
+    });
+
+    expect(res.ok).toBe(true);
+    expect(res.deleted).toBe(true);
   });
 
   it("calls /api/execution/eval/:intent for eval()", async () => {

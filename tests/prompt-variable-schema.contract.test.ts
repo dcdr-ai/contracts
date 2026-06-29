@@ -216,4 +216,40 @@ describe("prompt-variable-schema.contract", () => {
     expect(out.riskSignals.type).toBe(PromptVariableType.ARRAY);
     expect(out.riskSignals.itemsType).toBe(PromptVariableType.STRING);
   });
+
+  it("validates and canonicalizes asset prompt variables", () => {
+    const schema: Record<string, unknown> = {
+      contractPdf: {
+        type: "ASSET",
+        required: true,
+        assetPartTypes: [" document ", "image"],
+      },
+    };
+
+    const res = canonicalizePromptVariableSchemaRecord(schema);
+    expect(res.valid).toBe(true);
+    expect(res.schema?.contractPdf.type).toBe(PromptVariableType.ASSET);
+    expect(res.schema?.contractPdf.assetPartTypes).toEqual([
+      "document",
+      "image",
+    ]);
+  });
+
+  it("rejects disallowed fields on asset prompt variables", () => {
+    const schema: Record<string, unknown> = {
+      contractPdf: {
+        type: "asset",
+        itemsType: "string",
+        min: 1,
+      },
+    };
+
+    const res = validatePromptVariableSchemaRecord(schema);
+    expect(res.valid).toBe(false);
+    expect(
+      res.issues.some(
+        (i) => i.code === PromptVariableSchemaIssueCode.ASSET_FIELDS_DISALLOWED,
+      ),
+    ).toBe(true);
+  });
 });

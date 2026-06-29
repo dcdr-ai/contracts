@@ -1,7 +1,22 @@
 import { describe, expect, it } from "@jest/globals";
-import { stableJsonStringify } from "../src/utils.contract";
+import {
+  buildDcdrAssetCacheKey,
+  stableJsonStringify,
+} from "../src/utils.contract";
 
 describe("utils.contract", () => {
+  const fakeSha256Deps = {
+    sha256Hex: (value: string): string => {
+      let hash = 2166136261;
+      for (const ch of value) {
+        hash ^= ch.charCodeAt(0);
+        hash = Math.imul(hash, 16777619);
+      }
+      const out = (hash >>> 0).toString(16).padStart(8, "0");
+      return out.repeat(8).slice(0, 64);
+    },
+  };
+
   describe("stableJsonStringify", () => {
     it("sorts object keys recursively (deterministic)", () => {
       const input = {
@@ -36,6 +51,45 @@ describe("utils.contract", () => {
 
     it("serializes bigint as JSON string", () => {
       expect(stableJsonStringify({ n: 12n })).toBe('{"n":"12"}');
+    });
+  });
+
+  describe("buildDcdrAssetCacheKey", () => {
+    it("is deterministic for the same semantic asset identity", () => {
+      const keyA = buildDcdrAssetCacheKey(fakeSha256Deps, {
+        partType: "DOCUMENT",
+        mimeType: "application/pdf",
+        name: " Report.PDF ",
+        sha256: "ABC123",
+      });
+      const keyB = buildDcdrAssetCacheKey(fakeSha256Deps, {
+        partType: "document",
+        mimeType: "APPLICATION/PDF",
+        name: "report.pdf",
+        sha256: "abc123",
+      });
+
+      expect(keyA).toBe(keyB);
+      expect(keyA).toMatch(/^[a-f0-9]{64}$/);
+    });
+
+    it("does not depend on intent and therefore supports cross-intent reuse", () => {
+      const keyA = buildDcdrAssetCacheKey(fakeSha256Deps, {
+        partType: "document",
+        mimeType: "application/pdf",
+        name: "shared.pdf",
+        sha256:
+          "8bf1e7ad90922a656f154b8337108e3ac9ad7f3437f0f8aea7c860c33fb8837b",
+      });
+      const keyB = buildDcdrAssetCacheKey(fakeSha256Deps, {
+        partType: "document",
+        mimeType: "application/pdf",
+        name: "shared.pdf",
+        sha256:
+          "8bf1e7ad90922a656f154b8337108e3ac9ad7f3437f0f8aea7c860c33fb8837b",
+      });
+
+      expect(keyA).toBe(keyB);
     });
   });
 });

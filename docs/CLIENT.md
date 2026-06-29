@@ -17,6 +17,9 @@ Quick map (method → HTTP surface):
 | `demo(intent, request)`                              | `POST /api/execution/demo/:intent`          | required (except demo mode) | Demo-specific intent execution           |
 | `dryRun(intent, request)`                            | `POST /api/execution/dry-run/:intent`       | required                    | Debug prompt rendering & resolved config |
 | `eval(intent, request)`                              | `POST /api/execution/eval/:intent`          | required                    | Cloud and Cloud Pro evaluation workflows |
+| `uploadAsset(request)`                               | `POST /api/assets/upload`                   | required                    | Create or reuse a managed asset          |
+| `getAsset(request)`                                  | `GET /api/assets`                           | required                    | Read a managed asset payload             |
+| `deleteAsset(request)`                               | `DELETE /api/assets`                        | required                    | Delete a managed asset                   |
 | `circuitBreakerStatus(provider, model?, tenantCid?)` | `GET /api/execution/circuit-breakers`       | required                    | Observe breaker state (tenant-scoped)    |
 | `resetCircuitBreaker(provider, model?, tenantCid?)`  | `PUT /api/execution/circuit-breakers/reset` | internal only               | Reset breaker state (ops)                |
 
@@ -88,6 +91,84 @@ See: [STREAMING_EXECUTION_SSE.md](STREAMING_EXECUTION_SSE.md)
   - `evalId` can be provided for correlation (returned as `evaluationId`)
   - `maxConcurrency` bounds parallel execution in BEST_EFFORT mode
 
+### `uploadAsset(request)`
+
+- Endpoint: `POST /api/assets/upload`
+- Purpose: create or reuse a managed tenant asset and receive a stable `ExecutionAssetReference`.
+- Input contract: `DcdrAssetUploadRequest`
+- Output contract: `DcdrAssetUploadResponse`
+
+Notes:
+
+- Customer tokens need `assets:write` or `*`.
+- This is intended for cloud-managed storage flows; runtime/freeware mode can reject managed asset lifecycle operations.
+- Repeated uploads of the same canonical asset can return `created=false` when the object is reused from storage.
+- `request.metadata` can carry semantic fields such as `title`, `description`, `alt`, `tags`, and string `attributes`.
+- `intent` is optional for managed uploads; tenant-global cache identity no longer depends on it.
+- The TypeScript client infers common `mimeType` and `partType` values from `name` when omitted.
+
+Example:
+
+```ts
+import { DcdrRuntimeClient, prepareAssetInputPart } from "@dcdr/contracts";
+
+const client = new DcdrRuntimeClient({
+  bearerToken: process.env.DCDR_SESSION_TOKEN,
+});
+
+const upload = await client.uploadAsset({
+  name: "handbook.pdf",
+  dataBase64: handbookBuffer.toString("base64"),
+  metadata: {
+    title: "Employee handbook",
+    description: "Primary onboarding PDF",
+    tags: ["hr", "onboarding"],
+    attributes: {
+      language: "en",
+    },
+  },
+});
+
+const inputPart = prepareAssetInputPart({
+  ...upload,
+  variableName: "handbookPdf",
+});
+
+const request = {
+  vars: { question: "Resume este documento" },
+  inputParts: [inputPart],
+};
+
+// Note: runtime contracts already model this shape, but the current execution path
+// still gates multimodal inputParts until adapter support is enabled end-to-end.
+// When the intent declares PromptVariableType.ASSET slots, bind each inputPart through
+// inputParts[].variableName and keep the actual asset out of vars.
+```
+
+### `getAsset(request)`
+
+- Endpoint: `GET /api/assets?assetPath=...&storageId=...`
+- Purpose: fetch a previously stored managed asset payload as base64.
+- Input contract: `DcdrAssetGetRequest`
+- Output contract: `DcdrAssetGetResponse`
+
+Notes:
+
+- Customer tokens need `assets:read` or `*`.
+- `storageId` is optional; when omitted, the runtime resolves the tenant default storage.
+
+### `deleteAsset(request)`
+
+- Endpoint: `DELETE /api/assets?assetPath=...&storageId=...`
+- Purpose: delete a previously stored managed asset.
+- Input contract: `DcdrAssetDeleteRequest`
+- Output contract: `DcdrAssetDeleteResponse`
+
+Notes:
+
+- Customer tokens need `assets:delete` or `*`.
+- Delete is explicit and no compatibility alias is maintained under `/api/execution/assets`.
+
 ### `circuitBreakerStatus(provider, model?, tenantCid?)`
 
 - Endpoint: `GET /api/execution/circuit-breakers?provider=...&model=...`
@@ -102,8 +183,16 @@ The most common payload is `ExecuteIntentRequest`:
 
 - `workflow?: { ... }` — optional top-level workflow/agent orchestration metadata (correlation, run/node/step ids, idempotency)
 - `vars?: Record<string, unknown>` — template variables (e.g. `{ name: "Ada" }`)
+- `inputParts?: ExecutionInputPart[]` — multimodal parts; when the intent declares asset prompt variables, each part should bind via `variableName`
 - `context?: Record<string, any>` — open caller/business context (and the input surface used by `CONDITION_ON_CONTEXT` features)
 - `routing?: { ... }` — optional routing hints (force provider/implementation, tune retries)
+
+Important boundary for multimodal requests:
+
+- assets do not belong inside `vars`
+- `vars` remain prompt/template data only
+- asset-backed parts travel through `inputParts`
+- strong intent contracts should declare those slots in `inputSchema` with `PromptVariableType.ASSET`
 
 ### Workflow metadata
 

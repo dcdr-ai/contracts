@@ -8,6 +8,7 @@
  * Backend remains source-of-truth; runtime uses snapshot + local delta.
  */
 
+import { DcdrAssetStorageDescriptor } from "./asset.contract";
 import { SubscriptionStatus } from "./subscription.contract";
 
 /**
@@ -84,6 +85,9 @@ export interface DcdrEntitlementsContract {
   cid: string;
   limits: DcdrEntitlementLimits;
   usageBaseline: DcdrEntitlementUsageBaseline;
+
+  /** Optional tenant-managed asset storages available in cloud mode. */
+  assetStorages?: DcdrAssetStorageDescriptor[];
 
   /**
    * Optional gate controlling whether the tenant can use the paid DCDR virtual provider.

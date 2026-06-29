@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "homepage": "https://dcdr.ai",
   "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,
@@ -49,6 +49,7 @@
   },
   "exports": {
     ".": "./dist/index.js",
+    "./asset.contract": "./dist/asset.contract.js",
     "./runtime.client": "./dist/runtime.client.js",
     "./cache.contract": "./dist/cache.contract.js",
     "./capabilities.contract": "./dist/capabilities.contract.js",

@@ -3,6 +3,35 @@
  */
 
 /**
+ * Hash dependency used by helpers that need a stable SHA-256 hex digest.
+ */
+export interface Sha256HexDeps {
+  /** Returns the lowercase hex SHA-256 digest for the provided UTF-8 string. */
+  sha256Hex: (value: string) => string;
+}
+
+/**
+ * Inputs used to derive the default DCDR asset cache key.
+ *
+ * Notes
+ * - `cid` is intentionally excluded because tenant isolation already exists in the asset path prefix.
+ * - `intent` is intentionally excluded so the same tenant asset can be reused across intents.
+ */
+export interface DcdrAssetCacheKeyInput {
+  /** Stable semantic family for the asset. */
+  partType: string;
+
+  /** Canonical lowercase hex content hash for the payload bytes. */
+  sha256: string;
+
+  /** Optional technical MIME type. */
+  mimeType?: string;
+
+  /** Optional human-friendly asset name. */
+  name?: string;
+}
+
+/**
  * Stable JSON stringify with deterministic object key ordering.
  *
  * Why
@@ -85,4 +114,45 @@ export function stableJsonStringify(value: unknown): string {
   };
 
   return walk(value);
+}
+
+/**
+ * Builds the default DCDR asset cache key from stable semantic inputs.
+ *
+ * Notes
+ * - The result is deterministic and path-safe (`sha256` hex).
+ * - The same tenant asset can be reused across intents because `intent` is not part of this identity.
+ * - Callers may still provide an explicit override when they intentionally want a different logical cache identity.
+ */
+export function buildDcdrAssetCacheKey(
+  deps: Sha256HexDeps,
+  input: DcdrAssetCacheKeyInput,
+): string {
+  const partType = normalizeAssetCacheKeyField(input.partType);
+  const sha256 = normalizeAssetCacheKeyField(input.sha256);
+  if (!partType) {
+    throw new Error("buildDcdrAssetCacheKey: partType is required");
+  }
+  if (!sha256) {
+    throw new Error("buildDcdrAssetCacheKey: sha256 is required");
+  }
+
+  const normalized = stableJsonStringify({
+    v: 1,
+    partType,
+    mimeType: normalizeAssetCacheKeyField(input.mimeType) || null,
+    name: normalizeAssetCacheKeyField(input.name) || null,
+    sha256,
+  });
+
+  return deps.sha256Hex(normalized);
+}
+
+/**
+ * Normalizes a semantic cache-key field into a stable comparison form.
+ */
+function normalizeAssetCacheKeyField(value: string | undefined): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
 }

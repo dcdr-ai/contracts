@@ -119,6 +119,18 @@ export class RetryPolicy {
 
 export type ResponseFormat = "json_object" | "json_schema" | "text" | "markdown" | "html";
 
+/**
+ * Preferred upstream API surface for OpenAI-compatible providers.
+ *
+ * Notes
+ * - This is an execution/routing hint, not a prompt-semantics control.
+ * - Provider adapters may still reject unsupported combinations.
+ */
+export enum PromptParametersPreferredApi {
+    CHAT_COMPLETIONS = "CHAT_COMPLETIONS",
+    RESPONSES = "RESPONSES",
+}
+
 
 export class PromptParameters {
     /**
@@ -162,6 +174,16 @@ export class PromptParameters {
 
     @IsOptional()
     response_format?: ResponseFormat
+
+    /**
+     * Optional override for the upstream API surface used by OpenAI-compatible adapters.
+     *
+     * Precedence
+     * - If set, this overrides provider/model defaults and local heuristics.
+     * - When omitted, provider/model defaults remain in effect.
+     */
+    @IsOptional()
+    preferred_api?: PromptParametersPreferredApi;
 
     /**
      * Typical range: -2.0–2.0 (default: 0.0)

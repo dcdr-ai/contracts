@@ -2,6 +2,21 @@ import { ExecutionError } from "./errors.contract";
 import { Message } from "./messages.contract";
 import { Intent } from "./intent.contract";
 import { IntentProvider } from "./provider.contract";
+export {
+  ASSET_TYPE_LABELS as EXECUTION_PART_TYPE_LABELS,
+  ASSET_TYPE_VALUES as EXECUTION_PART_TYPE_VALUES,
+  AssetType,
+  AssetType as ExecutionPartType,
+  ExecutionAssetDatasourceReference,
+  ExecutionAssetDatasourceResolutionMode,
+  ExecutionAssetDatasourceType,
+  ExecutionAssetReference,
+} from "./asset.contract";
+import {
+  AssetType as ExecutionPartType,
+  ExecutionAssetDatasourceReference,
+  ExecutionAssetReference,
+} from "./asset.contract";
 
 /**
  * A single execution request coming into the gateway.
@@ -25,6 +40,16 @@ export interface ExecuteIntentRequest {
    * If omitted, gateway derives variables from `input`.
    */
   vars?: Record<string, unknown>;
+
+  /**
+   * Optional multimodal input parts.
+   *
+   * Notes
+   * - This surface carries execution content, not workflow metadata.
+   * - `vars` remains the primary prompt-template parameter surface.
+   * - Asset-backed parts are preferred for large artifacts.
+   */
+  inputParts?: ExecutionInputPart[];
 
   /**
    * Optional routing hints from backend.
@@ -105,6 +130,15 @@ export interface ExecutionReport {
     completionTokens?: number;
     totalTokens?: number;
   };
+
+  /** Safe, evidence-oriented representation of request parts when multimodal input is used. */
+  inputParts?: ExecutionReportPart[];
+
+  /** Safe, evidence-oriented representation of response parts when multimodal output is used. */
+  outputParts?: ExecutionReportPart[];
+
+  /** Optional tracked-call accounting details for weighted multimodal executions. */
+  trackedCallAccounting?: ExecutionTrackedCallAccounting;
 
   /**
    * Timing breakdown for this execution.
@@ -193,6 +227,9 @@ export interface ExecuteIntentResponse {
   /** The input */
   input: Message[];
 
+  /** Optional multimodal output parts. */
+  outputParts?: ExecutionOutputPart[];
+
   /** Parsed result (if ok). */
   output?: any;
 
@@ -240,6 +277,145 @@ export interface ExecutionWorkflowContext {
  */
 export interface ExecutionContext {
   [key: string]: any;
+}
+
+/**
+ * Supported content-source kinds for multimodal parts.
+ */
+export enum ExecutionPartSourceKind {
+  INLINE = "INLINE",
+  URL = "URL",
+  ASSET = "ASSET",
+}
+
+/**
+ * Source descriptor for a multimodal execution part.
+ */
+export interface ExecutionPartSource {
+  /** Source kind used for this part. */
+  kind: ExecutionPartSourceKind;
+
+  /** Optional inline base64 content for small payloads. */
+  dataBase64?: string;
+
+  /** Optional remote URL used by runtime as an input reference. */
+  url?: string;
+
+  /** Optional asset-backed reference. */
+  asset?: ExecutionAssetReference;
+}
+
+/**
+ * Multimodal input part supplied by the caller.
+ */
+export interface ExecutionInputPart {
+  /** Optional inputSchema asset variable fulfilled by this part. */
+  variableName?: string;
+
+  /** Stable semantic family for this part. */
+  type: ExecutionPartType;
+
+  /** Optional technical MIME type; required for non-text artifacts at validation time. */
+  mimeType?: string;
+
+  /** Optional human-friendly name. */
+  name?: string;
+
+  /** Optional declared size in bytes. */
+  sizeBytes?: number;
+
+  /** Inline text content for text parts. */
+  text?: string;
+
+  /** Optional content source for non-text and asset-backed parts. */
+  source?: ExecutionPartSource;
+}
+
+/**
+ * Multimodal output part returned to the client.
+ */
+export interface ExecutionOutputPart {
+  /** Stable semantic family for this part. */
+  type: ExecutionPartType;
+
+  /** Optional technical MIME type. */
+  mimeType?: string;
+
+  /** Optional human-friendly name. */
+  name?: string;
+
+  /** Optional output size in bytes. */
+  sizeBytes?: number;
+
+  /** Optional inline text content for text outputs. */
+  text?: string;
+
+  /** Optional source/reference for large outputs. */
+  source?: ExecutionPartSource;
+}
+
+/**
+ * Evidence-safe execution report part.
+ */
+export interface ExecutionReportPart {
+  /** Stable semantic family for this part. */
+  type: ExecutionPartType;
+
+  /** Optional technical MIME type. */
+  mimeType?: string;
+
+  /** Optional human-friendly name. */
+  name?: string;
+
+  /** Optional known size in bytes. */
+  sizeBytes?: number;
+
+  /** Optional known content hash. */
+  sha256?: string;
+
+  /** Canonical asset reference for QC/audit. */
+  asset?: ExecutionAssetReference;
+
+  /** Optional lightweight preview/derived evidence asset. */
+  previewAsset?: ExecutionAssetReference;
+}
+
+/**
+ * Multimodal tracked-call accounting details recorded in execution reports.
+ */
+export interface ExecutionTrackedCallAccounting {
+  /** Final tracked calls consumed by this execution. */
+  trackedCallsConsumed: number;
+
+  /** Base tracked-call cost before multipliers. */
+  trackedCallsBase?: number;
+
+  /** Applied multiplier when the execution costs more than one tracked call. */
+  trackedCallsMultiplier?: number;
+
+  /** Human-readable explanation of the final tracked-call rating. */
+  trackedCallsRatingReason?: string;
+
+  /** Optional aggregate input size used by rating. */
+  inputSizeBytes?: number;
+
+  /** Optional aggregate output size used by rating. */
+  outputSizeBytes?: number;
+
+  /** Optional input asset count used by rating. */
+  inputAssetCount?: number;
+
+  /** Optional output asset count used by rating. */
+  outputAssetCount?: number;
+
+  /** Optional document page count used by rating. */
+  documentPageCount?: number;
+
+  /** Optional audio duration in seconds used by rating. */
+  audioSeconds?: number;
+
+  /** Optional video duration in seconds used by rating. */
+  videoSeconds?: number;
 }
 
 /**

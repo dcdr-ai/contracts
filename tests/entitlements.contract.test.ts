@@ -1,6 +1,11 @@
 /// <reference types="jest" />
 
 import { DcdrEntitlementsContract } from "../src/entitlements.contract";
+import { DcdrAssetScope } from "../src/asset.contract";
+import {
+  ExecutionAssetDatasourceResolutionMode,
+  ExecutionAssetDatasourceType,
+} from "../src/execution.contract";
 import { SubscriptionStatus } from "../src/subscription.contract";
 
 describe("DcdrEntitlementsContract", () => {
@@ -18,6 +23,22 @@ describe("DcdrEntitlementsContract", () => {
         callsThisMonth: 0,
         trackedCallsThisMonth: 0,
       },
+      assetStorages: [
+        {
+          id: "managed-default",
+          isDefault: true,
+          enabled: true,
+          maxAssetSizeBytes: 104857600,
+          datasource: {
+            type: ExecutionAssetDatasourceType.S3,
+            resolution: ExecutionAssetDatasourceResolutionMode.BACKEND,
+            id: "managed-default",
+            container: "tenant-assets",
+            basePath: "tenants/customer-1",
+          },
+          credentialsExpiresAtMs: 1778460966000,
+        },
+      ],
       resetAt: 1777593600000,
       iat: 1777286527497,
       subscriptionStatus: SubscriptionStatus.TRIAL,
@@ -52,6 +73,10 @@ describe("DcdrEntitlementsContract", () => {
     expect(roundTrip.cid).toBe(ent.cid);
     expect(roundTrip.limits.maxCallsPerMonth).toBe(100000);
     expect(roundTrip.usageBaseline.periodKey).toBe("2026-04");
+    expect(roundTrip.assetStorages?.[0]?.datasource?.id).toBe(
+      "managed-default",
+    );
+    expect(roundTrip.assetStorages?.[0]?.isDefault).toBe(true);
     expect(roundTrip.subscriptionStatus).toBe("TRIAL");
     expect(roundTrip.businessLimits?.maxUsers).toBe(5);
     expect(roundTrip.businessUsage?.serviceTokens).toBe(1);
