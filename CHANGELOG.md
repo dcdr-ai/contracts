@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260629.6] — 18:51UTC
+
+<!--
+sourceCommit: 62c0c85b70a4f2647745d0e5d5a9294f88663564
+queuedAtUtc: 
+previousMirroredBuild: 20260629.4 (2026-06-29)
+contractsSubmodule: 5e097ffd48ad..87e1a98b927b
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> v2.3.1 — Re-exported asset contract surface from the root `@dcdr/contracts` barrel: `DcdrAssetScope`, `DcdrAssetStorageDescriptor`, `DcdrAssetMetadata`, `DcdrAssetMetadataAttributes`, `DcdrAssetUploadRequest/Response`, `DcdrAssetGetRequest/Response`, `DcdrAssetDeleteRequest/Response`, `ASSET_TYPE_VALUES`, `ASSET_TYPE_LABELS`. Added `types` conditions to all `exports` entries and a full `typesVersions` map for compatibility with `moduleResolution: node` and `node16`/`bundler` consumers.
+
 ## [20260629.4] — 17:00UTC
 
 <!--

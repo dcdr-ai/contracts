@@ -9,6 +9,14 @@ import { ExecutionPolicyType } from "../src/policies.contract";
 import { PromptVariable, PromptVariableType } from "../src/prompts.contract";
 import { IntentProvider } from "../src/provider.contract";
 import { CapabilityKey } from "../src/capabilities.contract";
+import {
+  AssetType,
+  ASSET_TYPE_VALUES,
+  ASSET_TYPE_LABELS,
+  DcdrAssetScope,
+  ExecutionAssetDatasourceResolutionMode,
+  ExecutionAssetDatasourceType,
+} from "../src/index";
 
 describe("@dcdr/contracts exports", () => {
   it("exports runtime enums/classes/functions", () => {
@@ -42,5 +50,31 @@ describe("@dcdr/contracts exports", () => {
     expect(values).toContain("RULES");
     expect(values).toContain("OPEN_AI");
     expect(new Set(values).size).toBe(values.length);
+  });
+
+  it("exports asset contract symbols from the root barrel", () => {
+    // Enums
+    expect(AssetType.DOCUMENT).toBe("document");
+    expect(AssetType.IMAGE).toBe("image");
+    expect(AssetType.TEXT).toBe("text");
+    expect(AssetType.AUDIO).toBe("audio");
+    expect(AssetType.VIDEO).toBe("video");
+
+    expect(DcdrAssetScope.READ).toBe("assets:read");
+    expect(DcdrAssetScope.WRITE).toBe("assets:write");
+    expect(DcdrAssetScope.DELETE).toBe("assets:delete");
+
+    expect(ExecutionAssetDatasourceResolutionMode.BACKEND).toBe("BACKEND");
+    expect(ExecutionAssetDatasourceResolutionMode.EXPLICIT).toBe("EXPLICIT");
+
+    expect(ExecutionAssetDatasourceType.S3).toBe("S3");
+
+    // Constants
+    expect(Array.isArray(ASSET_TYPE_VALUES)).toBe(true);
+    expect(ASSET_TYPE_VALUES).toContain("document");
+    expect(ASSET_TYPE_VALUES).toContain("image");
+
+    expect(typeof ASSET_TYPE_LABELS).toBe("object");
+    expect(ASSET_TYPE_LABELS[AssetType.DOCUMENT]).toBe("document");
   });
 });

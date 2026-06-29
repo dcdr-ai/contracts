@@ -7,9 +7,14 @@ const nodeLoader = createRequire(__filename);
 /**
  * Minimal shape we need from the contracts package.json.
  */
+interface ExportConditions {
+  types?: string;
+  default?: string;
+}
+
 interface ContractsPackageJson {
   main?: string;
-  exports?: Record<string, string>;
+  exports?: Record<string, string | ExportConditions>;
 }
 
 /**
@@ -59,13 +64,37 @@ const pkg = JSON.parse(rawPackageJson) as ContractsPackageJson;
 
 const distIndex = path.join(packageRoot, "dist", "index.js");
 const exportsMap = pkg.exports || {};
-const exportTargets = Object.values(exportsMap);
+
+/**
+ * Resolves the runtime (.js) path from an export entry which may be a plain
+ * string or a conditions object `{ types, default }`.
+ */
+function resolveExportDefault(entry: string | ExportConditions): string | null {
+  if (typeof entry === "string") return entry;
+  return entry.default ?? null;
+}
+
+/**
+ * Resolves the types (.d.ts) path from an export conditions object.
+ */
+function resolveExportTypes(entry: string | ExportConditions): string | null {
+  if (typeof entry === "string") return null;
+  return entry.types ?? null;
+}
+
+const exportEntries = Object.entries(exportsMap);
+const runtimeTargets = exportEntries
+  .map(([, v]) => resolveExportDefault(v))
+  .filter((t): t is string => t !== null);
+const typesTargets = exportEntries
+  .map(([, v]) => resolveExportTypes(v))
+  .filter((t): t is string => t !== null);
 
 const loadTargets: ModuleLoadResult[] = [
   loadDistModule(distIndex),
-  ...exportTargets
-    .filter((t): t is string => typeof t === "string")
-    .map((target) => loadDistModule(resolveFromPackageRoot(packageRoot, target))),
+  ...runtimeTargets.map((target) =>
+    loadDistModule(resolveFromPackageRoot(packageRoot, target)),
+  ),
 ];
 
 describe("@dcdr/contracts dist/ exports", () => {
@@ -74,13 +103,10 @@ describe("@dcdr/contracts dist/ exports", () => {
     expect(pkg.exports).toBeTruthy();
 
     expect(fs.existsSync(distIndex)).toBe(true);
+    expect(exportEntries.length).toBeGreaterThan(0);
 
-    expect(exportTargets.length).toBeGreaterThan(0);
-
-    for (const target of exportTargets) {
-      expect(typeof target).toBe("string");
+    for (const target of runtimeTargets) {
       expect(target.startsWith("./dist/")).toBe(true);
-
       const abs = resolveFromPackageRoot(packageRoot, target);
       expect(fs.existsSync(abs)).toBe(true);
     }
@@ -88,8 +114,21 @@ describe("@dcdr/contracts dist/ exports", () => {
     for (const r of loadTargets) {
       expect(r.ok).toBe(true);
       if (!r.ok) {
-        throw new Error(`Failed to load dist module: ${r.absolutePath}: ${r.error ?? "unknown"}`);
+        throw new Error(
+          `Failed to load dist module: ${r.absolutePath}: ${r.error ?? "unknown"}`,
+        );
       }
+    }
+  });
+
+  it("package.json export conditions include types paths pointing to real .d.ts files", () => {
+    expect(typesTargets.length).toBeGreaterThan(0);
+
+    for (const target of typesTargets) {
+      expect(target.startsWith("./dist/")).toBe(true);
+      expect(target.endsWith(".d.ts")).toBe(true);
+      const abs = resolveFromPackageRoot(packageRoot, target);
+      expect(fs.existsSync(abs)).toBe(true);
     }
   });
 });
