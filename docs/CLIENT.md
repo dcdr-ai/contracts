@@ -102,10 +102,18 @@ Notes:
 
 - Customer tokens need `assets:write` or `*`.
 - This is intended for cloud-managed storage flows; runtime/freeware mode can reject managed asset lifecycle operations.
+- `storageId` selects one tenant-visible managed storage exposed through entitlements. Callers do not send raw storage credentials in asset requests.
 - Repeated uploads of the same canonical asset can return `created=false` when the object is reused from storage.
 - `request.metadata` can carry semantic fields such as `title`, `description`, `alt`, `tags`, and string `attributes`.
 - `intent` is optional for managed uploads; tenant-global cache identity no longer depends on it.
 - The TypeScript client infers common `mimeType` and `partType` values from `name` when omitted.
+
+Managed storage credential model:
+
+- Public asset routes stay secret-free.
+- `DcdrAssetStorageDescriptor` identifies the tenant-visible storage and carries routing metadata such as `id`, `datasource`, `container`, `region`, or `basePath`.
+- Concrete storage secrets are resolved only between backend and runtime through the shared `storage.credentials.contract` interfaces.
+- This keeps the public asset lifecycle stable while leaving room for Google Cloud today and future `S3`, `FTP`, and `NAS` storage backends.
 
 Example:
 
@@ -156,6 +164,7 @@ Notes:
 
 - Customer tokens need `assets:read` or `*`.
 - `storageId` is optional; when omitted, the runtime resolves the tenant default storage.
+- `storageId` is a tenant-visible logical storage selector, not a raw datasource credential handle.
 
 ### `deleteAsset(request)`
 
@@ -168,6 +177,7 @@ Notes:
 
 - Customer tokens need `assets:delete` or `*`.
 - Delete is explicit and no compatibility alias is maintained under `/api/execution/assets`.
+- As with upload/get, callers address logical tenant storages through `storageId`; secret resolution remains backend/runtime-only.
 
 ### `circuitBreakerStatus(provider, model?, tenantCid?)`
 

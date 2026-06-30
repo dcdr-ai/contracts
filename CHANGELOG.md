@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260630.1] — 19:17UTC
+
+<!--
+sourceCommit: c47c253a83de325a7517dd6a7ceb3773dc3cbcd7
+queuedAtUtc: 
+previousMirroredBuild: 20260629.6 (2026-06-29)
+contractsSubmodule: 87e1a98b927b..eeca3f8a4783
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> v2.4.0 — Added shared backend/runtime `storage.credentials.contract` exports for backend-managed asset-storage credential resolution, keeping `DcdrAssetStorageDescriptor` secret-free while formalizing Google Cloud today and future `S3`/`FTP`/`NAS` credential payloads through shared interfaces.
+- <kbd>RUNTIME</kbd> Managed asset storage now resolves backend-managed storage credentials per tenant `storageId`/`datasource.id` with short in-memory caching, while preserving compatibility for the current shared cloud-managed storage through an explicit default `storageId`.
+
 ## [20260629.6] — 18:51UTC
 
 <!--

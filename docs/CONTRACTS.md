@@ -134,6 +134,20 @@ Runtime API shapes:
 - `Message`: [../src/messages.contract.ts](../src/messages.contract.ts#L13)
 - `DcdrRuntimeClient`: [../src/runtime.client.ts](../src/runtime.client.ts#L110)
 
+Managed asset storage shapes:
+
+- `DcdrAssetStorageDescriptor`: [../src/asset.contract.ts](../src/asset.contract.ts#L139)
+- `ResolveAssetStorageCredentialsRequest`: [../src/storage.credentials.contract.ts](../src/storage.credentials.contract.ts#L84)
+- `ResolveAssetStorageCredentialsResponse`: [../src/storage.credentials.contract.ts](../src/storage.credentials.contract.ts#L92)
+- `AssetStorageCredentialsContract`: [../src/storage.credentials.contract.ts](../src/storage.credentials.contract.ts#L68)
+
+Storage model:
+
+- `DcdrAssetStorageDescriptor` is tenant-visible and must stay secret-free.
+- Public asset upload/get/delete requests use `storageId` to select a logical tenant storage.
+- Concrete storage credentials are resolved only between backend and runtime through `storage.credentials.contract`.
+- The shared credential contract is intentionally additive and can represent Google Cloud today plus future `S3`, `FTP`, and `NAS` backends without changing the public asset lifecycle routes.
+
 ## IntentContract (deep dive)
 
 If you understand intents, you understand the DCDR execution surface. An intent is a versionable, provider-agnostic unit that can be executed consistently.

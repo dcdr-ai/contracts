@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "homepage": "https://dcdr.ai",
   "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,
@@ -50,6 +50,7 @@
   "exports": {
     ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
     "./asset.contract": { "types": "./dist/asset.contract.d.ts", "default": "./dist/asset.contract.js" },
+    "./storage.credentials.contract": { "types": "./dist/storage.credentials.contract.d.ts", "default": "./dist/storage.credentials.contract.js" },
     "./runtime.client": { "types": "./dist/runtime.client.d.ts", "default": "./dist/runtime.client.js" },
     "./cache.contract": { "types": "./dist/cache.contract.d.ts", "default": "./dist/cache.contract.js" },
     "./capabilities.contract": { "types": "./dist/capabilities.contract.d.ts", "default": "./dist/capabilities.contract.js" },
@@ -76,6 +77,7 @@
   "typesVersions": {
     "*": {
       "asset.contract": ["dist/asset.contract.d.ts"],
+      "storage.credentials.contract": ["dist/storage.credentials.contract.d.ts"],
       "runtime.client": ["dist/runtime.client.d.ts"],
       "cache.contract": ["dist/cache.contract.d.ts"],
       "capabilities.contract": ["dist/capabilities.contract.d.ts"],

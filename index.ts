@@ -1,5 +1,6 @@
 export * from "./src/control.contract";
 export * from "./src/asset.contract";
+export * from "./src/storage.credentials.contract";
 export * from "./src/errors.contract";
 export * from "./src/execution.contract";
 export * from "./src/implementations.contract";

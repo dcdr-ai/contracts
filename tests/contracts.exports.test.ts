@@ -13,6 +13,7 @@ import {
   AssetType,
   ASSET_TYPE_VALUES,
   ASSET_TYPE_LABELS,
+  AssetStorageCredentialsKind,
   DcdrAssetScope,
   ExecutionAssetDatasourceResolutionMode,
   ExecutionAssetDatasourceType,
@@ -68,6 +69,9 @@ describe("@dcdr/contracts exports", () => {
     expect(ExecutionAssetDatasourceResolutionMode.EXPLICIT).toBe("EXPLICIT");
 
     expect(ExecutionAssetDatasourceType.S3).toBe("S3");
+    expect(AssetStorageCredentialsKind.GOOGLE_CLOUD_SERVICE_ACCOUNT).toBe(
+      "GOOGLE_CLOUD_SERVICE_ACCOUNT",
+    );
 
     // Constants
     expect(Array.isArray(ASSET_TYPE_VALUES)).toBe(true);

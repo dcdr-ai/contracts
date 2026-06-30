@@ -403,6 +403,14 @@ See full feature matrix: [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRI
 
 ---
 
+## Managed storage credentials
+
+Cloud-managed assets keep tenant-visible storage descriptors and concrete secrets separate:
+
+- `DcdrAssetStorageDescriptor` stays secret-free and travels through entitlements.
+- Backend/runtime secret exchange uses the shared `storage.credentials.contract` surface.
+- Current runtime support resolves Google Cloud service-account credentials for managed buckets and leaves room for future `S3`, `FTP`, and `NAS` credential kinds without changing the public asset upload/get/delete routes.
+
 ## More docs
 
 ### Core concepts
