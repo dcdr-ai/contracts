@@ -39,6 +39,12 @@ export interface DcdrEntitlementUsageBaseline {
 
   /** Baseline tracked calls already accounted for (optional). */
   trackedCallsThisMonth?: number;
+
+  /** SUM(trackedCallsConsumed) — credit-weighted quota counter. Use this for limit enforcement. */
+  creditsThisMonth?: number;
+
+  /** SUM(trackedCallsConsumed) for tracked calls only. */
+  trackedCreditsThisMonth?: number;
 }
 
 /**

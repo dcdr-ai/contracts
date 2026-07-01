@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260701.1] — 11:59UTC
+
+<!--
+sourceCommit: aa0855043206c050829e77b299b3e0701745eee8
+queuedAtUtc: 
+previousMirroredBuild: 20260630.1 (2026-06-30)
+contractsSubmodule: eeca3f8a4783..cb9b46e0a40c
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Populate `ExecutionReport.inputParts` (as `ExecutionReportPart[]`) for every successful multimodal execution so backends can track which assets were used as input for QC and audit workflows. Each report part carries `type`, `mimeType`, `name`, `sizeBytes`, `sha256`, and the full `asset` reference (`datasource` + `assetPath`) for ASSET-backed parts. Inline binary content is intentionally excluded.
+
 ## [20260630.1] — 19:17UTC
 
 <!--
