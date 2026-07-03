@@ -409,14 +409,41 @@ export interface ExecutionTrackedCallAccounting {
   /** Human-readable explanation of the final tracked-call rating. */
   trackedCallsRatingReason?: string;
 
+  /** Optional coarse context describing how the final rating was chosen. */
+  trackedCallsRatingContext?: string;
+
   /** Optional aggregate input size used by rating. */
   inputSizeBytes?: number;
+
+  /** Optional aggregate known non-text input size used by guardrails. */
+  aggregateInputSizeBytes?: number;
+
+  /** Optional aggregate floor multiplier applied by guardrails. */
+  aggregateInputSizeMultiplier?: number;
 
   /** Optional aggregate output size used by rating. */
   outputSizeBytes?: number;
 
   /** Optional input asset count used by rating. */
   inputAssetCount?: number;
+
+  /** Optional dominant modality that determined the per-part winning bucket. */
+  dominantModality?: ExecutionPartType;
+
+  /** Optional dominant source type that determined the per-part winning bucket. */
+  dominantSourceType?: ExecutionPartSourceKind;
+
+  /** Optional dominant known size used by the per-part winning bucket. */
+  dominantSizeBytes?: number;
+
+  /** Optional dominant part index used by the per-part winning bucket. */
+  dominantPartIndex?: number;
+
+  /** Optional dominant bucket reason when a coarse context is also present. */
+  dominantRatingReason?: string;
+
+  /** Optional distinct per-part reasons observed during rating. */
+  observedRatingReasons?: string[];
 
   /** Optional output asset count used by rating. */
   outputAssetCount?: number;

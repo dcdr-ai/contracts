@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260703.4] — 22:30UTC
+
+<!--
+sourceCommit: 6d37fab0234625a6cf6bf2298b8b767a311e5739
+queuedAtUtc: 
+previousMirroredBuild: 20260703.3 (2026-07-03)
+contractsSubmodule: 69e3d070da5e..745aa294da80
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> v2.5.0 — Added a public tracked-call rating matrix contract (`tracked-call-rating.contract`) with a versioned multimodal multiplier table, aggregate guardrails, and shared default v1 metadata so backend/UI can render and audit the same policy the runtime uses.
+- <kbd>RUNTIME</kbd> Runtime now computes `ExecutionReport.trackedCallAccounting` from the shared tracked-call rating matrix instead of the old placeholder `multimodal_rating_not_applied`, including fractional multipliers, dominant bucket metadata, and aggregate non-text input-size guardrails.
+
 ## [20260703.3] — 20:07UTC
 
 <!--

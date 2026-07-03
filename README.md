@@ -37,6 +37,7 @@ On top of that, every failure can be reviewed, corrected, and turned into traini
 
 - **Public TypeScript contracts** (interfaces/enums) for DCDR Registries and runtime API payloads.
 - **`DcdrRuntimeClient`**: a strongly-typed TypeScript HTTP client for calling a DCDR Runtime instance.
+- **Tracked-call rating metadata**: a shared, versioned multimodal multiplier matrix that backend/UI can render and audit consistently with runtime behavior.
 
 ## Who should use it
 

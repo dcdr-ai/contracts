@@ -140,6 +140,7 @@ Managed asset storage shapes:
 - `ResolveAssetStorageCredentialsRequest`: [../src/storage.credentials.contract.ts](../src/storage.credentials.contract.ts#L84)
 - `ResolveAssetStorageCredentialsResponse`: [../src/storage.credentials.contract.ts](../src/storage.credentials.contract.ts#L92)
 - `AssetStorageCredentialsContract`: [../src/storage.credentials.contract.ts](../src/storage.credentials.contract.ts#L68)
+- `TrackedCallRatingMatrix`: [../src/tracked-call-rating.contract.ts](../src/tracked-call-rating.contract.ts#L109)
 
 Storage model:
 
@@ -148,6 +149,12 @@ Storage model:
 - `ExecutionAssetReference` can preserve `storageId` plus logical `storageOwner` (`SYSTEM` | `CUSTOMER`) so QC/backend flows can reload managed evidence without inferring the storage family from datasource ids.
 - Concrete storage credentials are resolved only between backend and runtime through `storage.credentials.contract`.
 - The shared credential contract is intentionally additive and can represent Google Cloud today plus future `S3`, `FTP`, and `NAS` backends without changing the public asset lifecycle routes.
+
+Tracked-call rating model:
+
+- `tracked-call-rating.contract` exports a versioned, declarative `TrackedCallRatingMatrix` so runtime, backend, and UI can share the same multimodal tracked-call policy.
+- `DEFAULT_TRACKED_CALL_RATING_MATRIX_V1` is the current default policy snapshot used by runtime v1.
+- `ExecutionReport.trackedCallAccounting` carries the final applied multiplier plus optional dominant-bucket and aggregate-guardrail metadata for auditability.
 
 ## IntentContract (deep dive)
 

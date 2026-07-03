@@ -17,6 +17,8 @@ import {
   DcdrAssetScope,
   ExecutionAssetDatasourceResolutionMode,
   ExecutionAssetDatasourceType,
+  DEFAULT_TRACKED_CALL_RATING_MATRIX_V1,
+  TrackedCallRatingAssetFamily,
 } from "../src/index";
 
 describe("@dcdr/contracts exports", () => {
@@ -80,5 +82,11 @@ describe("@dcdr/contracts exports", () => {
 
     expect(typeof ASSET_TYPE_LABELS).toBe("object");
     expect(ASSET_TYPE_LABELS[AssetType.DOCUMENT]).toBe("document");
+
+    expect(TrackedCallRatingAssetFamily.DOCUMENT).toBe("document");
+    expect(DEFAULT_TRACKED_CALL_RATING_MATRIX_V1.version).toBe("1.0");
+    expect(DEFAULT_TRACKED_CALL_RATING_MATRIX_V1.buckets.length).toBeGreaterThan(
+      0,
+    );
   });
 });

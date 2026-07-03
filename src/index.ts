@@ -19,6 +19,7 @@ export * from "./runtime.client";
 export * from "./utils.contract";
 export * from "./cache.contract";
 export * from "./storage.credentials.contract";
+export * from "./tracked-call-rating.contract";
 export * from "./prompt-variable-schema.contract";
 export * from "./registry.stats.contract";
 
