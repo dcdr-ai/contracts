@@ -361,6 +361,16 @@ export interface ExecutionReportPart {
   /** Stable semantic family for this part. */
   type: ExecutionPartType;
 
+  /**
+   * Optional source kind preserved for report reproducibility.
+   *
+   * Notes
+   * - `INLINE` never includes the inline payload itself.
+   * - `URL` can preserve the caller-provided remote location.
+   * - `ASSET` can preserve the runtime-managed asset reference.
+   */
+  sourceKind?: ExecutionPartSourceKind;
+
   /** Optional technical MIME type. */
   mimeType?: string;
 
@@ -375,6 +385,9 @@ export interface ExecutionReportPart {
 
   /** Canonical asset reference for QC/audit. */
   asset?: ExecutionAssetReference;
+
+  /** Original remote URL when the caller supplied this part via `source.kind=URL`. */
+  url?: string;
 
   /** Optional lightweight preview/derived evidence asset. */
   previewAsset?: ExecutionAssetReference;

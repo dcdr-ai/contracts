@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260703.1] — 16:56UTC
+
+<!--
+sourceCommit: e18cf3f4626919944c7c1ab4e0ef89aeb74e6494
+queuedAtUtc: 
+previousMirroredBuild: 20260701.1 (2026-07-01)
+contractsSubmodule: cb9b46e0a40c..ac5cf2ac9689
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> v2.5.0 — Extended `ExecutionReportPart` so URL-backed `inputParts` can preserve `sourceKind=URL` plus the caller-provided `url` in execution reports, while keeping inline payload bytes excluded.
+### Added
+- <kbd>RUNTIME</kbd> Execution reports now retain caller-supplied remote URLs for `inputParts` with `source.kind=URL`, alongside the source kind metadata, so backend QC/audit flows can distinguish URL-backed inputs from managed assets.
+
 ## [20260701.1] — 11:59UTC
 
 <!--
