@@ -4,6 +4,21 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260703.3] — 20:07UTC
+
+<!--
+sourceCommit: 8606e96bcefd2258ddf023c5c77a80c12699a158
+queuedAtUtc: 
+previousMirroredBuild: 20260703.1 (2026-07-03)
+contractsSubmodule: ac5cf2ac9689..69e3d070da5e
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> v2.4.3 — Extended multimodal execution report evidence so URL-backed `inputParts` preserve `sourceKind=URL` plus the caller-provided `url`, and ASSET-backed references preserve `storageId` + `storageOwner` for QC/backend rehydration without exposing inline payload bytes.
+### Added
+- <kbd>RUNTIME</kbd> Execution reports now retain caller-supplied remote URLs for `inputParts` with `source.kind=URL`, and ASSET-backed references now carry `storageId` plus `storageOwner` so backend QC panels can reload evidence from system vs customer storage deterministically.
+- <kbd>RUNTIME</kbd> Populate `ExecutionReport.inputParts` (as `ExecutionReportPart[]`) for every successful multimodal execution so backends can track which assets were used as input for QC and audit workflows. Each report part carries `type`, `mimeType`, `name`, `sizeBytes`, `sha256`, and the report-safe `asset` reference (`storageId`, `storageOwner`, `assetPath`) for ASSET-backed parts. Inline binary content is intentionally excluded.
+
 ## [20260703.1] — 16:56UTC
 
 <!--

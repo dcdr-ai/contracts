@@ -112,6 +112,7 @@ Managed storage credential model:
 
 - Public asset routes stay secret-free.
 - `DcdrAssetStorageDescriptor` identifies the tenant-visible storage and carries routing metadata such as `id`, `datasource`, `container`, `region`, or `basePath`.
+- `ExecutionAssetReference` returned by runtime asset routes can preserve `storageId` and logical `storageOwner` (`SYSTEM` | `CUSTOMER`) so QC/backend flows know which storage family to resolve later.
 - Concrete storage secrets are resolved only between backend and runtime through the shared `storage.credentials.contract` interfaces.
 - This keeps the public asset lifecycle stable while leaving room for Google Cloud today and future `S3`, `FTP`, and `NAS` storage backends.
 

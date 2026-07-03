@@ -159,12 +159,7 @@ export function prepareAssetInputPart(
     sizeBytes: input.sizeBytes ?? input.asset.sizeBytes,
     source: {
       kind: ExecutionPartSourceKind.ASSET,
-      asset: {
-        ...input.asset,
-        datasource: input.asset.datasource
-          ? { ...input.asset.datasource }
-          : undefined,
-      },
+      asset: { ...input.asset },
     },
   };
 }

@@ -145,6 +145,7 @@ Storage model:
 
 - `DcdrAssetStorageDescriptor` is tenant-visible and must stay secret-free.
 - Public asset upload/get/delete requests use `storageId` to select a logical tenant storage.
+- `ExecutionAssetReference` can preserve `storageId` plus logical `storageOwner` (`SYSTEM` | `CUSTOMER`) so QC/backend flows can reload managed evidence without inferring the storage family from datasource ids.
 - Concrete storage credentials are resolved only between backend and runtime through `storage.credentials.contract`.
 - The shared credential contract is intentionally additive and can represent Google Cloud today plus future `S3`, `FTP`, and `NAS` backends without changing the public asset lifecycle routes.
 

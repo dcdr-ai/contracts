@@ -5,7 +5,10 @@ import {
   prepareAssetInputPart,
   prepareAssetUploadRequest,
 } from "../src/runtime.client";
-import { DcdrAssetScope } from "../src/asset.contract";
+import {
+  DcdrAssetScope,
+  ExecutionAssetStorageOwner,
+} from "../src/asset.contract";
 import {
   ExecutionPartSourceKind,
   ExecutionPartType,
@@ -607,6 +610,8 @@ describe("DcdrRuntimeClient", () => {
       mimeType: "application/pdf",
       name: "handbook.pdf",
       asset: {
+        storageId: "managed-default",
+        storageOwner: ExecutionAssetStorageOwner.SYSTEM,
         assetPath: "customer-1/document/ab/abcd/handbook.pdf",
       },
     });
@@ -620,6 +625,8 @@ describe("DcdrRuntimeClient", () => {
       source: {
         kind: ExecutionPartSourceKind.ASSET,
         asset: {
+          storageId: "managed-default",
+          storageOwner: ExecutionAssetStorageOwner.SYSTEM,
           assetPath: "customer-1/document/ab/abcd/handbook.pdf",
         },
       },

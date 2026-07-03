@@ -51,6 +51,14 @@ export enum ExecutionAssetDatasourceResolutionMode {
 }
 
 /**
+ * Logical owner of the managed storage used by one asset reference.
+ */
+export enum ExecutionAssetStorageOwner {
+  SYSTEM = "SYSTEM",
+  CUSTOMER = "CUSTOMER",
+}
+
+/**
  * Reference to a storage datasource used by asset-backed execution parts.
  */
 export interface ExecutionAssetDatasourceReference {
@@ -80,10 +88,13 @@ export interface ExecutionAssetDatasourceReference {
  * Stable reference to an asset stored outside the execution payload itself.
  */
 export interface ExecutionAssetReference {
-  /** Optional datasource used to resolve this asset. */
-  datasource?: ExecutionAssetDatasourceReference;
+  /** Stable tenant-visible storage identifier when known. */
+  storageId?: string;
 
-  /** Stable datasource-relative asset path resolved by runtime. */
+  /** Logical storage owner used by QC/backend to rehydrate the asset. */
+  storageOwner?: ExecutionAssetStorageOwner;
+
+  /** Stable storage-relative asset path resolved by runtime. */
   assetPath?: string;
 
   /** Optional known content hash. */
