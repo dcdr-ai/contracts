@@ -279,6 +279,55 @@ export function buildAnthropicProviderModelDefinitions(
         updatedAt: "2026-05-04",
       },
     },
+    {
+      id: "claude-sonnet-5",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        output: 10.0,
+        tiers: [
+          {
+            name: "standard",
+            condition: "Standard pricing from 2026-09-01 (promotional pricing through 2026-08-31)",
+            input: 3.0,
+            output: 15.0,
+          },
+        ],
+        sourceUrl: ANTHROPIC_PRICING_URL,
+        notes:
+          "Anthropic pricing page snapshot 2026-07-04. Base values reflect the promotional Sonnet 5 rate shown as active through 2026-08-31.",
+      }),
+      parameterSupport: {
+        parameters: {
+          [args.catalogEnums.promptParameterKey.TEMPERATURE]:
+            args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
+          [args.catalogEnums.promptParameterKey.TOP_P]:
+            args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
+        },
+        notes:
+          "Sonnet 5 rejects explicit temperature/top_p on the current Anthropic Messages API path in provider E2E.",
+        updatedAt: "2026-07-04",
+      },
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E (text + structured) with the 1024-token baseline.",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Re-curated on 2026-07-04 with the canonical 15-cell Anthropic harness and the 1024-token baseline. IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT passes on INLINE and ASSET but still fails the canonical comprehension assertion on URL, so it is intentionally not promoted by the current catalog shape. AUDIO and VIDEO are rejected deterministically with MODEL_UNSUPPORTED by the current Anthropic Messages provider path.",
+          updatedAt: "2026-07-04",
+        },
+        updatedAt: "2026-07-04",
+      },
+    },
     // Haiku is the cheapest/default smoke-test model.
     {
       id: "claude-haiku-4-5",
@@ -327,6 +376,45 @@ export function buildAnthropicProviderModelDefinitions(
       },
     },
     {
+      id: "claude-fable-5",
+      types: [IntentType.CHAT],
+      pricing: args.pricingPerMillionTokens({
+        input: 10.0,
+        output: 50.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+        notes: "Anthropic pricing page snapshot 2026-07-04.",
+      }),
+      parameterSupport: {
+        parameters: {
+          [args.catalogEnums.promptParameterKey.TEMPERATURE]:
+            args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
+          [args.catalogEnums.promptParameterKey.TOP_P]:
+            args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
+        },
+        notes:
+          "Fable 5 rejects explicit temperature/top_p on the current Anthropic Messages API path in provider E2E.",
+        updatedAt: "2026-07-04",
+      },
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E (text + structured) with the 1024-token baseline. Lower output budgets can spend tokens on thinking before any visible text is emitted.",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [AssetType.TEXT, AssetType.IMAGE, AssetType.DOCUMENT],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Re-curated on 2026-07-04 with the canonical 15-cell Anthropic harness and the 1024-token baseline. TEXT, IMAGE, and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO are rejected deterministically with MODEL_UNSUPPORTED by the current Anthropic Messages provider path. With very small text budgets (for example 16 tokens), this model can spend the full budget on thinking before emitting visible text.",
+          updatedAt: "2026-07-04",
+        },
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
       id: "claude-haiku-4-5-20251001",
       types: [IntentType.CHAT],
       pricing: args.pricingPerMillionTokens({
@@ -365,5 +453,11 @@ export function buildAnthropicProviderModelDefinitions(
 export function buildAnthropicProviderModelE2EOverrides(
   args: ProviderCatalogModuleBuildArgs,
 ): Record<string, ProviderModelE2EOverride> {
-  return {};
+  return {
+    "claude-haiku-4-5": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Compatibility alias retained locally but no longer listed by Anthropic /v1/models",
+    },
+  };
 }

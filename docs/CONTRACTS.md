@@ -170,7 +170,7 @@ Key fields:
 
 - `id` — stable identifier for the intent. In Cloud and Cloud Pro, this is usually a UUID. In Runtime (self-hosted) you can use simple IDs like `"hello_world"` as long as they are stable.
 - `intent` — the public name you call over HTTP, e.g. `POST /api/execution/run/HELLO_WORLD`.
-- `type` — intent category (CHAT, EMBEDDING, IMAGE_GENERATION, …). This is used for capability checks and for picking the right provider adapter.
+- `type` — intent category (CHAT, EMBEDDING, IMAGE_GENERATION, VIDEO_GENERATION, …). This is used for capability checks and for picking the right provider adapter.
 - `active` — global on/off switch.
 - `description`, `name`, `tags` — human-facing metadata for UIs, logs, and analytics.
 

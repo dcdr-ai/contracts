@@ -199,6 +199,46 @@ export function buildGrokProviderModelDefinitions(
         updatedAt: "2026-06-07",
       },
     },
+    {
+      id: "grok-imagine-image",
+      types: [IntentType.IMAGE_GENERATION],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via xAI /v1/models; image generation runtime adapter and curation are not implemented yet.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "grok-imagine-image-quality",
+      types: [IntentType.IMAGE_GENERATION],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via xAI /v1/models; image generation runtime adapter and curation are not implemented yet.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "grok-imagine-video",
+      types: [IntentType.VIDEO_GENERATION],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via xAI /v1/models; video generation runtime adapter and curation are not implemented yet.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "grok-imagine-video-1.5",
+      types: [IntentType.VIDEO_GENERATION],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via xAI /v1/models; video generation runtime adapter and curation are not implemented yet.",
+        updatedAt: "2026-07-04",
+      },
+    },
   ];
 }
 
@@ -210,4 +250,3 @@ export function buildGrokProviderModelE2EOverrides(
 ): Record<string, ProviderModelE2EOverride> {
   return {};
 }
-

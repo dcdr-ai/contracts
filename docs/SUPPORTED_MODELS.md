@@ -11,9 +11,9 @@ Rules
 - Provider tables summarize only the additional multimodal input/output surfaces that have been explicitly validated so far.
 - Generated from the contracts catalog; do not edit by hand.
 
-Generated: **2026-06-29**
+Generated: **2026-07-04**
 
-> Total officially supported models: **103**
+> Total officially supported models: **105**
 
 ## OpenAI
 
@@ -103,7 +103,9 @@ Every model in this table is supported for standard text chat and structured JSO
 | `claude-opus-4-1-20250805` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-4-6` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-4-5-20250929` | <kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `claude-sonnet-5` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-haiku-4-5` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `claude-fable-5` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-haiku-4-5-20251001` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 
 ## Gemini

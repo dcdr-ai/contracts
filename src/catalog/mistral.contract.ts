@@ -20,8 +20,8 @@ export function buildMistralProviderModelDefinitions(
 ): ProviderModelDefinitionInput[] {
 
   return [
-    // Source: Mistral API pricing page + models API snapshot (2026-06-07).
-    // Keep this catalog CHAT-focused for runtime v1; embedding/moderation/ocr families are intentionally excluded.
+    // Source: Mistral API pricing page + models API snapshot (2026-07-04).
+    // Keep this catalog focused on CHAT + EMBEDDING for runtime v1; moderation/ocr families are intentionally excluded.
     {
       id: "mistral-large-latest",
       types: [IntentType.CHAT],
@@ -241,6 +241,236 @@ export function buildMistralProviderModelDefinitions(
         updatedAt: "2026-06-29",
       },
     },
+    {
+      id: "codestral-2508",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this code-specialised chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "codestral-embed",
+      types: [IntentType.EMBEDDING],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; embedding adapter and curation are not implemented yet.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "codestral-embed-2505",
+      types: [IntentType.EMBEDDING],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; embedding adapter and curation are not implemented yet.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "ministral-14b-2512",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "ministral-3b-2512",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "ministral-8b-2512",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-code-agent-latest",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this code-agent chat family.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-code-fim-latest",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this code-completion chat family.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-embed",
+      types: [IntentType.EMBEDDING],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; embedding adapter and curation are not implemented yet.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-embed-2312",
+      types: [IntentType.EMBEDDING],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; embedding adapter and curation are not implemented yet.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-large-2512",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-medium",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-medium-2505",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this legacy dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-medium-2508",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this legacy dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-medium-2604",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-medium-3",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this chat family.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-medium-3-5",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this chat family alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-medium-3.5",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this chat family alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-small-2506",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this legacy dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-small-2603",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-tiny-2407",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this dated chat alias.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-vibe-cli-fast",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this chat/tooling family.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "mistral-vibe-cli-with-tools",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models; pending provider E2E curation for this chat/tooling family.",
+        updatedAt: "2026-07-04",
+      },
+    },
   ];
 }
 
@@ -248,7 +478,20 @@ export function buildMistralProviderModelDefinitions(
  * Returns the E2E override map for Mistral provider models.
  */
 export function buildMistralProviderModelE2EOverrides(
-  _args: ProviderCatalogModuleBuildArgs,
+  args: ProviderCatalogModuleBuildArgs,
 ): Record<string, ProviderModelE2EOverride> {
-  return {};
+  return {
+    "mistral-medium-2505": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "Legacy/deprecated in current Mistral models documentation",
+    },
+    "mistral-medium-2508": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "Legacy/deprecated in current Mistral models documentation",
+    },
+    "mistral-small-2506": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "Legacy/deprecated in current Mistral models documentation",
+    },
+  };
 }

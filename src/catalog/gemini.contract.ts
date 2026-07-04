@@ -445,6 +445,62 @@ export function buildGeminiProviderModelDefinitions(
         updatedAt: "2026-06-07",
       },
     },
+    {
+      id: "gemini-3.1-flash-lite-image",
+      types: [IntentType.IMAGE_GENERATION],
+      pricing: pricingGemini({
+        input: 0.15,
+        output: 0.0195,
+        notes:
+          "Image generation model; docs list image output pricing separately and text/structured runtime support is still partial.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.FAILING,
+        reason:
+          "Provider E2E passes simple text but structured output returns INVALID_ARGUMENT (400).",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "gemini-3.5-live-translate-preview",
+      types: [IntentType.CHAT],
+      pricing: pricingGemini({
+        input: 3.5,
+        output: 21.0,
+        notes:
+          "Live speech-to-speech translation model; docs also publish per-minute audio rates.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.FAILING,
+        reason:
+          "Provider E2E returns MODEL_NOT_FOUND (upstream 404) for this account/endpoint.",
+        updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "gemini-omni-flash-preview",
+      types: [IntentType.VIDEO_GENERATION],
+      pricing: pricingGemini({
+        input: 1.5,
+        output: 9.0,
+        tiers: [
+          {
+            name: "video output",
+            condition: "video",
+            input: 1.5,
+            output: 17.5,
+          },
+        ],
+        notes:
+          "Omni/video generation preview; docs list a higher output price for generated video than for text output.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
+        reason:
+          "Provider E2E returns upstream 400: model only supports the Gemini Interactions API, not the current runtime path.",
+        updatedAt: "2026-07-04",
+      },
+    },
 
     {
       id: "gemini-3-pro-preview",
@@ -1131,6 +1187,10 @@ export function buildGeminiProviderModelE2EOverrides(
       status: args.catalogEnums.e2eStatus.LEGACY,
       reason: "Model/endpoint not found (404) in provider E2E",
     },
+    "gemini-3.5-live-translate-preview": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "Model/endpoint not found (404) in provider E2E for this account",
+    },
     "gemini-3-pro-preview": {
       status: args.catalogEnums.e2eStatus.LEGACY,
       reason: "Model/endpoint not found (404) in provider E2E for this account",
@@ -1140,6 +1200,10 @@ export function buildGeminiProviderModelE2EOverrides(
     "gemini-2.5-computer-use-preview-10-2025": {
       status: args.catalogEnums.e2eStatus.LEGACY,
       reason: "Requires Computer Use tool wiring (not supported in runtime v1)",
+    },
+    "gemini-omni-flash-preview": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "Requires the Gemini Interactions API (not supported in runtime v1)",
     },
 
     // Audio-only response modalities (runtime v1 is text-only).

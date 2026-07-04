@@ -4,6 +4,24 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260704.1] — 15:04UTC
+
+<!--
+sourceCommit: 1ce633bffbc15ff62607f3d99830b86f1afa5c0b
+queuedAtUtc: 
+previousMirroredBuild: 20260703.4 (2026-07-03)
+contractsSubmodule: 745aa294da80..b1d38a90d440
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> Re-curated Anthropic `claude-sonnet-5` with the 1024-token baseline: it remains `SUPPORTED`, now publishes `IMAGE` and `DOCUMENT` across `INLINE`/`URL`/`ASSET`, and keeps `TEXT` out of the promoted rectangle because URL-based text still fails the canonical comprehension assertion.
+- <kbd>CONTRACTS</kbd> Reclassified Anthropic `claude-fable-5` to `SUPPORTED` after rerunning `text + structured` with the 1024-token baseline, published a full `TEXT`/`IMAGE`/`DOCUMENT` x `INLINE`/`URL`/`ASSET` multimodal rectangle, and documented that very small text budgets can be consumed by thinking before any visible text is emitted.
+### Added
+- <kbd>CONTRACTS</kbd> Expanded the Gemini provider catalog with newly discovered `gemini-3.1-flash-lite-image`, `gemini-3.5-live-translate-preview`, and `gemini-omni-flash-preview`, classifying the image/video families as non-CHAT entries and documenting their current runtime limitations conservatively from provider E2E.
+- <kbd>CONTRACTS</kbd> Expanded the Anthropic provider catalog with newly discovered `claude-sonnet-5` and `claude-fable-5` chat model IDs as uncured `IN_PROGRESS` entries, and marked the local-only compatibility alias `claude-haiku-4-5` as `LEGACY` for Anthropic provider E2E.
+- <kbd>CONTRACTS</kbd> Expanded the Mistral provider catalog with newly discovered chat/code and embedding model IDs from `/v1/models`, leaving them conservatively uncured as `runtimeSupport=IN_PROGRESS` while continuing to exclude Mistral OCR/moderation families from the current runtime surface.
+- <kbd>CONTRACTS</kbd> Added `IntentType.VIDEO_GENERATION` and cataloged the newly discovered xAI `grok-imagine-*` image/video generation model IDs as non-CHAT entries with conservative `runtimeSupport=IN_PROGRESS` pending adapter work and curation.
+
 ## [20260703.4] — 22:30UTC
 
 <!--

@@ -46,6 +46,15 @@ export enum IntentType {
   IMAGE_GENERATION = "IMAGE_GENERATION",
 
   /**
+   * Video generation.
+   *
+   * Examples:
+   * - text-to-video models
+   * - image-to-video models
+   */
+  VIDEO_GENERATION = "VIDEO_GENERATION",
+
+  /**
    * Image understanding / multimodal analysis.
    *
    * Examples:
