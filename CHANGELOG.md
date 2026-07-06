@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260706.1] — 00:33UTC
+
+<!--
+sourceCommit: b27445c16f75a2223d85c9d610a2425dc28a6f9d
+queuedAtUtc: 
+previousMirroredBuild: 20260704.1 (2026-07-04)
+contractsSubmodule: b1d38a90d440..9d32bebc1a1f
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> v2.5.2 — Added optional `ExecutionReport.request.vars` so the original, pre-interpolation `ExecuteIntentRequest.vars` can be preserved end-to-end.
+- <kbd>RUNTIME</kbd> Every execution log/event sent to the backend (success, error, retry, fallback, and eval sub-runs) now includes `request.vars` sourced directly from the original incoming request, never from rendered prompt text or derived template defaults, so backend `AICallLog.requestVars` persistence and dataset-evaluation replay use the exact logical input the caller sent. `context` behavior is unchanged and `vars` is not duplicated into `context`.
+
 ## [20260704.1] — 15:04UTC
 
 <!--

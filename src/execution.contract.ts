@@ -99,6 +99,20 @@ export interface ExecutionReport {
   appId: string;
   workflow?: ExecutionWorkflowContext;
   context?: ExecutionContext;
+
+  /**
+   * Original, pre-interpolation request data preserved for replay-safe logging.
+   *
+   * Notes
+   * - `vars` here is the exact `ExecuteIntentRequest.vars` the caller sent, not
+   *   derived/defaulted values and not rendered prompt content.
+   * - Backend persists this into `AICallLog.requestVars` so dataset evaluations
+   *   can replay the same logical input later.
+   */
+  request?: {
+    vars?: Record<string, unknown>;
+  };
+
   gatewayRequestId: string;
 
   intent: Intent;
