@@ -1,5 +1,6 @@
 import { IntentType } from "../src/intent.contract";
-import { IntentProvider, ProviderModelRegistry } from "../src/provider.contract";
+import { IntentProvider } from "../src/provider.contract";
+import { ProviderModelRegistry } from "../src/provider.catalog.contract";
 
 describe("Grok non-chat catalog entries", () => {
   it("classifies newly discovered xAI imagine models as image/video generation instead of chat", () => {

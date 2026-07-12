@@ -12,6 +12,7 @@ export * from "./src/prompts.contract";
 export * from "./src/session.contract";
 export * from "./src/logs.contract";
 export * from "./src/provider.contract";
+export * from "./src/provider.catalog.contract";
 export * from "./src/credentials.contract";
 export * from "./src/capabilities.contract";
 export * from "./src/subscription.contract";

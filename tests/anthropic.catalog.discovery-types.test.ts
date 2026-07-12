@@ -1,10 +1,10 @@
 import { IntentType } from "../src/intent.contract";
+import { IntentProvider } from "../src/provider.contract";
 import {
-  IntentProvider,
   PROVIDER_MODEL_E2E_OVERRIDES,
   ProviderModelE2EStatus,
   ProviderModelRegistry,
-} from "../src/provider.contract";
+} from "../src/provider.catalog.contract";
 
 describe("Anthropic discovered catalog entries", () => {
   it("classifies newly discovered anthropic chat models as CHAT", () => {

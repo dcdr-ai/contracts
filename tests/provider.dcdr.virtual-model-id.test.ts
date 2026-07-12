@@ -1,10 +1,10 @@
+import { IntentProvider } from "../src/provider.contract";
 import {
   formatDcdrVirtualModelId,
-  IntentProvider,
   parseDcdrVirtualModelId,
   ProviderModelRegistry,
   ProviderModelRuntimeSupportStatus,
-} from "../src/provider.contract";
+} from "../src/provider.catalog.contract";
 
 describe("DCDR virtual provider model IDs", () => {
   it("formats provider/model ids for supported providers", () => {

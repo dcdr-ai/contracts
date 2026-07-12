@@ -1,8 +1,8 @@
+import { IntentProvider } from "../src/provider.contract";
 import {
   DcdrPublicModelCategory,
-  IntentProvider,
   ProviderModelRegistry,
-} from "../src/provider.contract";
+} from "../src/provider.catalog.contract";
 
 describe("ProviderModelRegistry.listProviderModels onlyPublicForCustomers", () => {
   it("filters models when onlyPublicForCustomers=true", () => {

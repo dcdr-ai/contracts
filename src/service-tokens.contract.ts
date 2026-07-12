@@ -6,14 +6,41 @@
  * - Tokens are referenced by sha256(utf8(tokenString)) in hex.
  * - Backend should keep this snapshot stable & ordered for reproducible ETags.
  */
+import { IntentProvider } from "./provider.contract";
 
 export type DcdrServiceTokenStatus = "ACTIVE" | "REVOKED";
+
+/**
+ * Stable well-known scopes that can be attached to DCDR service tokens.
+ *
+ * Notes
+ * - `scopes` remains an open `string[]` surface for backward compatibility.
+ * - This enum only publishes shared canonical values that runtime/backend/UI
+ *   may want to reference consistently.
+ */
+export enum DcdrServiceTokenScope {
+  GATEWAY = "gateway",
+}
 
 export enum DcdrServiceTokenLimitType {
   FIXED = "FIXED",
   LIMITED_BY_HOUR = "LIMITED_BY_HOUR",
   LIMITED_BY_DAY = "LIMITED_BY_DAY",
   LIMITED_BY_MONTH = "LIMITED_BY_MONTH",
+}
+
+/**
+ * Gateway binding for one provider.
+ *
+ * Notes
+ * - `credentialRef` uses the same reference concept already used elsewhere in
+ *   DCDR contracts.
+ * - Runtime/backend should treat `provider` as unique within one token's
+ *   `gatewayBindings` array.
+ */
+export interface DcdrServiceTokenGatewayProviderBinding {
+  provider: IntentProvider;
+  credentialRef: string;
 }
 
 export interface DcdrServiceTokenLimit {
@@ -50,6 +77,17 @@ export type DcdrServiceTokenSnapshotItem = {
 
   /** Optional runtime-enforced execution limits for this token. */
   limits?: DcdrServiceTokenLimit[];
+
+  /**
+   * Optional OpenAI-compatible gateway bindings.
+   *
+   * Intended use
+   * - A token with `gateway` scope can be constrained to exactly one backend-
+   *   managed credential reference per provider.
+   * - Runtime should resolve the selected credential by reference via backend
+   *   before making the upstream provider call.
+   */
+  gatewayBindings?: DcdrServiceTokenGatewayProviderBinding[];
 
   /** Optional note for operators. */
   note?: string;

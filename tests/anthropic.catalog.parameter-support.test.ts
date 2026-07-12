@@ -1,9 +1,9 @@
+import { IntentProvider } from "../src/provider.contract";
 import {
-  IntentProvider,
   PromptParameterKey,
   ProviderModelParameterSupportStatus,
   ProviderModelRegistry,
-} from "../src/provider.contract";
+} from "../src/provider.catalog.contract";
 
 describe("Anthropic catalog parameter support", () => {
   it("marks new Claude 5 models as rejecting explicit temperature and top_p", () => {

@@ -4,6 +4,24 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260712.1] — 12:16UTC
+
+<!--
+sourceCommit: 5339a4fe8e689270c6b4b423dc3db8d720e0d656
+queuedAtUtc: 
+previousMirroredBuild: 20260706.1 (2026-07-06)
+contractsSubmodule: 9d32bebc1a1f..8763bd03c8a2
+-->
+
+### Fixed
+- <kbd>CONTRACTS</kbd> v2.5.3 — **Production-breaking bug fix**: `provider.contract.ts` defined the `IntentProvider` enum and, in the same file, re-exported (`export * from`) `provider.catalog.contract`, which imports `IntentProvider` back and uses it as an object key at module top level. Node's `require()` tolerated this self-referential cycle by textual evaluation order, but bundler CJS-interop (Rollup/Vite, esbuild, webpack) is not guaranteed to preserve that order, so production client bundles could crash at module-eval time with `Cannot read properties of undefined (reading 'DCDR')`. Fixed by moving the re-export into the root barrels only (one-directional DAG), added a dedicated `@dcdr/contracts/provider.catalog.contract` subpath export for catalog symbols, and added `tools/check-no-barrel-cycles.js` (gated on `check`/`test`/`test:ci`/`prepublishOnly`) to reject this file shape repo-wide going forward.
+- <kbd>CONTRACTS</kbd> Fixed a stray-character typo in `provider.catalog.contract.ts` (accidentally introduced in the v2.5.3 fix above) that broke `tsc`/`npm run build`.
+- <kbd>RUNTIME</kbd> Updated internal imports (`anthropic.provider.ts`, `gemini.provider.ts`, `openai.provider.ts`, `provider.executor.service.ts`, and related tests) that pulled catalog-only symbols (`ProviderModelRegistry`, `PROVIDER_MODEL_E2E_OVERRIDES`, etc.) through `@dcdr/contracts/provider.contract` to import them from the new `@dcdr/contracts/provider.catalog.contract` subpath instead, ahead of the contracts fix above.
+- <kbd>RUNTIME</kbd> **Security fix**: `getManagedAsset`, `deleteManagedAsset`, and `getManagedAssetSignedUrl` now reject any client-supplied `assetPath` that falls outside the caller's own tenant-scoped `basePath`.
+### Added
+- <kbd>CONTRACTS</kbd> v2.6.0 — Added a public `provider-limits.contract` surface (`DcdrProviderLimitGate`, `DcdrProviderLimitEntry`, `DcdrProviderLimitsConfig`) so backend/runtime/UI can share one tenant-level provider/model governance contract for enablement, call windows, and budget windows.
+- <kbd>CONTRACTS</kbd> Added the well-known service-token scope `gateway` plus optional `gatewayBindings` entries (`provider` + `credentialRef`) so a tenant service token can point each provider to one backend-managed credential reference for the future OpenAI-compatible proxy surface.
+
 ## [20260706.1] — 00:33UTC
 
 <!--

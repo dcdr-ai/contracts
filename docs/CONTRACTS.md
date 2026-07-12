@@ -156,6 +156,17 @@ Tracked-call rating model:
 - `DEFAULT_TRACKED_CALL_RATING_MATRIX_V1` is the current default policy snapshot used by runtime v1.
 - `ExecutionReport.trackedCallAccounting` carries the final applied multiplier plus optional dominant-bucket and aggregate-guardrail metadata for auditability.
 
+Provider/model governance limits:
+
+- `provider-limits.contract` exports a tenant-level governance surface for managed/provider-aware policy configuration.
+- `DcdrProviderLimitGate` represents one allow/deny + quota gate:
+  - `enabled`
+  - `maxCalls` + `maxCallsPeriod`
+  - `maxBudget` + `maxBudgetPeriod`
+- `DcdrProviderLimitEntry` extends that gate with optional per-model overrides via `models[modelId]`.
+- `DcdrProviderLimitsConfig` groups those entries by `IntentProvider`.
+- This contract is intentionally configuration-only: it does not prescribe where live counters are stored or decremented.
+
 ## IntentContract (deep dive)
 
 If you understand intents, you understand the DCDR execution surface. An intent is a versionable, provider-agnostic unit that can be executed consistently.

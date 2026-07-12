@@ -9,6 +9,8 @@ export * from "./prompts.contract";
 export * from "./session.contract";
 export * from "./logs.contract";
 export * from "./provider.contract";
+export * from "./provider-limits.contract";
+export * from "./provider.catalog.contract";
 export * from "./credentials.contract";
 export * from "./http.contract";
 export * from "./entitlements.contract";

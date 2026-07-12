@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "2.5.2",
+  "version": "2.6.0",
   "homepage": "https://dcdr.ai",
   "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,
@@ -31,11 +31,13 @@
   ],
   "scripts": {
     "prepare": "npm run build",
-    "check": "tsc --noEmit",
+    "prepublishOnly": "npm run check && npm test",
+    "check": "tsc --noEmit && npm run check:no-barrel-cycles",
+    "check:no-barrel-cycles": "node tools/check-no-barrel-cycles.js",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && tsc -p tsconfig.json",
-    "test": "npm run build && jest",
-    "test:ci": "npm run build && jest --runInBand"
+    "test": "npm run build && npm run check:no-barrel-cycles && jest",
+    "test:ci": "npm run build && npm run check:no-barrel-cycles && jest --runInBand"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
@@ -72,6 +74,8 @@
     "./policies.contract": { "types": "./dist/policies.contract.d.ts", "default": "./dist/policies.contract.js" },
     "./prompts.contract": { "types": "./dist/prompts.contract.d.ts", "default": "./dist/prompts.contract.js" },
     "./provider.contract": { "types": "./dist/provider.contract.d.ts", "default": "./dist/provider.contract.js" },
+    "./provider-limits.contract": { "types": "./dist/provider-limits.contract.d.ts", "default": "./dist/provider-limits.contract.js" },
+    "./provider.catalog.contract": { "types": "./dist/provider.catalog.contract.d.ts", "default": "./dist/provider.catalog.contract.js" },
     "./service-tokens.contract": { "types": "./dist/service-tokens.contract.d.ts", "default": "./dist/service-tokens.contract.js" },
     "./session.contract": { "types": "./dist/session.contract.d.ts", "default": "./dist/session.contract.js" }
   },
@@ -100,6 +104,8 @@
       "policies.contract": ["dist/policies.contract.d.ts"],
       "prompts.contract": ["dist/prompts.contract.d.ts"],
       "provider.contract": ["dist/provider.contract.d.ts"],
+      "provider-limits.contract": ["dist/provider-limits.contract.d.ts"],
+      "provider.catalog.contract": ["dist/provider.catalog.contract.d.ts"],
       "service-tokens.contract": ["dist/service-tokens.contract.d.ts"],
       "session.contract": ["dist/session.contract.d.ts"]
     }
