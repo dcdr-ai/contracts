@@ -1,6 +1,7 @@
 import { ImplementationContract } from "./implementations.contract";
 import { RetryPolicy, PromptParameters, ExecutionPolicy } from "./policies.contract";
 import { PromptTemplate, PromptVariable } from "./prompts.contract";
+import { ProcessingProcessor } from "./processing.contract";
 
 
 
@@ -162,6 +163,17 @@ export interface IntentContract {
    * This should be centrally configured from your backend UI.
    */
   retryPolicy: RetryPolicy;
+
+  /**
+   * Optional governed processing processors executed around the intent runtime pipeline.
+   *
+   * Notes
+   * - `INPUT` processors run before prompt rendering / provider execution.
+   * - `OUTPUT` processors run after provider execution and before the final caller-visible result is finalized.
+   * - Each processor is a versioned ordered sequence of atomic rules.
+   * - This applies to intent execution only, not the OpenAI-compatible `/v1` gateway proxy.
+   */
+  processors?: ProcessingProcessor[];
 
   /**
    * Implementations available for this intent.

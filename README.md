@@ -39,6 +39,16 @@ On top of that, every failure can be reviewed, corrected, and turned into traini
 - **`DcdrRuntimeClient`**: a strongly-typed TypeScript HTTP client for calling a DCDR Runtime instance.
 - **Tracked-call rating metadata**: a shared, versioned multimodal multiplier matrix that backend/UI can render and audit consistently with runtime behavior.
 - **Governance contracts**: shared provider/model limit shapes (`provider-limits.contract`) for tenant-level enablement, call-window, and budget-window policy configuration.
+- **Intent processing contracts**: shared enums/interfaces/helpers for a schema-aware `INPUT`/`OUTPUT` processor engine that frontend/runtime can preview, test, and execute consistently.
+  - Processors can be attached globally through `DcdrRegistry.processors` and per-intent through `IntentContract.processors`.
+  - A processor is the product-facing unit: one named, versioned, ordered chain of atomic rules that implements a concrete behavior such as input cleanup, PII governance, or output review routing.
+  - Current product availability: Cloud / Cloud Pro only. Freeware runtime `--registry` mode should reject registries that require these rules.
+  - UI/runtime authoring metadata comes from the static shared atomic rule catalog in `PROCESSING_RULE_SCHEMAS`.
+  - Atomic rule schemas include presentation groups, and each rule can reuse the same condition-tree model already used by conditioned routing so frontend builders stay nearly identical across both surfaces.
+  - Product-facing processors are versioned ordered chains of atomic rules, so frontend can compose/edit presets without inventing backend-only metadata.
+  - Governance-oriented rules can emit typed trail metadata through `ProcessingPolicyOutcome` and `ProcessingPolicyReasonCode`, so preview/reporting does not depend on ad hoc strings.
+  - Governance rule configuration is also becoming more closed-catalog driven: provider allow/deny lists reuse `IntentProvider`, output-policy references use `ProcessingOutputPolicyRef`, and review routing queues use `ProcessingReviewQueue`.
+  - Optional region filters are contract-ready for provider/model policy checks, but runtime only enforces them when explicit region context is available; otherwise the intended trail outcome is `WARN` + `REGION_CONTEXT_MISSING`.
 
 ## Who should use it
 
@@ -418,6 +428,7 @@ Cloud-managed assets keep tenant-visible storage descriptors and concrete secret
 ### Core concepts
 
 - [docs/CONTRACTS.md](docs/CONTRACTS.md) — How Registries, Intents, implementations, policies, and capabilities fit together.
+- [docs/PROCESSING_RULES.md](docs/PROCESSING_RULES.md) — Shared processing-rule engine contracts (`INPUT`/`OUTPUT`, bounded mutation trail, preview semantics).
 - [docs/EXECUTION_POLICY.md](docs/EXECUTION_POLICY.md) — ExecutionPolicy reference (availability matrix + tie-breakers).
 - [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md) — Runtime (self-hosted) vs Cloud vs Cloud Pro (what runs where, who owns what).
 - [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRIX.md) — One-page feature/tier reference.

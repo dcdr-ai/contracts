@@ -4,6 +4,27 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260713.1] — 02:41UTC
+
+<!--
+sourceCommit: 790d78839d4d24fa482e767fb66faaf84a5c54e4
+queuedAtUtc: 
+previousMirroredBuild: 20260712.1 (2026-07-12)
+contractsSubmodule: 8763bd03c8a2..22f2c820d394
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> v2.7.0 â€” Enriched intent-processing governance rules with typed policy trail metadata (`ProcessingPolicyOutcome`, `ProcessingPolicyReasonCode`) and contract-ready optional region filters on provider/model policy checks, using non-blocking `REGION_CONTEXT_MISSING` trail outcomes when runtime has no explicit region context to enforce.
+- <kbd>CONTRACTS</kbd> v2.7.0 â€” Tightened intent-processing governance authoring with shared enum catalogs: provider allow/deny lists now validate against `IntentProvider`, `OUTPUT_POLICY_CHECK.policyRef` now uses `ProcessingOutputPolicyRef`, and `REVIEW_ROUTING.queue` now uses `ProcessingReviewQueue`.
+- <kbd>CONTRACTS</kbd> v2.7.0 — Added the public intent-processing contract wave: `processing.contract`, optional `DcdrRegistry.processors` and `IntentContract.processors`, shared validation/default helpers, explicit rule-group metadata for UI grouping, a broader first-wave primitive catalog, enum-backed regex options, and shared condition-tree reuse (`ConditionOp` / `ConditionLogicOp`) so routing-condition builders and processing-rule builders can stay nearly identical in frontend.
+### Added
+- <kbd>RUNTIME</kbd> Intent processing now executes as a real stage-based engine instead of a no-op scaffold: runtime orders processors deterministically, evaluates optional shared condition trees before each rule, applies built-in switch-dispatched handlers, records bounded trail/evidence, logs the effective `PRE -> INTENT -> POST` pipeline, and handles rule failures explicitly via `FAIL_CLOSED` / `FAIL_OPEN` / `WARN_ONLY` instead of letting handler errors tear down execution opaquely.
+- <kbd>RUNTIME</kbd> Intent processing now resolves both `DcdrRegistry.processors` and `IntentContract.processors` with explicit execution order, validates configured processors/conditions at registry-load time, and skips rules cleanly when their shared condition tree does not match.
+- <kbd>CONTRACTS</kbd> v2.7.0 — Added a public `processing.contract` surface for the intent-only governed processing engine: shared enums/interfaces for `INPUT`/`OUTPUT` stages, built-in rule kinds, bounded processing/mutation trail reporting, cache-safety metadata, and pure `IntentProcessingSemantics` helpers so frontend/runtime can preview and test the same rule semantics.
+- <kbd>RUNTIME</kbd> Added the first intent-processing scaffold: execution reports can now carry a bounded `report.processing` block, runtime preserves the original caller request separately from the processed execution request, and the new no-op `INPUT`/`OUTPUT` processing hooks establish the invariant that future `problemHash`/`runHash` are based on processed input while `outputHash` is based on final post-processed output.
+- <kbd>RUNTIME</kbd> Added the first executable OpenAI governance gateway slice with a dedicated `/v1` router, backend-driven gateway token validation (`/dcdr/token/check`), an OpenAI-compatible `GET /v1/models` surface filtered by provider bindings and provider/model governance limits, and real SDK-backed passthrough proxying for `/v1/responses` and `/v1/chat/completions` on currently supported OpenAI-compatible providers (`OPEN_AI`, `GROK`, `MISTRAL`), including stable gateway-side normalization for backend/credentials/upstream failure paths.
+- <kbd>RUNTIME</kbd> Extended the `/v1` governance gateway to accept runtime-configured `OPEN_AI_COMPATIBLE` upstreams through `DCDR_GATEWAY_OPENAI_COMPATIBLE_BASE_URL` plus `DCDR_GATEWAY_OPENAI_COMPATIBLE_MODEL_IDS`, and added explicit `openai-compatible/<modelId>` routing to avoid cross-provider model ambiguity without inventing a new backend token flow.
+
 ## [20260712.1] — 12:16UTC
 
 <!--

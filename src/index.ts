@@ -6,6 +6,7 @@ export * from "./messages.contract";
 export * from "./intent.contract";
 export * from "./policies.contract";
 export * from "./prompts.contract";
+export * from "./processing.contract";
 export * from "./session.contract";
 export * from "./logs.contract";
 export * from "./provider.contract";

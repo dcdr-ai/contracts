@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "homepage": "https://dcdr.ai",
   "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,
@@ -73,6 +73,7 @@
     "./messages.contract": { "types": "./dist/messages.contract.d.ts", "default": "./dist/messages.contract.js" },
     "./policies.contract": { "types": "./dist/policies.contract.d.ts", "default": "./dist/policies.contract.js" },
     "./prompts.contract": { "types": "./dist/prompts.contract.d.ts", "default": "./dist/prompts.contract.js" },
+    "./processing.contract": { "types": "./dist/processing.contract.d.ts", "default": "./dist/processing.contract.js" },
     "./provider.contract": { "types": "./dist/provider.contract.d.ts", "default": "./dist/provider.contract.js" },
     "./provider-limits.contract": { "types": "./dist/provider-limits.contract.d.ts", "default": "./dist/provider-limits.contract.js" },
     "./provider.catalog.contract": { "types": "./dist/provider.catalog.contract.d.ts", "default": "./dist/provider.catalog.contract.js" },
@@ -103,6 +104,7 @@
       "messages.contract": ["dist/messages.contract.d.ts"],
       "policies.contract": ["dist/policies.contract.d.ts"],
       "prompts.contract": ["dist/prompts.contract.d.ts"],
+      "processing.contract": ["dist/processing.contract.d.ts"],
       "provider.contract": ["dist/provider.contract.d.ts"],
       "provider-limits.contract": ["dist/provider-limits.contract.d.ts"],
       "provider.catalog.contract": ["dist/provider.catalog.contract.d.ts"],

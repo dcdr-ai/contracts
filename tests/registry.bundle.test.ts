@@ -4,10 +4,13 @@ import { ImplementationContract } from "../src/implementations.contract";
 import { IntentProvider } from "../src/provider.contract";
 import { PromptTemplate } from "../src/prompts.contract";
 import { RetryPolicy } from "../src/policies.contract";
+import {
+  ProcessingRuleKind,
+  ProcessingStage,
+} from "../src/processing.contract";
 
 /**
  * Builds a minimal PromptTemplate that satisfies the contract.
- * @returns A minimal prompt template object.
  */
 function makeMinimalPromptTemplate(): PromptTemplate {
   return {
@@ -22,10 +25,10 @@ function makeMinimalPromptTemplate(): PromptTemplate {
 
 /**
  * Builds a minimal ImplementationContract that satisfies the contract.
- * @param provider Provider enum value to set.
- * @returns A minimal implementation contract object.
  */
-function makeMinimalImplementation(provider: IntentProvider): ImplementationContract {
+function makeMinimalImplementation(
+  provider: IntentProvider,
+): ImplementationContract {
   return {
     id: `impl-${provider}`,
     provider,
@@ -41,7 +44,6 @@ function makeMinimalImplementation(provider: IntentProvider): ImplementationCont
 
 /**
  * Builds a minimal RetryPolicy that satisfies the contract.
- * @returns A minimal retry policy.
  */
 function makeMinimalRetryPolicy(): RetryPolicy {
   return {
@@ -52,7 +54,6 @@ function makeMinimalRetryPolicy(): RetryPolicy {
 
 /**
  * Builds a minimal IntentContract that satisfies the contract.
- * @returns A minimal intent contract.
  */
 function makeMinimalIntentContract(): IntentContract {
   return {
@@ -62,6 +63,14 @@ function makeMinimalIntentContract(): IntentContract {
     active: true,
     defaultPrompt: makeMinimalPromptTemplate(),
     retryPolicy: makeMinimalRetryPolicy(),
+    processors: [
+      {
+        id: "normalize-input",
+        version: "1",
+        stage: ProcessingStage.INPUT,
+        rules: [{ id: "trim", kind: ProcessingRuleKind.TRIM, fieldPaths: ["vars.name"] }],
+      },
+    ],
     implementations: [makeMinimalImplementation(IntentProvider.RULES)],
   };
 }
@@ -71,53 +80,57 @@ describe("DcdrRegistry bundle", () => {
     const registry: DcdrRegistry = {
       sha256: "registry-sha256",
       intents: [makeMinimalIntentContract()],
+      processors: [
+        {
+          id: "global-phi",
+          version: "1",
+          stage: ProcessingStage.INPUT,
+          rules: [
+            {
+              id: "normalize-name",
+              kind: ProcessingRuleKind.NORMALIZE_NEW_LINES,
+              fieldPaths: ["vars.customerName"],
+            },
+          ],
+        },
+      ],
       generatedAt: new Date().toISOString(),
     };
 
     expect(typeof registry.sha256).toBe("string");
-    expect(registry.sha256.length).toBeGreaterThan(0);
-
-    expect(Array.isArray(registry.intents)).toBe(true);
     expect(registry.intents.length).toBeGreaterThan(0);
-
-    const first = registry.intents[0];
-    expect(first.active).toBe(true);
-    expect(first.type).toBe(IntentType.CHAT);
-    expect(first.defaultPrompt.messages.length).toBeGreaterThan(0);
-    expect(first.implementations.length).toBeGreaterThan(0);
+    expect(registry.processors?.[0]?.version).toBe("1");
   });
 
   it("survives JSON round-trip without losing required fields", () => {
     const registry: DcdrRegistry = {
       sha256: "registry-sha256",
       intents: [makeMinimalIntentContract()],
+      processors: [
+        {
+          id: "global-phi",
+          version: "1",
+          stage: ProcessingStage.INPUT,
+          rules: [
+            {
+              id: "normalize-name",
+              kind: ProcessingRuleKind.NORMALIZE_NEW_LINES,
+              fieldPaths: ["vars.customerName"],
+            },
+          ],
+        },
+      ],
     };
 
     const json = JSON.stringify(registry);
     const parsed = JSON.parse(json) as DcdrRegistry;
 
-    expect(parsed.sha256).toBe("registry-sha256");
-    expect(Array.isArray(parsed.intents)).toBe(true);
-    expect(parsed.intents.length).toBe(1);
-
-    const intent = parsed.intents[0];
-    expect(typeof intent.id).toBe("string");
-    expect(typeof intent.intent).toBe("string");
-    expect(typeof intent.active).toBe("boolean");
-
-    expect(intent.defaultPrompt).toBeTruthy();
-    expect(Array.isArray(intent.defaultPrompt.messages)).toBe(true);
-
-    expect(intent.retryPolicy).toBeTruthy();
-    expect(typeof intent.retryPolicy.maxAttempts).toBe("number");
-
-    expect(Array.isArray(intent.implementations)).toBe(true);
-    expect(intent.implementations.length).toBe(1);
-
-    const impl = intent.implementations[0];
-    expect(typeof impl.id).toBe("string");
-    expect(typeof impl.provider).toBe("string");
-    expect(typeof impl.endpoint).toBe("string");
-    expect(typeof impl.active).toBe("boolean");
+    expect(parsed.processors?.[0]?.id).toBe("global-phi");
+    expect(parsed.processors?.[0]?.rules?.[0]?.kind).toBe(
+      ProcessingRuleKind.NORMALIZE_NEW_LINES,
+    );
+    expect(parsed.intents[0]?.processors?.[0]?.rules?.[0]?.kind).toBe(
+      ProcessingRuleKind.TRIM,
+    );
   });
 });

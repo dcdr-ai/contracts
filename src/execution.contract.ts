@@ -1,6 +1,7 @@
 import { ExecutionError } from "./errors.contract";
 import { Message } from "./messages.contract";
 import { Intent } from "./intent.contract";
+import { ExecutionProcessingReport } from "./processing.contract";
 import { IntentProvider } from "./provider.contract";
 export {
   ASSET_TYPE_LABELS as EXECUTION_PART_TYPE_LABELS,
@@ -215,6 +216,16 @@ export interface ExecutionReport {
     schemaOk?: boolean;
     errors?: string[];
   };
+
+  /**
+   * Optional bounded processing report for pre/post execution rule application.
+   *
+   * Notes
+   * - Input-side hashes (`problemHash` / `runHash`) are computed over the processed input that
+   *   actually reaches execution, not over the original caller payload.
+   * - `outputHash` is computed over the final post-processed output that the caller logically receives.
+   */
+  processing?: ExecutionProcessingReport;
 
   /** The bundle version used during this execution (helps debugging). */
   configVersion?: string;

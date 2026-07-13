@@ -25,6 +25,9 @@ export enum CapabilityKey {
   /** ExecutionPolicy exploration enabled (epsilon-greedy / top-K sampling). */
   AI_INTENTS_EXPLORATION_POLICY = "AI_INTENTS_EXPLORATION_POLICY",
 
+  /** Governed processing processors configured at registry or intent scope. */
+  AI_INTENTS_PROCESSING_RULES = "AI_INTENTS_PROCESSING_RULES",
+
   /** Response caching enabled with per-implementation TTL configuration. */
   AI_RUNTIME_CACHE_TTL_CONFIGURABLE = "AI_RUNTIME_CACHE_TTL_CONFIGURABLE",
 
@@ -67,6 +70,13 @@ export function getRequiredCapabilitiesForIntent(intent: IntentContract): Capabi
     out.push(CapabilityKey.AI_INTENTS_EXPLORATION_POLICY);
   }
 
+  if (
+    Array.isArray(intent.processors) &&
+    intent.processors.length > 0
+  ) {
+    out.push(CapabilityKey.AI_INTENTS_PROCESSING_RULES);
+  }
+
   const implementations = Array.isArray(intent.implementations) ? intent.implementations : [];
   for (const impl of implementations) {
     if (!impl) continue;
@@ -96,6 +106,14 @@ export function getRequiredCapabilitiesForIntent(intent: IntentContract): Capabi
 export function getRequiredCapabilitiesFromRegistry(registry: DcdrRegistry): CapabilityKey[] {
   const unique = new Set<CapabilityKey>();
   const intents = registry && Array.isArray(registry.intents) ? registry.intents : [];
+
+  if (
+    registry &&
+    Array.isArray(registry.processors) &&
+    registry.processors.length > 0
+  ) {
+    unique.add(CapabilityKey.AI_INTENTS_PROCESSING_RULES);
+  }
 
   for (const intent of intents) {
     for (const cap of getRequiredCapabilitiesForIntent(intent)) {

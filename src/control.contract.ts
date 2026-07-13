@@ -1,5 +1,6 @@
 import { CredentialsContract } from "./credentials.contract";
 import { IntentContract } from "./intent.contract";
+import { ProcessingProcessor } from "./processing.contract";
 
 
 /**
@@ -41,6 +42,16 @@ export interface DcdrRegistry {
 
   /** Full list of intent contracts */
   intents: IntentContract[];
+
+  /**
+   * Optional global governed processing processors for the whole registry.
+   *
+   * Notes
+   * - These are intended to apply across intents at the registry/tenant level.
+   * - Intent-specific processors live on `IntentContract.processors`.
+   * - Runtime merge/order semantics are implementation-defined and may evolve independently.
+   */
+  processors?: ProcessingProcessor[];
 
   /** Full list of credential contracts */
   credentials?: CredentialsContract[];

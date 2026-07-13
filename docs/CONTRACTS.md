@@ -37,6 +37,14 @@ All fields below belong to `DcdrRegistry`:
   - Type: `IntentContract[]`.
   - Source type: [../src/intent.contract.ts](../src/intent.contract.ts#L98)
 
+- `processors` (optional)
+  - Purpose: registry-level governed processing processors that apply globally across intents.
+  - Type: `ProcessingProcessor[]`.
+  - Source type: [../src/processing.contract.ts](../src/processing.contract.ts#L93)
+  - Notes:
+    - intent-specific processors still live on `IntentContract.processors`
+    - global-vs-intent merge/order semantics are runtime-defined
+
 - `credentials` (optional)
   - Purpose: reusable auth material referenced by implementations.
   - Type: `CredentialsContract[]`.
@@ -134,6 +142,36 @@ Runtime API shapes:
 - `Message`: [../src/messages.contract.ts](../src/messages.contract.ts#L13)
 - `DcdrRuntimeClient`: [../src/runtime.client.ts](../src/runtime.client.ts#L110)
 
+Intent-processing rule engine:
+
+- `processing.contract` exports the shared intent-only rule engine surface used by runtime and frontend preview tooling.
+- Core enums/interfaces include:
+  - `ProcessingStage`
+  - `ProcessingRuleKind`
+  - `ProcessingRuleGroup`
+  - `ProcessingRuleDefinition`
+  - `ProcessingProcessor`
+  - `ProcessingTrailEntry`
+  - `ExecutionProcessingReport`
+  - `IntentProcessingSemantics`
+  - shared condition tree reuse from conditioned routing:
+    - `ConditionOp`
+    - `ConditionLogicOp`
+    - `ImplementationCondition`
+    - `LogicalImplementationCondition`
+- Scope:
+  - governed `INPUT` / `OUTPUT` processing around intent execution
+  - not the OpenAI-compatible `/v1` gateway proxy
+- Hashing semantics:
+  - `problemHash` / `runHash` should reflect the processed input that actually reaches execution
+  - `outputHash` should reflect the final post-processed output returned to the caller
+- `ExecutionReport.processing` is a bounded metadata-first audit surface for that rule engine:
+  - stage summaries
+  - mutation/block/review flags
+  - optional bounded trail entries
+  - per-entry origin scope (`GLOBAL` vs `INTENT`)
+  - no raw secrets or uncontrolled payload copies by default
+
 Managed asset storage shapes:
 
 - `DcdrAssetStorageDescriptor`: [../src/asset.contract.ts](../src/asset.contract.ts#L139)
@@ -184,6 +222,41 @@ Key fields:
 - `type` — intent category (CHAT, EMBEDDING, IMAGE_GENERATION, VIDEO_GENERATION, …). This is used for capability checks and for picking the right provider adapter.
 - `active` — global on/off switch.
 - `description`, `name`, `tags` — human-facing metadata for UIs, logs, and analytics.
+
+### Governed processing rules
+
+There are now two contract-level configuration hooks:
+
+- `DcdrRegistry.processors` for global processors
+- `IntentContract.processors` for intent-specific processors
+
+Availability:
+
+- Cloud / Cloud Pro: supported
+- Runtime (self-hosted, `--registry`): rejected by capability gating today
+
+Authoring model:
+
+- configured processor instances live in the registry
+- the static atomic rule catalog (`PROCESSING_RULE_SCHEMAS`) lives in `processing.contract`
+- each atomic rule schema also carries `group` metadata so UI can group primitives without hardcoded frontend taxonomies
+- processing rules may reuse the same `condition` tree contract already used by conditioned routing, which keeps rule-builder UI and preview logic largely shared
+- configured `configuration` values are constrained by `ProcessingRuleConfigurationMap` and validated with shared pure helpers instead of backend-only ad hoc logic
+- frontend/runtime should use that shared static catalog to render and validate atomic rule configuration consistently
+
+`IntentContract.processors` is an optional ordered list of governed processing processors executed around normal intent execution.
+
+- `INPUT` processors run before prompt rendering and before provider execution.
+- `OUTPUT` processors run after provider execution and before the final caller-visible output/report is finalized.
+- Each processor is a versioned ordered sequence of atomic rules from the shared catalog in `processing.contract`.
+- This surface is for the intent pipeline only, not for the OpenAI-compatible `/v1` gateway proxy.
+
+Current runtime posture:
+
+- processor ordering is deterministic via `order` then `id`
+- runtime records bounded trail/evidence into `ExecutionReport.processing`
+- `problemHash` / `runHash` reflect processed input
+- `outputHash` reflects final post-processed output
 
 ### Input/output schemas
 

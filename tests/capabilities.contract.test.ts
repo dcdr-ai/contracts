@@ -3,6 +3,7 @@ import { DcdrRegistry } from "../src/control.contract";
 import { IntentContract, IntentType } from "../src/intent.contract";
 import { ImplementationContract } from "../src/implementations.contract";
 import { ExecutionPolicyType, ExplorationMode } from "../src/policies.contract";
+import { ProcessingRuleKind, ProcessingStage } from "../src/processing.contract";
 import { IntentProvider } from "../src/provider.contract";
 import { PromptTemplate } from "../src/prompts.contract";
 import { RetryPolicy } from "../src/policies.contract";
@@ -118,6 +119,45 @@ describe("capabilities.contract", () => {
 
     const caps = getRequiredCapabilitiesFromRegistry(reg);
     expect(caps).toContain(CapabilityKey.AI_RUNTIME_CACHE_TTL_CONFIGURABLE);
+  });
+
+  it("detects governed processing processors at intent scope", () => {
+    const reg: DcdrRegistry = {
+      sha256: "r",
+      intents: [
+        makeIntent({
+          processors: [
+            {
+              id: "normalize",
+              version: "1",
+              stage: ProcessingStage.INPUT,
+              rules: [{ id: "trim", kind: ProcessingRuleKind.TRIM }],
+            },
+          ],
+        }),
+      ],
+    };
+
+    const caps = getRequiredCapabilitiesFromRegistry(reg);
+    expect(caps).toContain(CapabilityKey.AI_INTENTS_PROCESSING_RULES);
+  });
+
+  it("detects governed processing processors at registry scope", () => {
+    const reg: DcdrRegistry = {
+      sha256: "r",
+      processors: [
+        {
+          id: "global-normalize",
+          version: "1",
+          stage: ProcessingStage.INPUT,
+          rules: [{ id: "trim", kind: ProcessingRuleKind.TRIM }],
+        },
+      ],
+      intents: [makeIntent()],
+    };
+
+    const caps = getRequiredCapabilitiesFromRegistry(reg);
+    expect(caps).toContain(CapabilityKey.AI_INTENTS_PROCESSING_RULES);
   });
 
   it("detects per-implementation execution windows", () => {
