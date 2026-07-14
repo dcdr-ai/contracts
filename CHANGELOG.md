@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260714.4] — 16:47UTC
+
+<!--
+sourceCommit: e25fa7c52be113f64c802d0a153676dc6d0f6b44
+queuedAtUtc: 
+previousMirroredBuild: 20260714.2 (2026-07-14)
+contractsSubmodule: dd450259b05b..697c24091302
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v2.8.1 — Added optional top-level `ExecutionLogEvent.cid` so backend can persist `AICallLog.customer` directly from the log envelope instead of deriving tenant identity from `sessionId`.
+### Changed
+- <kbd>RUNTIME</kbd> Every execution log/event sent to the backend (intent runs, eval/stream sub-runs, and gateway `/v1/*` logs) now sets `executionMode` (`INTENT` or `GATEWAY`) and a top-level `cid` alongside the existing `serviceTokenId`, so backend can resolve tenant/customer identity without deriving it from `sessionId`.
+
 ## [20260714.2] — 15:56UTC
 
 <!--

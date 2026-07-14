@@ -93,4 +93,5 @@ export interface ExecutionLogEvent extends Partial<ExecutionReport> {
   output?: unknown;
   error?: ExecutionError;
   gateway?: GatewayExecutionLogDetails;
+  cid?: string;
 }
