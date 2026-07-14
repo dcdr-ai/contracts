@@ -4,6 +4,25 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260714.2] — 15:56UTC
+
+<!--
+sourceCommit: ff78911326a9c8b05aec1b9d5d80e8b1e5844bd3
+queuedAtUtc: 
+previousMirroredBuild: 20260713.1 (2026-07-13)
+contractsSubmodule: 22f2c820d394..dd450259b05b
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v2.8.0 — Added optional `ExecutionReport.serviceTokenId` so managed customer/service-token executions can expose the backend-issued token id as additive audit metadata without overloading `sessionId` or `context`.
+### Changed
+- <kbd>RUNTIME</kbd> Runtime now propagates `serviceTokenId` consistently into `ExecutionReport` and backend execution logs for customer-token executions, including standard intent runs, eval/stream/demo flows, gateway logs, and router-level fallback error responses.
+- <kbd>CONTRACTS</kbd> v2.7.0 â€” Extended the shared backend log envelope so gateway `/v1/*` traffic can emit additive `executionMode=GATEWAY` metadata plus safe gateway request/response summaries without pretending to be a full intent execution report.
+### Added
+- <kbd>CONTRACTS</kbd> v2.8.0 — Added optional `ExecutionReport.serviceTokenId` so managed customer/service-token executions can persist the backend-issued token id as additive audit metadata without overloading `context` or `sessionId`.
+- <kbd>RUNTIME</kbd> Runtime now propagates the backend-issued `serviceTokenId` into `ExecutionReport` for customer-token intent executions, eval/stream/demo variants, and OpenAI-compatible gateway logs.
+- <kbd>RUNTIME</kbd> OpenAI-compatible gateway routes now enqueue backend execution logs through the same shared log pipeline used by intents, using an additive `executionMode=GATEWAY` envelope with safe `/v1/models`, `/v1/responses`, and `/v1/chat/completions` request/response summaries plus resolved provider/model/credential metadata.
+
 ## [20260713.1] — 02:41UTC
 
 <!--

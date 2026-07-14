@@ -39,6 +39,7 @@ On top of that, every failure can be reviewed, corrected, and turned into traini
 - **`DcdrRuntimeClient`**: a strongly-typed TypeScript HTTP client for calling a DCDR Runtime instance.
 - **Tracked-call rating metadata**: a shared, versioned multimodal multiplier matrix that backend/UI can render and audit consistently with runtime behavior.
 - **Governance contracts**: shared provider/model limit shapes (`provider-limits.contract`) for tenant-level enablement, call-window, and budget-window policy configuration.
+- **Execution log contracts**: shared backend/runtime envelopes for intent logs plus additive gateway-log metadata so `/v1/*` proxy traffic can reuse the same ingestion pipeline without pretending to be an intent execution.
 - **Intent processing contracts**: shared enums/interfaces/helpers for a schema-aware `INPUT`/`OUTPUT` processor engine that frontend/runtime can preview, test, and execute consistently.
   - Processors can be attached globally through `DcdrRegistry.processors` and per-intent through `IntentContract.processors`.
   - A processor is the product-facing unit: one named, versioned, ordered chain of atomic rules that implements a concrete behavior such as input cleanup, PII governance, or output review routing.

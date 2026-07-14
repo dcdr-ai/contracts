@@ -82,6 +82,24 @@ export enum ProcessingRuleGroup {
 
 /**
  * Logical target family a processing rule operates on.
+ *
+ * Notes (effective runtime semantics, stable since engine v1)
+ * - `DATA_FIELD` (the default when omitted) with `fieldPaths` set operates exactly on those
+ *   paths. A path that resolves to a container value expands to that container's leaves for
+ *   string-oriented rules; generic value-family rules operate on the exact resolved value.
+ * - `DATA_FIELD` with no `fieldPaths` scopes to every scalar leaf under a default root that is
+ *   controlled by the call-site, never hardcoded by the rule engine. For intent `INPUT` this
+ *   root is `vars`; for intent `OUTPUT` it is the whole output object. A future non-intent
+ *   call-site (e.g. a gateway/proxy processor) supplies its own root instead of `vars`.
+ * - `FULL_PAYLOAD` always scopes to every scalar leaf of the entire payload, independent of
+ *   stage and of the default root above. Unlike the `DATA_FIELD` empty-scope case, it never
+ *   depends on any call-site-provided default root.
+ * - Neither empty-scope case ever serializes the payload (e.g. via `JSON.stringify`) to apply
+ *   text rules; both operate structurally, leaf by leaf, so container shape is preserved and
+ *   non-target leaves (e.g. numbers when a text rule runs) are left untouched.
+ * - `EXECUTION_CONTEXT` only changes where a rule's optional `condition` is evaluated (against
+ *   the runtime execution context instead of the payload). It does not redirect the rule
+ *   handler's own read/write targets, which always resolve against the payload.
  */
 export enum ProcessingTargetKind {
   DATA_FIELD = "DATA_FIELD",
@@ -349,11 +367,30 @@ export interface ProcessingRuleDefinition {
    * - The processing engine evaluates this condition against the selected rule scope.
    */
   condition?: ImplementationCondition | LogicalImplementationCondition;
+  /**
+   * Logical target family. Defaults to `DATA_FIELD` when omitted.
+   *
+   * See `ProcessingTargetKind` for the effective scope this produces together with
+   * `fieldPaths` (below) and the call-site's default `DATA_FIELD` root.
+   */
   targetKind?: ProcessingTargetKind;
   failureMode?: ProcessingFailureMode;
   runtimeMode?: ProcessingRuntimeMode;
   cacheBehavior?: ProcessingCacheBehavior;
   stopOnMatch?: boolean;
+  /**
+   * Explicit dotted/bracketed field paths this rule operates on (e.g. `"vars.name"`,
+   * `"vars.items[*].label"`).
+   *
+   * Notes
+   * - When set, always wins over `targetKind`'s default-scope behavior and is used exactly
+   *   as configured.
+   * - When empty/omitted, the effective scope is derived from `targetKind` instead — see
+   *   `ProcessingTargetKind` for the exact `DATA_FIELD` vs `FULL_PAYLOAD` semantics.
+   * - A small number of rule kinds (e.g. `SET_DEFAULT_VALUE`) always require an explicit
+   *   `fieldPaths` because they have no meaningful default scope; those are documented on
+   *   the corresponding `PROCESSING_RULE_SCHEMAS` entry.
+   */
   fieldPaths?: string[];
   configuration?: ProcessingRuleConfigurationMap;
 }
@@ -658,7 +695,10 @@ export const PROCESSING_RULE_SCHEMAS: ProcessingRuleSchemaDefinition[] = [
     kind: ProcessingRuleKind.JSON_PARSE_STRING_FIELD,
     group: ProcessingRuleGroup.VALUE_NORMALIZATION,
     label: "JSON parse string field",
-    description: "Parse a JSON string field into a structured value.",
+    description:
+      "Parse a JSON string field into a structured value. Always requires explicit " +
+      "fieldPaths — runtime rejects an empty scope because attempting to JSON.parse every " +
+      "scalar leaf under a default root would fail on ordinary non-JSON text.",
     allowedStages: [ProcessingStage.INPUT, ProcessingStage.OUTPUT],
     supportsFieldPaths: true,
     supportsStopOnMatch: false,
@@ -671,7 +711,9 @@ export const PROCESSING_RULE_SCHEMAS: ProcessingRuleSchemaDefinition[] = [
     group: ProcessingRuleGroup.VALUE_NORMALIZATION,
     label: "Remove empty fields",
     description:
-      "Remove empty/nullish fields from objects and arrays according to configuration.",
+      "Remove empty/nullish fields from objects and arrays according to configuration. " +
+      "Always requires explicit fieldPaths pointing at the container to prune — a default " +
+      "scope expands to individual scalar leaves, which have no children to prune.",
     allowedStages: [ProcessingStage.INPUT, ProcessingStage.OUTPUT],
     supportsFieldPaths: true,
     supportsStopOnMatch: false,
@@ -733,7 +775,10 @@ export const PROCESSING_RULE_SCHEMAS: ProcessingRuleSchemaDefinition[] = [
     kind: ProcessingRuleKind.SET_DEFAULT_VALUE,
     group: ProcessingRuleGroup.VALUE_NORMALIZATION,
     label: "Set default value",
-    description: "Set a default value when the target field is absent.",
+    description:
+      "Set a default value when the target field is absent. Always requires explicit " +
+      "fieldPaths — there is no meaningful default scope for a rule whose purpose is to " +
+      "populate one specific, otherwise-missing field.",
     allowedStages: [ProcessingStage.INPUT, ProcessingStage.OUTPUT],
     supportsFieldPaths: true,
     supportsStopOnMatch: false,

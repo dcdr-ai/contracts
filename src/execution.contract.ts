@@ -98,6 +98,16 @@ export interface ExecutionAttemptReport {
 export interface ExecutionReport {
   sessionId: string;
   appId: string;
+  /**
+   * Backend-issued customer/service token identifier when the execution was authenticated
+   * with a managed service token.
+   *
+   * Notes
+   * - This is additive audit metadata for backend correlation/billing.
+   * - It is intentionally separate from `sessionId`, which remains the session payload id.
+   * - Internal/bypass executions typically omit this field.
+   */
+  serviceTokenId?: string;
   workflow?: ExecutionWorkflowContext;
   context?: ExecutionContext;
 
