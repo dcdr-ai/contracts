@@ -7,6 +7,7 @@
  * - Backend should keep this snapshot stable & ordered for reproducible ETags.
  */
 import { IntentProvider } from "./provider.contract";
+import { DcdrProviderLimitsConfig } from "./provider-limits.contract";
 
 export type DcdrServiceTokenStatus = "ACTIVE" | "REVOKED";
 
@@ -99,3 +100,21 @@ export type DcdrServiceTokensSnapshotContract = {
   /** Snapshot issued at (unix ms). Optional. */
   iat?: number;
 };
+
+/**
+ * Backend response for a gateway service-token validity check.
+ */
+export interface DcdrGatewayTokenCheckResponse {
+  valid: boolean;
+  cid?: string;
+  tokenId?: string;
+  scopes?: string[];
+  gatewayBindings?: DcdrServiceTokenGatewayProviderBinding[];
+  providerLimits?: DcdrProviderLimitsConfig;
+  token?: {
+    id?: string;
+    scopes?: string[];
+    gatewayBindings?: DcdrServiceTokenGatewayProviderBinding[];
+    providerLimits?: DcdrProviderLimitsConfig;
+  };
+}

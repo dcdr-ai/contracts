@@ -4,6 +4,21 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260718.1] — 10:45UTC
+
+<!--
+sourceCommit: 03398aeb3603e4846d00b172a93bb4ce51fc5a4a
+queuedAtUtc: 
+previousMirroredBuild: 20260714.4 (2026-07-14)
+contractsSubmodule: 697c24091302..c2606d7b9bb6
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v2.8.2 — Promoted `DcdrGatewayTokenCheckResponse` to the public `service-tokens.contract` surface. It was already being imported by `equivalo-backend` as if published, but only existed as a local interface in `dcdr-runtime`'s `DcdrAPIClient`.
+### Fixed
+- <kbd>RUNTIME</kbd> **Bug fix**: `array<enum>` output fields (`itemsType: "enum"`) were not handled by the OpenAI structured-output Zod schema builder and silently fell back to a freeform "any JSON value" type, which embeds an open (`additionalProperties`-unset) object node. OpenAI's Chat Completions structured outputs (`response_format: json_schema`) reject any schema containing such a node, so any intent whose `outputSchema` included an `array<enum>` field (e.g. `suitableAssetClasses`) failed every OpenAI chat-completions call with `400 Invalid schema for response_format`. Fixed by building a proper `z.enum()`-backed array type for `itemsType: "enum"`.
+- <kbd>RUNTIME</kbd> **Bug fix**: `array<enum>` fields in `inputSchema`/`outputSchema` (via `ModelSemantics.validateAndNormalizeContract`, used to validate/normalize `vars`) always rejected every array element with `"values" must be a non-empty string[] for enum`, because the allowed enum values live on the array-level definition but were never read for `type: array` nodes, nor forwarded to the synthetic per-item definition used to validate each element. Any request sending a value for an `array<enum>` variable (e.g. `excludedSectors: ["TECHNOLOGY", "HEALTHCARE"]`) failed validation regardless of the actual values sent.
+
 ## [20260714.4] — 16:47UTC
 
 <!--
