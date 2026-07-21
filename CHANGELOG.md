@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260721.1] — 01:57UTC
+
+<!--
+sourceCommit: 4bf6eb7088b880209be3adf74823d4767b4dd559
+queuedAtUtc: 
+previousMirroredBuild: 20260718.1 (2026-07-18)
+contractsSubmodule: c2606d7b9bb6..d6b491c42dd6
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v2.8.3 — Added optional `DcdrEntitlementsContract.providerLimits` (reusing `DcdrProviderLimitsConfig`) so the tenant-scoped Governance provider/model limits already exposed to the gateway via `/dcdr/token/check` can also be surfaced through `/dcdr/entitlements`, the path intent execution actually consumes. Contract-only in this pass — runtime enforcement for intent mode is tracked as `RM-045` (planned).
+
 ## [20260718.1] — 10:45UTC
 
 <!--

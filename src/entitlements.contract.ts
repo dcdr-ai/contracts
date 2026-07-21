@@ -9,6 +9,7 @@
  */
 
 import { DcdrAssetStorageDescriptor } from "./asset.contract";
+import { DcdrProviderLimitsConfig } from "./provider-limits.contract";
 import { SubscriptionStatus } from "./subscription.contract";
 
 /**
@@ -133,4 +134,16 @@ export interface DcdrEntitlementsContract {
 
   /** Optional business/UI usage snapshot. */
   businessUsage?: DcdrBusinessUsageContract;
+
+  /**
+   * Optional tenant-level governance gate for provider/model enablement and
+   * per-provider call/budget windows, mirrored from `CustomerContract.dcdrTierConfig.providerLimits`.
+   *
+   * Notes
+   * - Additive and fail-open: when omitted, the runtime must assume no provider/model
+   *   restrictions beyond what the registry/catalog already allows.
+   * - Same shape as the gateway's `DcdrGatewayTokenCheckResponse.providerLimits`, so backend
+   *   can source both surfaces from one governance record.
+   */
+  providerLimits?: DcdrProviderLimitsConfig;
 }
