@@ -30,7 +30,17 @@ export interface DcdrProviderLimitGate {
    */
   maxCallsPeriod?: DcdrServiceTokenLimitType;
 
-  /** Max spend allowed within `maxBudgetPeriod`. `null` = unlimited. */
+  /**
+   * Max spend allowed within `maxBudgetPeriod`. `null` = unlimited.
+   *
+   * Notes
+   * - Currency-agnostic on purpose: the runtime only ever compares this number against
+   *   `usage.budget.consumed`, so it does not need to know or enforce a currency.
+   *   Backend owns the currency and must ensure both values are always denominated
+   *   the same way. Today that is EUR (matching existing Governance/wallet product
+   *   semantics), independent of upstream provider catalog pricing currency (commonly
+   *   USD) — backend converts before publishing `usage.budget.consumed`.
+   */
   maxBudget?: number | null;
 
   /** Window type for `maxBudget`. Only meaningful when `maxBudget` is set. Same `FIXED` policy as `maxCallsPeriod` (reject on write, coerce to `LIMITED_BY_MONTH` on read). */
@@ -68,12 +78,25 @@ export interface DcdrProviderLimitUsageBaseline {
     consumed: number;
   };
 
-  /** Backend-aggregated USD spend for the current `maxBudgetPeriod` window. */
+  /**
+   * Backend-aggregated spend for the current `maxBudgetPeriod` window.
+   *
+   * Notes
+   * - Same currency as `DcdrProviderLimitGate.maxBudget` — the runtime treats both as
+   *   an opaque unit and just compares the two numbers; backend is fully responsible
+   *   for keeping them consistent (today: EUR for both, independent of upstream
+   *   provider catalog pricing currency, commonly USD; backend converts per-call
+   *   before aggregating, e.g. ECB fixing rate for the call's date, same approach
+   *   wallet billing already uses).
+   * - Omitted (not zero) whenever a reliable figure cannot be produced for this window
+   *   — e.g. missing catalog pricing or missing FX rate — so the gate fails open on
+   *   `maxBudget` for that window instead of comparing against a wrong number.
+   */
   budget?: {
     /** Window bucket key (same format as `calls.periodKey`). */
     periodKey: string;
-    /** USD spend already consumed in this window, across all runtime nodes. */
-    consumedUsd: number;
+    /** Spend already consumed in this window, across all runtime nodes. */
+    consumed: number;
   };
 }
 

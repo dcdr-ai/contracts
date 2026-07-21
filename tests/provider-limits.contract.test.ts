@@ -21,7 +21,7 @@ describe("DcdrProviderLimitsConfig", () => {
           maxBudgetPeriod: DcdrServiceTokenLimitType.LIMITED_BY_MONTH,
           usage: {
             calls: { periodKey: "2026-07", consumed: 812 },
-            budget: { periodKey: "2026-07", consumedUsd: 193.42 },
+            budget: { periodKey: "2026-07", consumed: 193.42 },
           },
           models: {
             "gpt-5": {
@@ -52,7 +52,7 @@ describe("DcdrProviderLimitsConfig", () => {
     ).toBe(false);
     expect(roundTrip.providers?.ANTHROPIC?.enabled).toBe(false);
     expect(roundTrip.providers?.OPEN_AI?.usage?.calls?.consumed).toBe(812);
-    expect(roundTrip.providers?.OPEN_AI?.usage?.budget?.consumedUsd).toBe(
+    expect(roundTrip.providers?.OPEN_AI?.usage?.budget?.consumed).toBe(
       193.42,
     );
   });

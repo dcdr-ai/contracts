@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260721.4] — 12:20UTC
+
+<!--
+sourceCommit: 52b087d1a39a79aea17a8f7384b841e60e85474b
+queuedAtUtc: 
+previousMirroredBuild: 20260721.3 (2026-07-21)
+contractsSubmodule: 272fb0ad47f5..00db9ddf5d61
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v2.8.5 — Renamed `DcdrProviderLimitUsageBaseline.budget.consumedUsd` (v2.8.4, unreleased) to `consumed` and made it explicitly currency-agnostic: the runtime only ever compares `maxBudget` against `usage.budget.consumed` as an opaque unit, and backend is fully responsible for keeping both denominated the same way. This was caught before anything shipped — the original `Usd` suffix wrongly assumed the same currency as the upstream provider catalog pricing (commonly USD), but `maxBudget` is actually EUR-denominated, matching existing Governance/wallet product semantics.
+- <kbd>CONTRACTS</kbd> v2.8.4 — Added `DcdrProviderLimitUsageBaseline` (`usage.calls`/`usage.budget`, each with its own `periodKey`) as an optional field on `DcdrProviderLimitGate`, and added `ExecutionErrorCode.PROVIDER_LIMIT_EXCEEDED` (mapped to HTTP 429). Backend-computed baselines let runtime enforce `maxCalls`/`maxBudget` without ever computing cost itself — see the `RUNTIME` entry below.
+- <kbd>RUNTIME</kbd> Governance `Provider Limits` (`DcdrProviderLimitsConfig`) are now enforced for **both** intent execution (`/api/execution/*`) and the OpenAI-compatible gateway (`/v1/*`), through one shared gate (`src/services/provider.limits.service.ts`). Provider/model `enabled:false` gates block a candidate the same way `denyProviders` already does (intent execution filters blocked candidates once before the retry/fallback loop in `executeCandidatesWithRetry()` so fallback to the next BYOK candidate still works; gateway rejects at dispatch time via `proxyGatewayRequest()`). `maxCalls` combines a backend-supplied baseline (`providerLimits.providers[p].usage.calls`) with a real-time local Redis/in-memory delta, mirroring the existing tenant-wide monthly-quota baseline pattern in `tenant.middleware.ts`. `maxBudget` is enforced purely against a backend-supplied baseline (`usage.budget.consumed`) — the runtime treats it as a currency-agnostic opaque unit and never computes cost from token usage × catalog pricing itself, avoiding drift from backend's own billing calculation (backend confirmed it is EUR end-to-end, converted from catalog pricing via the same ECB-fixing approach DCDR wallet billing already uses). Provider-level and model-level gates apply independently (both must pass). `IntentProvider.DCDR` (virtual provider) candidates are gate-checked against their *effective* upstream provider/model (e.g. `OPEN_AI`/`gpt-4o-mini`), not the raw `DCDR`/prefixed-virtual-id fields, since Governance rules are authored against the effective provider and the real substitution otherwise only happens later at the executor boundary. When every candidate is blocked, both surfaces return a stable `PROVIDER_LIMIT_EXCEEDED` (HTTP 429 / `error.code = "provider_limit_exceeded"` on the gateway). Fail-open: enforcement only activates for tenants where backend actually populates `providerLimits` (and its `usage` baselines) on `/dcdr/entitlements` and `/dcdr/token/check` — backend has this implemented and locally verified (2026-07-21); live/staging rollout confirmation is the last step before closing `RM-045` in `internal_docs/ROADMAP.md`.
+
 ## [20260721.3] — 03:18UTC
 
 <!--
