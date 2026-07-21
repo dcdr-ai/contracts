@@ -4,6 +4,22 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260721.3] — 03:18UTC
+
+<!--
+sourceCommit: aee878199873f4d6f05e6a26137e6297aa8baf37
+queuedAtUtc: 
+previousMirroredBuild: 20260721.1 (2026-07-21)
+contractsSubmodule: d6b491c42dd6..272fb0ad47f5
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v2.8.4 — Added `DcdrProviderLimitUsageBaseline` (`usage.calls`/`usage.budget`, each with its own `periodKey`) as an optional field on `DcdrProviderLimitGate`, and added `ExecutionErrorCode.PROVIDER_LIMIT_EXCEEDED` (mapped to HTTP 429). Backend-computed baselines let runtime enforce `maxCalls`/`maxBudget` without ever computing USD cost itself — see the `RUNTIME` entry below.
+- <kbd>RUNTIME</kbd> Governance `Provider Limits` (`DcdrProviderLimitsConfig`) are now enforced for **both** intent execution (`/api/execution/*`) and the OpenAI-compatible gateway (`/v1/*`), through one shared gate (`src/services/provider.limits.service.ts`). Provider/model `enabled:false` gates block a candidate the same way `denyProviders` already does (intent execution filters blocked candidates once before the retry/fallback loop in `executeCandidatesWithRetry()` so fallback to the next BYOK candidate still works; gateway rejects at dispatch time via `proxyGatewayRequest()`). `maxCalls` combines a backend-supplied baseline (`providerLimits.providers[p].usage.calls`) with a real-time local Redis/in-memory delta, mirroring the existing tenant-wide monthly-quota baseline pattern in `tenant.middleware.ts`. `maxBudget` is enforced purely against a backend-supplied baseline (`usage.budget.consumedUsd`) — the runtime does not compute cost from token usage × catalog pricing, avoiding drift from backend's own billing calculation. Provider-level and model-level gates apply independently (both must pass). `IntentProvider.DCDR` (virtual provider) candidates are gate-checked against their *effective* upstream provider/model (e.g. `OPEN_AI`/`gpt-4o-mini`), not the raw `DCDR`/prefixed-virtual-id fields, since Governance rules are authored against the effective provider and the real substitution otherwise only happens later at the executor boundary. When every candidate is blocked, both surfaces return a stable `PROVIDER_LIMIT_EXCEEDED` (HTTP 429 / `error.code = "provider_limit_exceeded"` on the gateway). Fail-open and currently inert in production: enforcement only activates once backend populates `providerLimits` (and its `usage` baselines) on `/dcdr/entitlements` and `/dcdr/token/check` — see `RM-045` in `internal_docs/ROADMAP.md` for the exact backend requirement.
+- <kbd>CONTRACTS</kbd> v2.8.3 — Added optional `DcdrEntitlementsContract.providerLimits` (reusing `DcdrProviderLimitsConfig`) so the tenant-scoped Governance provider/model limits already exposed to the gateway via `/dcdr/token/check` can also be surfaced through `/dcdr/entitlements`, the path intent execution actually consumes.
+### Changed
+- <kbd>RUNTIME</kbd> Factored the candidate-selection error-response builder out of `selectCandidatesOrErrorResponse()`'s catch block into a shared `buildCandidateSelectionErrorResponse()` helper in `run.service.ts`, so both synchronous planning failures (e.g. the DCDR virtual gate) and the new async Governance Provider Limits pre-loop gate produce the same stable report/error shape instead of duplicating the logic.
+
 ## [20260721.1] — 01:57UTC
 
 <!--

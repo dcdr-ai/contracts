@@ -19,6 +19,10 @@ describe("DcdrProviderLimitsConfig", () => {
           maxCallsPeriod: DcdrServiceTokenLimitType.LIMITED_BY_MONTH,
           maxBudget: 250,
           maxBudgetPeriod: DcdrServiceTokenLimitType.LIMITED_BY_MONTH,
+          usage: {
+            calls: { periodKey: "2026-07", consumed: 812 },
+            budget: { periodKey: "2026-07", consumedUsd: 193.42 },
+          },
           models: {
             "gpt-5": {
               enabled: true,
@@ -47,5 +51,9 @@ describe("DcdrProviderLimitsConfig", () => {
       roundTrip.providers?.OPEN_AI?.models?.["gpt-image-1"]?.enabled,
     ).toBe(false);
     expect(roundTrip.providers?.ANTHROPIC?.enabled).toBe(false);
+    expect(roundTrip.providers?.OPEN_AI?.usage?.calls?.consumed).toBe(812);
+    expect(roundTrip.providers?.OPEN_AI?.usage?.budget?.consumedUsd).toBe(
+      193.42,
+    );
   });
 });

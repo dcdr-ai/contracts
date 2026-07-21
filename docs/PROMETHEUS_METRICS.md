@@ -160,6 +160,12 @@ These metrics are intentionally designed to keep label cardinality bounded.
   - Labels:
     - `result`: allow/deny reason (bounded set)
 
+- `dcdr_runtime_provider_limit_enforcement_total{surface,action}` (Counter)
+  - Value: total Governance `Provider Limits` enforcement outcomes (enabled/disabled gate + `maxCalls`/`maxBudget` windows), shared by intent execution and the OpenAI-compatible gateway
+  - Labels:
+    - `surface`: `intent | gateway`
+    - `action`: `allowed | provider_disabled | model_disabled | calls_exceeded | budget_exceeded`
+
 ### Circuit breaker + in-memory counters footprint
 
 These metrics expose a small, bounded footprint of internal caches used for reliability.
