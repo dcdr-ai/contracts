@@ -13,6 +13,7 @@ const OPENAI_PRICING_URL = "https://developers.openai.com/api/docs/pricing";
 const OPENAI_PRICING_UPDATED_AT_20260327 = Date.UTC(2026, 2, 27);
 const OPENAI_PRICING_UPDATED_AT_20260430 = Date.UTC(2026, 3, 30);
 const OPENAI_PRICING_UPDATED_AT_20260522 = Date.UTC(2026, 4, 22);
+const OPENAI_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
 
 export const OPENAI_PROVIDER_PRICING_FALLBACK_RULES: ProviderPricingFallbackRule[] =
   [
@@ -49,23 +50,308 @@ export function buildOpenAIProviderModelDefinitions(
     // Model IDs below are kept in roughly "newest first" order.
     // Discovered aliases are sourced from OpenAI `GET /v1/models` (snapshot 2026-04-27).
 
-    // --- gpt-5.5 (discovered; priced) ---
+    // --- Discovered on the 2026-09-05 /v1/models sync ---
     {
-      id: "gpt-5.5",
+      id: "gpt-6-astra",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 10.0,
+        cachedInput: 1.0,
+        output: 50.0,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20260905,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. AUDIO and VIDEO fail on every source kind (\"audible content unavailable for inspection\").",
+          updatedAt: "2026-09-05",
+        },
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-5.6-sol",
       types: [IntentType.CHAT],
       publicForCustomers: true,
-      tokenUsageCovered: true,
       publicName: "DCDR Best",
       badge: "OpenAI",
       primaryCategory: args.catalogEnums.publicModelCategory.BEST,
       categories: [args.catalogEnums.publicModelCategory.BEST],
       qualityTier: 5,
       speedTier: 3,
-      costTier: 1,
+      costTier: 2,
       recommendedUseCases: ["reasoning", "agentic_coding"],
       isRecommended: false,
       isGlobalDefault: false,
       isCategoryDefault: true,
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 4.0,
+        cachedInput: 0.4,
+        output: 20.0,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20260905,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. AUDIO and VIDEO fail on every source kind, and the model says so itself (\"Audible content could not be determined\"), so the failure is an honest refusal rather than a hallucination.",
+          updatedAt: "2026-09-05",
+        },
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-5.6-terra",
+      types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Smart",
+      badge: "Recommended",
+      primaryCategory: args.catalogEnums.publicModelCategory.SMART,
+      categories: [
+        args.catalogEnums.publicModelCategory.SMART,
+        args.catalogEnums.publicModelCategory.BEST,
+      ],
+      qualityTier: 4,
+      speedTier: 4,
+      costTier: 3,
+      recommendedUseCases: ["production_chat", "reasoning"],
+      isRecommended: true,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        cachedInput: 0.2,
+        output: 12.0,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20260905,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. AUDIO and VIDEO fail on every source kind; the model only acknowledges the file (\"An MP3 audio file is present.\") without perceiving its content.",
+          updatedAt: "2026-09-05",
+        },
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-5.6-luna",
+      types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Fast",
+      badge: "OpenAI",
+      primaryCategory: args.catalogEnums.publicModelCategory.FAST,
+      categories: [
+        args.catalogEnums.publicModelCategory.FAST,
+        args.catalogEnums.publicModelCategory.ECONOMY,
+      ],
+      qualityTier: 3,
+      speedTier: 5,
+      costTier: 5,
+      recommendedUseCases: ["interactive_chat", "classification", "support"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: true,
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 0.2,
+        cachedInput: 0.02,
+        output: 1.2,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20260905,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. AUDIO and VIDEO fail on every source kind; the model reports the input as present but states its content is unavailable for inspection.",
+          updatedAt: "2026-09-05",
+        },
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-realtime-2.1",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-realtime-2.1-mini",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-live-transcribe",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-transcribe",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "chatgpt-image-latest",
+      types: [IntentType.IMAGE_GENERATION],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "omni-moderation-latest",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "omni-moderation-2024-09-26",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-3.5-turbo-instruct",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gpt-3.5-turbo-instruct-0914",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "tts-1-1106",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "tts-1-hd-1106",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-09-05; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    // --- gpt-5.5 (discovered; priced) ---
+    {
+      id: "gpt-5.5",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
@@ -89,8 +375,6 @@ export function buildOpenAIProviderModelDefinitions(
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
-            AssetType.AUDIO,
-            AssetType.VIDEO,
             AssetType.DOCUMENT,
           ],
           supportedSourceKinds: [
@@ -99,8 +383,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on gpt-5.5 via the corrected one-model multimodal curator with a clean 15/15 matrix.",
-          updatedAt: "2026-06-16",
+            "Re-curated on 2026-09-05 with the comprehension-grade OpenAI curator (RM-050). TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind. The previous 15/15 claim came from the transport-only curator, which accepted sawProvidedInput=true as proof of support, so it was never backed by comprehension evidence.",
+          updatedAt: "2026-09-05",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
         updatedAt: "2026-06-16",
@@ -114,7 +398,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -128,7 +412,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on the dated gpt-5.5 family alias via the same corrected multimodal curator baseline used for gpt-5.5.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-16",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -156,7 +440,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -170,7 +454,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on gpt-5.5-pro via the corrected one-model multimodal curator with a clean 15/15 matrix.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-16",
         },
         reason:
@@ -186,7 +470,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -200,7 +484,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on gpt-5.5-pro-2026-04-23 via the corrected one-model multimodal curator with a clean 15/15 matrix.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-16",
         },
         reason:
@@ -214,22 +498,7 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-5.4",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
       tokenUsageCovered: true,
-      publicName: "DCDR Smart",
-      badge: "Recommended",
-      primaryCategory: args.catalogEnums.publicModelCategory.SMART,
-      categories: [
-        args.catalogEnums.publicModelCategory.SMART,
-        args.catalogEnums.publicModelCategory.BEST,
-      ],
-      qualityTier: 4,
-      speedTier: 4,
-      costTier: 3,
-      recommendedUseCases: ["production_chat", "coding", "reasoning"],
-      isRecommended: true,
-      isGlobalDefault: false,
-      isCategoryDefault: false,
       pricing: args.pricingPerMillionTokens({
         input: 2.5,
         cachedInput: 0.25,
@@ -250,21 +519,15 @@ export function buildOpenAIProviderModelDefinitions(
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
           status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
-          supportedAssetTypes: [
-            AssetType.TEXT,
-            AssetType.IMAGE,
-            AssetType.AUDIO,
-            AssetType.VIDEO,
-            AssetType.DOCUMENT,
-          ],
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
           supportedSourceKinds: [
             ExecutionPartSourceKind.INLINE,
             ExecutionPartSourceKind.URL,
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on gpt-5.4 via the corrected one-model multimodal curator with a clean 15/15 matrix.",
-          updatedAt: "2026-06-16",
+            "Re-curated on 2026-09-05 with the comprehension-grade OpenAI curator (RM-050). IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT passes only on URL and is excluded because runtimeSupport.inputParts cannot express a per-asset source-kind subset without overstating support. AUDIO and VIDEO fail the canonical comprehension cues on every source kind. The previous claim came from the transport-only curator and was never backed by comprehension evidence.",
+          updatedAt: "2026-09-05",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
         updatedAt: "2026-06-16",
@@ -278,7 +541,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -292,7 +555,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on gpt-5.4-2026-03-05 via the corrected one-model multimodal curator with a clean 15/15 matrix.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-16",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -303,22 +566,7 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-5.4-mini",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
       tokenUsageCovered: true,
-      publicName: "DCDR Fast",
-      badge: "OpenAI",
-      primaryCategory: args.catalogEnums.publicModelCategory.FAST,
-      categories: [
-        args.catalogEnums.publicModelCategory.FAST,
-        args.catalogEnums.publicModelCategory.ECONOMY,
-      ],
-      qualityTier: 3,
-      speedTier: 5,
-      costTier: 4,
-      recommendedUseCases: ["interactive_chat", "support", "rewriting"],
-      isRecommended: false,
-      isGlobalDefault: false,
-      isCategoryDefault: true,
       pricing: args.pricingPerMillionTokens({
         input: 0.75,
         cachedInput: 0.075,
@@ -333,8 +581,6 @@ export function buildOpenAIProviderModelDefinitions(
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
-            AssetType.AUDIO,
-            AssetType.VIDEO,
             AssetType.DOCUMENT,
           ],
           supportedSourceKinds: [
@@ -343,8 +589,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
-          updatedAt: "2026-06-28",
+            "Re-curated on 2026-09-05 with the comprehension-grade OpenAI curator (RM-050). TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind. The previous 15/15 claim came from the transport-only curator, which accepted sawProvidedInput=true as proof of support, so it was never backed by comprehension evidence.",
+          updatedAt: "2026-09-05",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
         updatedAt: "2026-06-28",
@@ -358,7 +604,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -372,7 +618,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -411,21 +657,15 @@ export function buildOpenAIProviderModelDefinitions(
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
           status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
-          supportedAssetTypes: [
-            AssetType.TEXT,
-            AssetType.IMAGE,
-            AssetType.AUDIO,
-            AssetType.VIDEO,
-            AssetType.DOCUMENT,
-          ],
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
           supportedSourceKinds: [
             ExecutionPartSourceKind.INLINE,
             ExecutionPartSourceKind.URL,
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. TEXT passes INLINE but returns no comprehensionEcho on URL and ASSET, so it is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail on every source kind: the model echoes the file metadata (\"An audio file was provided (sample.mp3, audio/mpeg).\") without perceiving content.",
+          updatedAt: "2026-09-05",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
         updatedAt: "2026-06-28",
@@ -439,7 +679,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -453,7 +693,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -481,7 +721,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -495,7 +735,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on gpt-5.4-pro via the corrected one-model multimodal curator with a clean 15/15 matrix.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-16",
         },
         reason:
@@ -511,7 +751,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -525,7 +765,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason:
@@ -549,7 +789,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -563,7 +803,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -584,7 +824,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -598,7 +838,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -625,7 +865,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -639,7 +879,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -654,7 +894,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -668,7 +908,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -689,7 +929,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -703,7 +943,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -724,7 +964,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -738,7 +978,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -762,7 +1002,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -776,7 +1016,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason:
@@ -792,7 +1032,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -806,7 +1046,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason:
@@ -834,7 +1074,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -848,7 +1088,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -863,7 +1103,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -877,7 +1117,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -898,7 +1138,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.IMAGE,
             AssetType.AUDIO,
@@ -911,7 +1151,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline: image, audio, video, and document pass across INLINE, URL, and ASSET; text passes URL only (INLINE and ASSET return sawProvidedInput=false), so the promoted rectangle excludes text.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -932,7 +1172,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.IMAGE,
             AssetType.AUDIO,
@@ -944,7 +1184,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline: image and document pass across INLINE, URL, and ASSET, audio passes for INLINE and ASSET but fails for URL, text only passes for ASSET, and video fails across all three sources, so the promoted rectangle remains image/audio/document over the shared three-source surface.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -965,7 +1205,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.IMAGE,
             AssetType.AUDIO,
@@ -978,7 +1218,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline: image, audio, video, and document pass across INLINE, URL, and ASSET, while text only passes for INLINE and ASSET because URL still returns an empty Responses output, so the promoted rectangle excludes text.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -999,7 +1239,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -1013,7 +1253,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1040,7 +1280,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [AssetType.AUDIO, AssetType.DOCUMENT],
           supportedSourceKinds: [
             ExecutionPartSourceKind.INLINE,
@@ -1048,7 +1288,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "One-model multimodal recuration on gpt-5 on 2026-06-28 still shows a mixed Responses-path matrix after tightening the gpt-5-family curator prompt and budget, so the published rectangle stays conservative but now expands to AUDIO and DOCUMENT across INLINE/URL/ASSET. Current evidence: AUDIO and DOCUMENT pass across all three source kinds; TEXT passes on URL and ASSET but still fails on INLINE; IMAGE passes on INLINE and ASSET but fails on URL; VIDEO still fails across INLINE/URL/ASSET with PROVIDER_EMPTY_RESPONSE.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1063,7 +1303,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.IMAGE,
             AssetType.AUDIO,
@@ -1076,7 +1316,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "One-model multimodal recuration on gpt-5-2025-08-07 on 2026-06-28 with the 1024-token baseline shows a near-complete matrix. IMAGE, AUDIO, VIDEO, and DOCUMENT all pass across INLINE/URL/ASSET. TEXT passes on INLINE but still fails on URL and ASSET with PROVIDER_EMPTY_RESPONSE, so the published rectangle stays conservative at the fully validated four-asset subset.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1097,7 +1337,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -1111,7 +1351,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1132,7 +1372,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.IMAGE,
             AssetType.AUDIO,
@@ -1144,7 +1384,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "One-model multimodal recuration on gpt-5-codex on 2026-06-28 still shows a mixed matrix, so the published rectangle stays conservative at IMAGE/AUDIO/DOCUMENT across INLINE/URL/ASSET. Current evidence: IMAGE, AUDIO, and DOCUMENT pass across all three source kinds; TEXT passes on URL and ASSET but not INLINE; VIDEO passes on INLINE but not URL or ASSET.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1169,7 +1409,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -1183,7 +1423,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1198,7 +1438,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -1212,7 +1452,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1237,7 +1477,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -1251,7 +1491,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on gpt-5-nano via the corrected one-model multimodal curator with the 1024-token baseline and a clean 15/15 matrix.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1266,7 +1506,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -1280,7 +1520,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "OpenAI provider validated text/image/audio/video/document inputParts for INLINE, URL, and ASSET sources on gpt-5-nano-2025-08-07 via the corrected one-model multimodal curator with the 1024-token baseline and a clean 15/15 matrix.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -1304,7 +1544,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.IMAGE,
             AssetType.AUDIO,
@@ -1317,7 +1557,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "One-model multimodal recuration on gpt-5-pro on 2026-06-28 still shows a mixed matrix, so the published rectangle stays conservative at IMAGE/AUDIO/VIDEO/DOCUMENT across INLINE/URL/ASSET. TEXT still fails across all three source kinds with PROVIDER_EMPTY_RESPONSE.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason:
@@ -1333,7 +1573,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.IMAGE,
             AssetType.AUDIO,
@@ -1346,7 +1586,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "One-model multimodal recuration on gpt-5-pro-2025-10-06 on 2026-06-28 still shows a mixed matrix, so the published rectangle stays conservative at IMAGE/AUDIO/VIDEO/DOCUMENT across INLINE/URL/ASSET. TEXT still fails across all three source kinds with PROVIDER_EMPTY_RESPONSE.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason:
@@ -1409,8 +1649,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1435,8 +1675,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1460,19 +1700,15 @@ export function buildOpenAIProviderModelDefinitions(
         preferredApi: args.catalogEnums.preferredApi.CHAT_COMPLETIONS,
         inputParts: {
           status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
-          supportedAssetTypes: [
-            AssetType.TEXT,
-            AssetType.IMAGE,
-            AssetType.DOCUMENT,
-          ],
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
           supportedSourceKinds: [
             ExecutionPartSourceKind.INLINE,
             ExecutionPartSourceKind.URL,
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT does not pass on all three source kinds and is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1486,19 +1722,15 @@ export function buildOpenAIProviderModelDefinitions(
         preferredApi: args.catalogEnums.preferredApi.CHAT_COMPLETIONS,
         inputParts: {
           status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
-          supportedAssetTypes: [
-            AssetType.TEXT,
-            AssetType.IMAGE,
-            AssetType.DOCUMENT,
-          ],
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
           supportedSourceKinds: [
             ExecutionPartSourceKind.INLINE,
             ExecutionPartSourceKind.URL,
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 during the openai 6.42 -> 7.10 bump (RM-046). IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT is withdrawn: the RM-050 claim was measured on a run where the ASSET cell happened to trail the canonical marker into its echo, and it does not reproduce. Under openai 7.10.0 TEXT fails on all three source kinds; the bump was rolled back to 6.42.0 and TEXT failed there too (INLINE and URL fail, ASSET passes), so this is model behaviour, not an SDK regression. The failure mode is that the gpt-4.1-mini family echoes the instruction text instead of the text part, which makes the cell non-deterministic; it never reaches all three source kinds on either SDK version. The gpt-4.1-mini alias is published as IMAGE/DOCUMENT for the same reason. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1522,19 +1754,15 @@ export function buildOpenAIProviderModelDefinitions(
         preferredApi: args.catalogEnums.preferredApi.CHAT_COMPLETIONS,
         inputParts: {
           status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
-          supportedAssetTypes: [
-            AssetType.TEXT,
-            AssetType.IMAGE,
-            AssetType.DOCUMENT,
-          ],
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
           supportedSourceKinds: [
             ExecutionPartSourceKind.INLINE,
             ExecutionPartSourceKind.URL,
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT does not pass on all three source kinds and is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1548,19 +1776,15 @@ export function buildOpenAIProviderModelDefinitions(
         preferredApi: args.catalogEnums.preferredApi.CHAT_COMPLETIONS,
         inputParts: {
           status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
-          supportedAssetTypes: [
-            AssetType.TEXT,
-            AssetType.IMAGE,
-            AssetType.DOCUMENT,
-          ],
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
           supportedSourceKinds: [
             ExecutionPartSourceKind.INLINE,
             ExecutionPartSourceKind.URL,
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT does not pass on all three source kinds and is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1596,8 +1820,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1622,8 +1846,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1648,8 +1872,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1704,8 +1928,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1730,8 +1954,8 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Chat Completions path: text, image, and document pass across INLINE, URL, and ASSET; audio and video fail with upstream 400 (Chat Completions does not support those modalities on this model).",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. TEXT, IMAGE and DOCUMENT pass across INLINE/URL/ASSET. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
+          updatedAt: "2026-09-06",
         },
         reason: "Validated via provider E2E",
         updatedAt: "2026-06-28",
@@ -1977,7 +2201,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -1991,7 +2215,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2005,7 +2229,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2019,7 +2243,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2062,7 +2286,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2076,7 +2300,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2090,7 +2314,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2104,7 +2328,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2125,7 +2349,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2139,7 +2363,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2153,7 +2377,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2167,7 +2391,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2210,7 +2434,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.AUDIO,
@@ -2223,7 +2447,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Responses path: text, audio, video, and document pass across INLINE, URL, and ASSET; image fails with upstream 400 on all three sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2237,7 +2461,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.AUDIO,
@@ -2250,7 +2474,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 via Responses path: text, audio, video, and document pass across INLINE, URL, and ASSET; image fails with upstream 400 on all three sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2271,7 +2495,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2285,7 +2509,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2299,7 +2523,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2313,7 +2537,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2334,7 +2558,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2348,7 +2572,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2380,7 +2604,7 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
@@ -2394,7 +2618,7 @@ export function buildOpenAIProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Curated on 2026-06-28 with the 1024-token multimodal baseline and confirmed a clean 15/15 matrix across text/image/audio/video/document inputs for INLINE, URL, and ASSET sources.",
+            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
@@ -2765,6 +2989,73 @@ export function buildOpenAIProviderModelE2EOverrides(
   args: ProviderCatalogModuleBuildArgs,
 ): Record<string, ProviderModelE2EOverride> {
   return {
+    // Deprecated by OpenAI as of the 2026-09-06 sweep. These ids are still returned by
+    // /v1/models, so the listing is not a reliable availability signal on its own: every
+    // call 404s, and /v1/chat/completions says so explicitly ("has been deprecated"),
+    // while /v1/responses reports the generic "does not exist or you do not have access
+    // to it". Availability is E2E scope, so each entry keeps its last observed
+    // runtimeSupport evidence and is skipped here rather than demoted or deleted.
+    "gpt-5.3-chat-latest": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+    "gpt-5.2-chat-latest": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+    "gpt-5.2-codex": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+    "gpt-5.1-chat-latest": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+    "gpt-5.1-codex": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+    "gpt-5.1-codex-max": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+    "gpt-5.1-codex-mini": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+    "gpt-5-chat-latest": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+    "gpt-5-codex": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+
+    // No longer returned by OpenAI /v1/models (2026-09-05 sync). Availability is E2E
+    // scope, so each catalog entry and its last observed runtimeSupport are preserved.
+    "dall-e-3": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "No longer listed by OpenAI /v1/models (2026-09-05 sync)",
+    },
+    "dall-e-2": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "No longer listed by OpenAI /v1/models (2026-09-05 sync)",
+    },
+    "gpt-realtime-mini-2025-10-06": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "No longer listed by OpenAI /v1/models (2026-09-05 sync)",
+    },
+
     // Not chat-completions models (will 404 on /v1/chat/completions)
     "babbage-002": {
       status: args.catalogEnums.e2eStatus.LEGACY,

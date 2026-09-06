@@ -114,8 +114,8 @@ export function buildGeminiProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Validated with comprehension-grade Gemini curator using the canonical shared fixtures across TEXT/IMAGE/AUDIO/VIDEO/DOCUMENT and INLINE/URL/ASSET.",
-          updatedAt: "2026-06-17",
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. Full 5/5 rectangle: Gemini is the only provider in the catalog that genuinely comprehends AUDIO and VIDEO input, and it now does so under the same bar every other provider is held to.",
+          updatedAt: "2026-09-05",
         },
       },
       parameterSupport: {
@@ -129,6 +129,146 @@ export function buildGeminiProviderModelDefinitions(
 
     // --- Newer preview families (pending E2E curation) ---
     // Discovered via Gemini Models API (2026-05-22).
+    {
+      id: "gemini-3.8-flash",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      pricing: pricingGemini({
+        input: 0.75,
+        output: 3.75,
+        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 3.75 out); the post-promotional rate is 1.50 in / 7.50 out. Snapshot 2026-09-05.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gemini-3.7-flash",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      pricing: pricingGemini({
+        input: 0.75,
+        output: 3.75,
+        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 3.75 out); the post-promotional rate is 1.50 in / 7.50 out. Snapshot 2026-09-05.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gemini-3.6-flash",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      pricing: pricingGemini({
+        input: 0.75,
+        output: 3.75,
+        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 3.75 out); the post-promotional rate is 1.50 in / 7.50 out. Snapshot 2026-09-05.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gemini-3.5-flash-lite",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      pricing: pricingGemini({
+        input: 0.3,
+        output: 2.5,
+        notes: "Published standard rates (2026-09-05): 0.30 in across text/image/video/audio, 2.50 out.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gemini-omni-1.1-flash",
+      types: [IntentType.CHAT],
+      pricing: pricingGemini({
+        input: 1.5,
+        output: 9.0,
+        notes: "Published standard rates (2026-09-05): 1.50 in (text/image/video/audio), 9.00 out for text. Video output is billed separately at 17.50 per MTok.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
+        reason:
+          "Provider E2E returns 'This model only supports Interactions API.' — it is not reachable through the generateContent surface the runtime CHAT adapter uses.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gemini-3.5-transcribe",
+      types: [IntentType.CHAT],
+      pricing: pricingGemini({
+        input: 2.0,
+        output: 12.0,
+        notes: "Speech-to-text model; docs also publish per-minute rates (0.003/min audio in, 0.002/min text out). Snapshot 2026-09-05.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
+        reason:
+          "Provider E2E returns 'Developer instruction is not enabled for this model'; the runtime CHAT contract always sends a system instruction, so this speech-to-text model cannot be driven through the current adapter.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gemini-3.5-transcribe-live",
+      types: [IntentType.CHAT],
+      pricing: pricingGemini({
+        input: 3.5,
+        output: 21.0,
+        notes: "Realtime speech-to-text model; docs also publish per-minute rates (0.005/min audio in, 0.004/min text out). Snapshot 2026-09-05.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
+        reason:
+          "Provider E2E returns 400: the model only supports real-time bidirectional streaming over WebSocket (bidiGenerateContent), which the runtime CHAT adapter does not implement.",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gemini-robotics-er-2-preview",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      pricing: pricingGemini({
+        input: 2.0,
+        output: 10.0,
+        notes: "Published standard rates (2026-09-05): 2.00 in (text/image/video/audio), 10.00 out.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-09-05 (text + structured).",
+        updatedAt: "2026-09-05",
+      },
+    },
+    {
+      id: "gemini-robotics-er-2-streaming-preview",
+      types: [IntentType.CHAT],
+      pricing: pricingGemini({
+        input: 2.0,
+        output: 10.0,
+        notes: "Published standard rates (2026-09-05): 2.00 in (text/image/video/audio), 10.00 out.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
+        reason:
+          "Provider E2E returns 400: the model only supports real-time bidirectional streaming over WebSocket (bidiGenerateContent), which the runtime CHAT adapter does not implement.",
+        updatedAt: "2026-09-05",
+      },
+    },
     {
       id: "gemini-3.5-flash",
       types: [IntentType.CHAT],
@@ -173,8 +313,8 @@ export function buildGeminiProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Validated with comprehension-grade Gemini curator using the canonical shared fixtures across TEXT/IMAGE/AUDIO/VIDEO/DOCUMENT and INLINE/URL/ASSET.",
-          updatedAt: "2026-06-17",
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. Full 5/5 rectangle, including genuine AUDIO and VIDEO comprehension.",
+          updatedAt: "2026-09-05",
         },
       },
       parameterSupport: {
@@ -273,7 +413,7 @@ export function buildGeminiProviderModelDefinitions(
         inputParts: {
           status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
           supportedAssetTypes: [
-            AssetType.TEXT,
+            AssetType.IMAGE,
             AssetType.AUDIO,
             AssetType.VIDEO,
             AssetType.DOCUMENT,
@@ -284,8 +424,8 @@ export function buildGeminiProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Re-curated on 2026-06-28 with the 1024-token baseline: AUDIO/VIDEO/DOCUMENT pass across INLINE/URL/ASSET. TEXT passed INLINE and URL but showed PARSE_FAIL on ASSET (inconsistent with June 18 confirmation; treated as transient). IMAGE fails the canonical visual cue across all source kinds.",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. IMAGE, AUDIO, VIDEO and DOCUMENT all pass. TEXT is excluded because the structured response fails to parse as JSON on every source kind, which is a response-shape failure rather than a comprehension one; it is worth revisiting when the Gemini structured path is next touched.",
+          updatedAt: "2026-09-05",
         },
       },
     },
@@ -438,6 +578,12 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.1-flash-image",
       types: [IntentType.IMAGE_GENERATION],
+      pricing: pricingGemini({
+        input: 0.5,
+        output: 3.0,
+        notes:
+          "Published standard rates (2026-09-05): 0.50 in (text/image), 3.00 out for text. Image output is billed separately at 60.00 per MTok, which the token pricing component cannot express.",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:
@@ -449,10 +595,10 @@ export function buildGeminiProviderModelDefinitions(
       id: "gemini-3.1-flash-lite-image",
       types: [IntentType.IMAGE_GENERATION],
       pricing: pricingGemini({
-        input: 0.15,
-        output: 0.0195,
+        input: 0.25,
+        output: 1.5,
         notes:
-          "Image generation model; docs list image output pricing separately and text/structured runtime support is still partial.",
+          "Published standard rates (2026-09-05): 0.25 in (text/image/video), 1.50 out for text. Image output is billed separately at 30.00 per MTok, which the token pricing component cannot express. Corrected from 0.15/0.0195, which were the gemini-2.5-flash-image batch rates.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.FAILING,
@@ -539,6 +685,12 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3-pro-image",
       types: [IntentType.IMAGE_GENERATION],
+      pricing: pricingGemini({
+        input: 2.0,
+        output: 12.0,
+        notes:
+          "Published standard rates (2026-09-05): 2.00 in (text/image), 12.00 out for text. Image output is billed separately at 120.00 per MTok, which the token pricing component cannot express.",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:
@@ -611,7 +763,9 @@ export function buildGeminiProviderModelDefinitions(
           status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
           supportedAssetTypes: [
             AssetType.TEXT,
+            AssetType.IMAGE,
             AssetType.AUDIO,
+            AssetType.VIDEO,
             AssetType.DOCUMENT,
           ],
           supportedSourceKinds: [
@@ -620,8 +774,8 @@ export function buildGeminiProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Re-curated on 2026-06-28 with the 1024-token baseline: TEXT/AUDIO/DOCUMENT pass INLINE and ASSET (DOCUMENT ASSET got transient 5XX — not structural); IMAGE passes ASSET but fails INLINE (inconsistent — excluded); VIDEO passes INLINE but fails ASSET (inconsistent — excluded). URL fixtures were unavailable this run (SKIPPED_NO_FIXTURE); URL was confirmed passing in the June 18 prior curation.",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. Full 5/5 rectangle. IMAGE and VIDEO are newly proven here: the previous, stricter per-provider cue list and the 256-token Gemini budget were both producing false negatives.",
+          updatedAt: "2026-09-05",
         },
       },
       parameterSupport: {
@@ -637,6 +791,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-pro",
       types: [IntentType.CHAT],
+      tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 1.25,
         output: 10.0,
@@ -733,6 +888,7 @@ export function buildGeminiProviderModelDefinitions(
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.IMAGE,
+            AssetType.AUDIO,
             AssetType.VIDEO,
             AssetType.DOCUMENT,
           ],
@@ -742,8 +898,8 @@ export function buildGeminiProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Re-curated on 2026-06-28 with the 1024-token baseline: TEXT/IMAGE/VIDEO/DOCUMENT pass INLINE and ASSET; AUDIO fails the canonical audio cue. URL fixtures were unavailable this run (SKIPPED_NO_FIXTURE); URL was confirmed passing in the June 17 prior curation.",
-          updatedAt: "2026-06-28",
+            "Re-measured on 2026-09-05 with the unified comprehension-grade curator (RM-050/RM-051): one shared cue definition, one prompt per asset family and a 1024-token budget across every provider, so this rectangle means the same thing as every other provider's. Full 5/5 rectangle. AUDIO is newly proven here: the previous run rejected \"A dog barking\" because the cue list lacked animal names, which was a false negative rather than a real gap.",
+          updatedAt: "2026-09-05",
         },
       },
       parameterSupport: {
@@ -1018,12 +1174,12 @@ export function buildGeminiProviderModelDefinitions(
         notes: "Rolling alias; priced as Gemini 2.5 Flash-Lite (approx).",
       },
       runtimeSupport: {
-        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        status: args.catalogEnums.runtimeSupportStatus.FAILING,
         reason:
-          "Validated via provider E2E (text + structured + streaming SSE) (alias)",
-        updatedAt: "2026-05-04",
+          "Provider E2E on 2026-09-06 returns PROVIDER_ERROR (upstream 400, 'Request contains an invalid argument.') on both text and structured. Reproduced on @google/genai 2.10.0 and 2.21.0, so it is upstream drift on this floating alias rather than an SDK regression: the sibling pinned ids (gemini-2.5-flash-lite, gemini-3.1-flash-lite) pass in the same run. The alias presumably now resolves to a model that rejects part of the request the runtime sends.",
+        updatedAt: "2026-09-06",
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
           supportedAssetTypes: [
             AssetType.TEXT,
             AssetType.AUDIO,
@@ -1035,8 +1191,8 @@ export function buildGeminiProviderModelDefinitions(
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Re-curated on 2026-06-28 with the 1024-token baseline: TEXT/AUDIO/DOCUMENT pass INLINE and ASSET; IMAGE and VIDEO fail the canonical comprehension cues. URL fixtures were unavailable this run (SKIPPED_NO_FIXTURE); URL was confirmed passing in the June 17 prior curation.",
-          updatedAt: "2026-06-28",
+            "Untrusted while the model is FAILING: the 2026-06-28 rectangle cannot be re-verified because provider E2E cannot execute this alias at all as of 2026-09-06. Retained as the prior claim only; re-measure once the upstream 400 is resolved.",
+          updatedAt: "2026-09-06",
         },
       },
       parameterSupport: {
@@ -1229,6 +1385,10 @@ export function buildGeminiProviderModelE2EOverrides(
     },
 
     // Some robotics preview IDs appear/disappear across accounts.
+    "gemini-robotics-er-1.6-preview": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason: "No longer listed by Gemini /v1beta/models (2026-09-05 sync)",
+    },
     "gemini-robotics-er-1.5-preview": {
       status: args.catalogEnums.e2eStatus.LEGACY,
       reason: "Model/endpoint not found (404) in provider E2E",

@@ -37,6 +37,7 @@ import {
 import {
   buildMistralProviderModelDefinitions,
   buildMistralProviderModelE2EOverrides,
+  MISTRAL_PROVIDER_PRICING_FALLBACK_RULES,
 } from "./catalog/mistral.contract";
 import {
   buildOcrProviderModelDefinitions,
@@ -472,7 +473,7 @@ const PRICING_FALLBACK_RULES_BY_PROVIDER: Record<
   [IntentProvider.ANTHROPIC]: ANTHROPIC_PROVIDER_PRICING_FALLBACK_RULES,
   [IntentProvider.GEMINI]: [],
   [IntentProvider.GROK]: [],
-  [IntentProvider.MISTRAL]: [],
+  [IntentProvider.MISTRAL]: MISTRAL_PROVIDER_PRICING_FALLBACK_RULES,
   [IntentProvider.COHERE]: [],
   [IntentProvider.OFFICE]: [],
   [IntentProvider.OLLAMA]: [],
