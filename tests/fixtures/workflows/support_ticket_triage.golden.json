@@ -1,0 +1,455 @@
+{
+  "description": "Golden replay fixture: support ticket triage. Every host (contracts reference walker, workflow runner) must reproduce `expected` for each case given the simulated host outputs.",
+  "intents": [
+    {
+      "intent": "SUPPORT_TICKET_CLASSIFIER",
+      "inputSchema": {
+        "ticket": {
+          "type": "string",
+          "required": true
+        },
+        "customerTier": {
+          "type": "string"
+        }
+      },
+      "outputSchema": {
+        "category": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "float"
+        }
+      }
+    },
+    {
+      "intent": "SUPPORT_RESPONSE_WRITER",
+      "inputSchema": {
+        "ticket": {
+          "type": "string",
+          "required": true
+        },
+        "category": {
+          "type": "string",
+          "required": true
+        },
+        "customerName": {
+          "type": "string"
+        }
+      },
+      "outputSchema": {
+        "reply": {
+          "type": "string"
+        }
+      }
+    }
+  ],
+  "connections": [
+    "crm",
+    "ticketing"
+  ],
+  "definition": {
+    "schemaVersion": 1,
+    "key": "SUPPORT_TRIAGE",
+    "name": "Support ticket triage",
+    "input": {
+      "ticket": {
+        "type": "object",
+        "required": true
+      },
+      "customerId": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "outputSchema": {
+      "category": {
+        "type": "string",
+        "required": true
+      },
+      "reply": {
+        "type": "string"
+      },
+      "escalated": {
+        "type": "string",
+        "required": true
+      }
+    },
+    "output": {
+      "category": {
+        "$ref": "states.classify.output.category"
+      },
+      "reply": {
+        "$ref": "states.respond.output.reply",
+        "default": null
+      },
+      "escalated": {
+        "$ref": "states.escalate.status",
+        "default": "NOT_RUN"
+      }
+    },
+    "settings": {
+      "timeoutMs": 600000,
+      "maxTransitionsPerRun": 20
+    },
+    "startAt": "fetch_customer",
+    "states": {
+      "fetch_customer": {
+        "type": "HTTP",
+        "display": {
+          "label": "Fetch customer",
+          "position": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "next": "classify",
+        "onError": {
+          "action": "CONTINUE"
+        },
+        "http": {
+          "connection": "crm",
+          "method": "GET",
+          "path": {
+            "$template": "/customers/{{input.customerId}}"
+          },
+          "responseType": "JSON"
+        }
+      },
+      "classify": {
+        "type": "INTENT",
+        "next": "route",
+        "intent": {
+          "intent": "SUPPORT_TICKET_CLASSIFIER",
+          "vars": {
+            "ticket": {
+              "$ref": "input.ticket.text"
+            },
+            "customerTier": {
+              "$fn": "COALESCE",
+              "args": [
+                {
+                  "$ref": "states.fetch_customer.output.body.plan"
+                },
+                "standard"
+              ]
+            }
+          }
+        }
+      },
+      "route": {
+        "type": "CHOICE",
+        "choice": {
+          "choices": [
+            {
+              "id": "critical",
+              "condition": {
+                "op": "AND",
+                "conditions": [
+                  {
+                    "path": "states.classify.output.severity",
+                    "op": "EQUALS",
+                    "value1": "CRITICAL"
+                  },
+                  {
+                    "path": "states.classify.output.confidence",
+                    "op": "MORE_THAN_EQUAL",
+                    "value1": 0.8
+                  }
+                ]
+              },
+              "next": "escalate"
+            }
+          ],
+          "default": "respond"
+        }
+      },
+      "escalate": {
+        "type": "HTTP",
+        "next": "done",
+        "http": {
+          "connection": "ticketing",
+          "method": "POST",
+          "path": "/escalations",
+          "body": {
+            "ticketId": {
+              "$ref": "input.ticket.id"
+            },
+            "summary": {
+              "$template": "[{{states.classify.output.category}}] ticket {{input.ticket.id}} from customer {{input.customerId}}"
+            },
+            "team": {
+              "$ref": "constants.escalationTeam"
+            },
+            "dueAt": {
+              "$fn": "DATE_ADD",
+              "args": [
+                {
+                  "$ref": "run.startedAt"
+                },
+                {
+                  "$ref": "constants.slaHours"
+                },
+                "HOURS"
+              ]
+            }
+          },
+          "responseType": "JSON",
+          "expectStatus": [
+            201
+          ]
+        }
+      },
+      "respond": {
+        "type": "INTENT",
+        "next": "publish",
+        "intent": {
+          "intent": "SUPPORT_RESPONSE_WRITER",
+          "vars": {
+            "ticket": {
+              "$ref": "input.ticket.text"
+            },
+            "category": {
+              "$ref": "states.classify.output.category"
+            },
+            "customerName": {
+              "$ref": "states.fetch_customer.output.body.name",
+              "default": "customer"
+            }
+          }
+        }
+      },
+      "publish": {
+        "type": "TRANSFORM",
+        "next": "done",
+        "transform": {
+          "output": {
+            "ticketId": {
+              "$ref": "input.ticket.id"
+            },
+            "reply": {
+              "$fn": "TRIM",
+              "args": [
+                {
+                  "$ref": "states.respond.output.reply"
+                }
+              ]
+            },
+            "replyLength": {
+              "$fn": "LENGTH",
+              "args": [
+                {
+                  "$ref": "states.respond.output.reply"
+                }
+              ]
+            },
+            "tags": {
+              "$fn": "SPLIT",
+              "args": [
+                {
+                  "$ref": "states.classify.output.category"
+                },
+                "/"
+              ]
+            },
+            "priority": {
+              "$fn": "IF",
+              "args": [
+                {
+                  "$fn": "GTE",
+                  "args": [
+                    {
+                      "$ref": "states.classify.output.confidence"
+                    },
+                    0.9
+                  ]
+                },
+                "high",
+                "normal"
+              ]
+            },
+            "attachmentIds": {
+              "$ref": "input.ticket.attachments[*].id",
+              "default": null
+            },
+            "attempt": {
+              "$fn": "ADD",
+              "args": [
+                {
+                  "$ref": "run.attempt"
+                },
+                1
+              ]
+            }
+          }
+        }
+      },
+      "done": {
+        "type": "END",
+        "end": {
+          "outcome": "SUCCEED"
+        }
+      }
+    },
+    "constants": {
+      "slaHours": 4,
+      "escalationTeam": "tier2"
+    }
+  },
+  "cases": [
+    {
+      "name": "critical ticket is escalated",
+      "input": {
+        "ticket": {
+          "id": "T-1",
+          "text": "Production is down!"
+        },
+        "customerId": "C-9"
+      },
+      "hostOutputs": {
+        "fetch_customer": {
+          "status": 200,
+          "body": {
+            "name": "ACME",
+            "plan": "enterprise"
+          }
+        },
+        "classify": {
+          "category": "incident/outage",
+          "severity": "CRITICAL",
+          "confidence": 0.93
+        },
+        "escalate": {
+          "status": 201,
+          "body": {
+            "id": "E-1"
+          }
+        }
+      },
+      "expected": {
+        "trail": [
+          "fetch_customer",
+          "classify",
+          "route",
+          "escalate",
+          "done"
+        ],
+        "choice": {
+          "route": "critical"
+        },
+        "resolvedVars": {
+          "classify": {
+            "ticket": "Production is down!",
+            "customerTier": "enterprise"
+          }
+        },
+        "resolvedHttp": {
+          "fetch_customer": {
+            "path": "/customers/C-9"
+          },
+          "escalate": {
+            "path": "/escalations",
+            "body": {
+              "ticketId": "T-1",
+              "summary": "[incident/outage] ticket T-1 from customer C-9",
+              "team": "tier2",
+              "dueAt": "2026-09-06T04:00:00.000Z"
+            }
+          }
+        },
+        "endOutcome": "SUCCEED",
+        "runOutput": {
+          "category": "incident/outage",
+          "reply": null,
+          "escalated": "COMPLETED"
+        }
+      }
+    },
+    {
+      "name": "normal ticket gets a reply even when the CRM is down",
+      "input": {
+        "ticket": {
+          "id": "T-2",
+          "text": "How do I export my data?",
+          "attachments": [
+            {
+              "id": "A-1"
+            },
+            {
+              "id": "A-2"
+            }
+          ]
+        },
+        "customerId": "C-1"
+      },
+      "hostFailures": {
+        "fetch_customer": {
+          "code": "HTTP_502",
+          "message": "CRM unavailable"
+        }
+      },
+      "hostOutputs": {
+        "classify": {
+          "category": "howto/export",
+          "severity": "LOW",
+          "confidence": 0.71
+        },
+        "respond": {
+          "reply": "  You can export from Settings > Data.  "
+        }
+      },
+      "expected": {
+        "trail": [
+          "fetch_customer",
+          "classify",
+          "route",
+          "respond",
+          "publish",
+          "done"
+        ],
+        "choice": {
+          "route": null
+        },
+        "resolvedVars": {
+          "classify": {
+            "ticket": "How do I export my data?",
+            "customerTier": "standard"
+          },
+          "respond": {
+            "ticket": "How do I export my data?",
+            "category": "howto/export",
+            "customerName": "customer"
+          }
+        },
+        "stateStatus": {
+          "fetch_customer": "FAILED"
+        },
+        "transformOutputs": {
+          "publish": {
+            "ticketId": "T-2",
+            "reply": "You can export from Settings > Data.",
+            "replyLength": 40,
+            "tags": [
+              "howto",
+              "export"
+            ],
+            "priority": "normal",
+            "attachmentIds": [
+              "A-1",
+              "A-2"
+            ],
+            "attempt": 2
+          }
+        },
+        "endOutcome": "SUCCEED",
+        "runOutput": {
+          "category": "howto/export",
+          "reply": "  You can export from Settings > Data.  ",
+          "escalated": "NOT_RUN"
+        }
+      }
+    }
+  ]
+}

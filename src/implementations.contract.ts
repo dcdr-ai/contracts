@@ -1,128 +1,29 @@
 import { IntentProvider } from "./provider.contract";
 import { HttpRequestParams } from "./http.contract";
 
+import { ConditionGroup, ConditionLeaf } from "./conditions.contract";
+
 /**
- * Condition operators for conditioned routing.
+ * Deprecated names kept for one major (3.x) so existing registries, clients and tests compile.
+ *
+ * Migration
+ * - `ConditionOp` -> `ConditionOperator` (`./conditions.contract`)
+ * - `ConditionLogicOp` -> import it from `./conditions.contract` (same name, same values)
+ * - `ImplementationCondition` -> `ConditionLeaf`
+ * - `LogicalImplementationCondition` -> `ConditionGroup`
  *
  * Notes
- * - Used by conditioned execution policies (context/input).
- * - Keep values stable (wire-level behavior).
+ * - Named re-exports and empty extending interfaces are used instead of `type` aliases on purpose
+ *   (repository rule: no type aliases in contracts/runtime code).
+ * - `ConditionLogicOp` is re-exported unchanged so deep importers of this module keep compiling.
  */
-export enum ConditionOp {
-  /** Incorrect type (based on operator expectations and/or value1 type). */
-  INCORRECT = "INCORRECT",
+export { ConditionLogicOp, ConditionOperator as ConditionOp } from "./conditions.contract";
 
-  // Boolean
-  TRUE = "TRUE",
-  FALSE = "FALSE",
+/** @deprecated Use `ConditionLeaf` from `./conditions.contract`. Removed in 4.0.0. */
+export interface ImplementationCondition extends ConditionLeaf {}
 
-  // Text
-  LENGTH_MIN = "LENGTH_MIN",
-  LENGTH_MAX = "LENGTH_MAX",
-  CONTAINS = "CONTAINS",
-  NOT_CONTAINS = "NOT_CONTAINS",
-  STARTS_WITH = "STARTS_WITH",
-  ENDS_WITH = "ENDS_WITH",
-  EMPTY = "EMPTY",
-  NOT_EMPTY = "NOT_EMPTY",
-
-  // Numeric
-  MORE_THAN = "MORE_THAN",
-  MORE_THAN_EQUAL = "MORE_THAN_EQUAL",
-  LESS_THAN = "LESS_THAN",
-  LESS_THAN_EQUAL = "LESS_THAN_EQUAL",
-  BETWEEN_RANGE = "BETWEEN_RANGE",
-  OUTSIDE_RANGE = "OUTSIDE_RANGE",
-
-  // Generic
-  NULL = "NULL",
-  EQUALS = "EQUALS",
-  NOT_EQUALS = "NOT_EQUALS",
-  VALID_URL = "VALID_URL",
-}
-
-/**
- * Boolean operators for composing multiple conditions.
- *
- * Notes
- * - Used only when an intent uses a conditioned execution policy.
- * - Keep values stable (wire-level behavior).
- */
-export enum ConditionLogicOp {
-  NOT = "NOT",
-  AND = "AND",
-  OR = "OR",
-}
-
-/**
- * Minimal condition contract for conditioned routing.
- *
- * Semantics
- * - `path` is a dot-path relative to the evaluation scope.
- * - `value1` and `value2` are generic operator parameters.
- */
-export interface ImplementationCondition {
-  /** Dot-path relative to the evaluation scope (context or vars). */
-  path: string;
-
-  /** Leaf operator to apply to the resolved value at `path`. */
-  op: ConditionOp;
-
-  /** Primary operator parameter. */
-  value1?: string | number | boolean | null;
-
-  /** Secondary operator parameter (e.g. max in a range). */
-  value2?: string | number | boolean | null;
-
-  /** Optional normalization for string operators. */
-  caseInsensitive?: boolean;
-
-  /** Optional trim for string operators. */
-  trim?: boolean;
-}
-
-/**
- * Recursive boolean condition used to compose multiple leaf conditions.
- *
- * Notes
- * - The evaluation scope is still determined by the execution policy type:
- *   - CONDITION_ON_CONTEXT => request.context
- *   - CONDITION_ON_INPUT   => effective vars
- * - Children can be either leaf ImplementationCondition or another LogicalImplementationCondition.
- */
-export interface LogicalImplementationCondition {
-  op: ConditionLogicOp;
-
-  /**
-   * Child conditions.
-   *
-   * Rules
-   * - NOT: must include exactly 1 child
-   * - AND/OR: must include 1+ children
-   */
-  conditions?: Array<ImplementationCondition | LogicalImplementationCondition>;
-}
-
-/**
- * Time window constraints for an implementation.
- * If present, the implementation is eligible ONLY within these windows.
- */
-export interface ExecutionWindow {
-  /**
-   * UTC window: Bit 0..6 represent days of week (recommended: 0=Mon ... 6=Sun).
-   */
-  daysMask?: number;
-
-  /**
-   * UTC window: Bit 0..23 represent hour slots (bit0 = 00:00-01:00, bit23 = 23:00-00:00).
-   */
-  hoursMask?: number;
-
-  /**
-   * Whether the execution window must be enforced (if false, the gateway may ignore it and use the implementation anyway).
-   */
-  active?: boolean;
-}
+/** @deprecated Use `ConditionGroup` from `./conditions.contract`. Removed in 4.0.0. */
+export interface LogicalImplementationCondition extends ConditionGroup<ConditionLeaf> {}
 
 /**
  * Time window constraints for an implementation.
@@ -252,6 +153,7 @@ export interface ImplementationContract {
    *
    * Notes
    * - Only evaluated when the intent executionPolicy type is CONDITION_ON_CONTEXT or CONDITION_ON_INPUT.
+   * - Shared shape from `./conditions.contract` (leaf or AND/OR/NOT group).
    */
-  condition?: ImplementationCondition | LogicalImplementationCondition;
+  condition?: ConditionLeaf | ConditionGroup<ConditionLeaf>;
 }

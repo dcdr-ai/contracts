@@ -85,10 +85,13 @@ Semantics
 
 Condition contract
 
-- Leaf condition (single check):
+- Leaf condition (single check, `ConditionLeaf` in `conditions.contract.ts`):
   - `path`: dot-path relative to the evaluation scope
-  - `op`: `ConditionOp` (e.g. `EQUALS`, `MORE_THAN`, `TRUE`, `VALID_URL`)
-  - `value1` / `value2`: optional operator parameters
+  - `op`: `ConditionOperator` (e.g. `EQUALS`, `MORE_THAN`, `TRUE`, `VALID_URL`, `IN`; 2.x name `ConditionOp` still works in 3.x)
+  - `value1` / `value2` / `value3`: optional operator parameters (arity per operator in `CONDITION_OPERATOR_META`; `value3` only for the percentage range operators)
+  - `value1Ref` / `value2Ref` / `value3Ref`: read the parameter from the evaluation scope instead of a literal (compare two paths); a reference that resolves to nothing makes the leaf false
+  - paths accept `[index]` suffixes to enter arrays (`items[0].id`); array operators (`ARRAY_CONTAINS`, `ARRAY_EMPTY`, `ARRAY_LENGTH_MIN`/`MAX`…) and a bounded `MATCHES_REGEX` (pattern ≤ 200 chars, no nested quantifiers, input ≤ 10k chars) are available since 3.0.0
+  - AI-backed operators (`AI_CONTEXT_*`) are part of the vocabulary but are rejected by the runtime evaluator
 - Boolean composition (recursive):
   - `op`: `ConditionLogicOp` (`AND` | `OR` | `NOT`)
   - `conditions`: array of child conditions (leaf or nested logical)

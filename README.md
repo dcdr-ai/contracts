@@ -430,6 +430,7 @@ Cloud-managed assets keep tenant-visible storage descriptors and concrete secret
 
 - [docs/CONTRACTS.md](docs/CONTRACTS.md) — How Registries, Intents, implementations, policies, and capabilities fit together.
 - [docs/PROCESSING_RULES.md](docs/PROCESSING_RULES.md) — Shared processing-rule engine contracts (`INPUT`/`OUTPUT`, bounded mutation trail, preview semantics).
+- [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — Workflow contract (state-machine definition, value-mapping DSL, validator, shared engine core; 3.0.0).
 - [docs/EXECUTION_POLICY.md](docs/EXECUTION_POLICY.md) — ExecutionPolicy reference (availability matrix + tie-breakers).
 - [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md) — Runtime (self-hosted) vs Cloud vs Cloud Pro (what runs where, who owns what).
 - [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRIX.md) — One-page feature/tier reference.

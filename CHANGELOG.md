@@ -4,6 +4,28 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260907.2] — 15:55UTC
+
+<!--
+sourceCommit: 07f53cf06dcf1ea41fa96ef0c0024985bf74da76
+queuedAtUtc: 
+previousMirroredBuild: 20260906.3 (2026-09-06)
+contractsSubmodule: f23680bc50e9..eca020132643
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v3.0.0 — long-horizon `AGENT` bounds (`maxDurationMs`, `maxEstimatedCost`, `historyWindow`, `summarizerIntent`), planner `notes`/`evidence`, `WAIT` as an agent tool, shared `WorkflowEvidence`, runner step `iteration`/`toolId`/typed `evidence`, cursor `agent` resume block, output `summary`; tier matrix "Workflows & Agents" section and `examples/workflow.support_ticket_triage.json`.
+- <kbd>CONTRACTS</kbd> v3.0.0 — workflows declare a typed `outputSchema` (same prompt-variable schema as intents); output mappings and `END` overrides are validated against it, and `SUBWORKFLOW` inputs are validated against the child workflow's input schema.
+- <kbd>CONTRACTS</kbd> v3.0.0 — new `conditions.contract.ts` — shared condition tree (`ConditionLeaf`, `ConditionGroup`, `ConditionOperator`, `validateConditionTree`, `evaluateConditionTreeOnScope`) with an extended operator set (array operators, bounded `MATCHES_REGEX`, `[index]` paths, `valueNRef` parameters). Existing operator values are unchanged.
+- <kbd>CONTRACTS</kbd> v3.0.0 — new `workflow.contract.ts` — declarative workflow definitions (state machine, value-mapping DSL with a closed function catalog, validator, shared helpers, `AGENT` state). See `docs/WORKFLOWS.md`.
+- <kbd>CONTRACTS</kbd> v3.0.0 — new `workflow.runner.contract.ts` — shapes and typed client of the internal control-plane/runner protocol (not a customer-facing surface).
+### Changed
+- <kbd>CONTRACTS</kbd> v3.0.0 — Bumped `@dcdr/contracts` to `3.0.0` (major, RM-102/RM-103/RM-104). Breaking for condition consumers: `condition` fields are typed as `ConditionLeaf | ConditionGroup<ConditionLeaf>` (deprecated aliases kept for 3.x), the duplicate `ExecutionWindow` declaration in `implementations.contract` is gone, and `resolveConditionPath` enters arrays on numeric segments. The workflow, agent, evidence and runner-protocol surfaces are new and additive. The runtime consumes the package from the submodule and needs no code change beyond the condition facade already shipped.
+- <kbd>CONTRACTS</kbd> v3.0.0 — `ImplementationCondition`, `LogicalImplementationCondition` and `ConditionOp` are deprecated in favour of `ConditionLeaf`, `ConditionGroup` and `ConditionOperator`; they remain available throughout 3.x.
+- <kbd>RUNTIME</kbd> Condition evaluation for conditioned routing and processing rules now uses the shared contracts evaluator; behavior is unchanged.
+### Fixed
+- <kbd>RUNTIME</kbd> Added a `Preflight: npm publish credentials` step to `azure_templates/publish-and-deploy-docker-runtime.yml`, right after the Node install and gated on the same conditions as the publish step, so a credential problem fails in seconds instead of after the full install/typecheck/build/test/Docker-push cycle. This was prompted by a real failure: the npm token expired and `npm publish` reported `E404 Not Found - PUT`, which never mentions credentials — the registry deliberately answers 404 rather than 401/403 on publish so it cannot be used to probe for private packages. The preflight calls `npm whoami`, which returns a plain `E401 Unauthorized` instead. It also rejects a `NPM_PUBLISH_TOKEN` that Azure left unexpanded as the literal `$(NPM_PUBLISH_TOKEN)` (non-empty, so the previous emptiness guard passed it through), and refuses a version already present on the registry. npm granular access tokens always carry an expiry, so this will recur; note also that bypass-2FA tokens lose direct publish around January 2027, and npm trusted publishing (OIDC) does not currently support Azure Pipelines or self-hosted runners.
+
 ## [20260906.3] — 03:32UTC
 
 <!--

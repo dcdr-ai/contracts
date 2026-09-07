@@ -1,13 +1,15 @@
 import {
+  ConditionGroup,
+  ConditionLeaf,
   ConditionLogicOp,
-  ConditionOp,
-  ImplementationCondition,
-  LogicalImplementationCondition,
-} from "./implementations.contract";
+  ConditionOperator,
+} from "./conditions.contract";
 import { IntentProvider } from "./provider.contract";
 
+// Compatibility re-exports (3.x): processing consumers historically imported the condition
+// vocabulary from this module. New code should import from `./conditions.contract`.
+export { ConditionLogicOp } from "./conditions.contract";
 export {
-  ConditionLogicOp,
   ConditionOp,
   ImplementationCondition,
   LogicalImplementationCondition,
@@ -366,7 +368,7 @@ export interface ProcessingRuleDefinition {
    *   and preview tooling can share one UI model.
    * - The processing engine evaluates this condition against the selected rule scope.
    */
-  condition?: ImplementationCondition | LogicalImplementationCondition;
+  condition?: ConditionLeaf | ConditionGroup<ConditionLeaf>;
   /**
    * Logical target family. Defaults to `DATA_FIELD` when omitted.
    *
@@ -1217,8 +1219,8 @@ function isConditionParameterValue(
  * Returns true when the provided condition object is a logical condition node.
  */
 function isProcessingLogicalCondition(
-  condition: ImplementationCondition | LogicalImplementationCondition,
-): condition is LogicalImplementationCondition {
+  condition: ConditionLeaf | ConditionGroup<ConditionLeaf>,
+): condition is ConditionGroup<ConditionLeaf> {
   return (
     condition.op === ConditionLogicOp.NOT ||
     condition.op === ConditionLogicOp.AND ||
@@ -1230,7 +1232,7 @@ function isProcessingLogicalCondition(
  * Validates one shared condition tree used by processing rules.
  */
 function validateProcessingConditionInternal(args: {
-  condition: ImplementationCondition | LogicalImplementationCondition;
+  condition: ConditionLeaf | ConditionGroup<ConditionLeaf>;
   path: string;
   state: ProcessingConditionValidationState;
   issues: ProcessingValidationIssue[];
@@ -1316,7 +1318,7 @@ function validateProcessingConditionInternal(args: {
     });
   }
 
-  if (!(Object.values(ConditionOp) as string[]).includes(args.condition.op)) {
+  if (!(Object.values(ConditionOperator) as string[]).includes(args.condition.op)) {
     args.issues.push({
       path: `${args.path}.op`,
       code: ProcessingValidationIssueCode.CONDITION_INVALID,
@@ -1621,7 +1623,7 @@ export class IntentProcessingSemantics {
    * Validates one shared condition tree reused by processing rules.
    */
   static validateConditionDefinition(
-    condition: ImplementationCondition | LogicalImplementationCondition,
+    condition: ConditionLeaf | ConditionGroup<ConditionLeaf>,
   ): ProcessingValidationResult {
     const issues: ProcessingValidationIssue[] = [];
     validateProcessingConditionInternal({

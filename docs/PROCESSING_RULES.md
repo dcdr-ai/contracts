@@ -50,10 +50,7 @@ The contracts package exports:
 - `ProcessingStageSummary`
 - `ExecutionProcessingReport`
 - `IntentProcessingSemantics`
-- `ConditionOp`
-- `ConditionLogicOp`
-- `ImplementationCondition`
-- `LogicalImplementationCondition`
+- `ConditionOperator`, `ConditionLogicOp`, `ConditionLeaf`, `ConditionGroup` (from `conditions.contract.ts`; the 2.x names `ConditionOp`, `ImplementationCondition`, `LogicalImplementationCondition` stay available in 3.x)
 
 Processors can be attached at two contract levels:
 
@@ -98,12 +95,14 @@ Processing rules can reuse the same condition tree already used by conditioned r
 
 That means a rule may declare:
 
-- `condition?: ImplementationCondition | LogicalImplementationCondition`
+- `condition?: ConditionLeaf | ConditionGroup<ConditionLeaf>`
 
-using the existing:
+using the shared vocabulary from `conditions.contract.ts`:
 
-- `ConditionOp`
+- `ConditionOperator` (`ConditionOp` in 2.x code)
 - `ConditionLogicOp`
+
+Validation and evaluation are shared too: `validateConditionTree` (non-throwing, addressed issues) and `evaluateConditionTreeOnScope` (throws `CONFIG_ERROR` on misconfiguration) are exported from the same module so previews and hosts behave identically.
 
 This is intentional so frontend can reuse nearly the same builder/preview UI for:
 
@@ -119,7 +118,7 @@ Example:
   fieldPaths: ["vars.message"],
   condition: {
     path: "vars.message",
-    op: ConditionOp.CONTAINS,
+    op: ConditionOperator.CONTAINS,
     value1: "secret",
     caseInsensitive: true
   },

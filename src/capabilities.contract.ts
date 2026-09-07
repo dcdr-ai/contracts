@@ -121,6 +121,7 @@ export function getRequiredCapabilitiesFromRegistry(registry: DcdrRegistry): Cap
     }
   }
 
+
   return Array.from(unique.values());
 }
 

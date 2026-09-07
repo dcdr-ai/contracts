@@ -10,6 +10,22 @@ import { PromptVariable, PromptVariableType } from "../src/prompts.contract";
 import { IntentProvider } from "../src/provider.contract";
 import { CapabilityKey } from "../src/capabilities.contract";
 import {
+  CONDITION_OPERATOR_META,
+  ConditionLogicOp,
+  ConditionOperator,
+  evaluateConditionTreeOnScope,
+  validateConditionTree,
+} from "../src/index";
+import { ConditionOp } from "../src/implementations.contract";
+import { DcdrWorkflowRunnerClient, WORKFLOW_RUNNER_BASE_PATH, WorkflowRunOutputStatus } from "../src/index";
+import {
+  parseWorkflowValueShorthand,
+  validateWorkflowDefinition,
+  WorkflowSchemaVersion,
+  WorkflowStateType,
+  WorkflowValueKind,
+} from "../src/index";
+import {
   AssetType,
   ASSET_TYPE_VALUES,
   ASSET_TYPE_LABELS,
@@ -45,6 +61,32 @@ describe("@dcdr/contracts exports", () => {
     expect(isExecutionErrorCode(ExecutionErrorCode.BAD_REQUEST)).toBe(true);
     const unknown = `UNKNOWN_${ExecutionErrorCode.BAD_REQUEST}`;
     expect(isExecutionErrorCode(unknown)).toBe(false);
+  });
+
+  it("exports the shared condition contract from the root barrel", () => {
+    expect(ConditionLogicOp.AND).toBe("AND");
+    expect(ConditionOperator.EQUALS).toBe("EQUALS");
+    expect(CONDITION_OPERATOR_META[ConditionOperator.EQUALS].arity).toBe(1);
+    expect(typeof evaluateConditionTreeOnScope).toBe("function");
+    expect(typeof validateConditionTree).toBe("function");
+    // Deprecated 2.x name resolves to the same enum object.
+    expect(ConditionOp).toBe(ConditionOperator);
+    expect(contracts.ConditionOp).toBe(ConditionOperator);
+    expect(contracts.ConditionLogicOp).toBe(ConditionLogicOp);
+  });
+
+  it("exports the workflow contract from the root barrel", () => {
+    expect(WorkflowStateType.INTENT).toBe("INTENT");
+    expect(WorkflowSchemaVersion.V1).toBe(1);
+    expect(parseWorkflowValueShorthand({ $ref: "input.a" })).toEqual({ kind: WorkflowValueKind.REF, ref: "input.a" });
+    expect(typeof validateWorkflowDefinition).toBe("function");
+    expect(typeof contracts.computeWorkflowDefinitionSha256).toBe("function");
+  });
+
+  it("exports the workflow runner protocol from the root barrel", () => {
+    expect(WORKFLOW_RUNNER_BASE_PATH).toBe("/api/workflows");
+    expect(WorkflowRunOutputStatus.WAITING).toBe("WAITING");
+    expect(typeof DcdrWorkflowRunnerClient).toBe("function");
   });
 
   it("keeps IntentProvider stable and non-empty", () => {

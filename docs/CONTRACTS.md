@@ -41,9 +41,6 @@ All fields below belong to `DcdrRegistry`:
   - Purpose: registry-level governed processing processors that apply globally across intents.
   - Type: `ProcessingProcessor[]`.
   - Source type: [../src/processing.contract.ts](../src/processing.contract.ts#L93)
-  - Notes:
-    - intent-specific processors still live on `IntentContract.processors`
-    - global-vs-intent merge/order semantics are runtime-defined
 
 - `credentials` (optional)
   - Purpose: reusable auth material referenced by implementations.
@@ -155,11 +152,12 @@ Intent-processing rule engine:
   - `ProcessingTrailEntry`
   - `ExecutionProcessingReport`
   - `IntentProcessingSemantics`
-  - shared condition tree reuse from conditioned routing:
-    - `ConditionOp`
+  - shared condition tree (see `src/contracts/src/conditions.contract.ts`, 3.0.0):
+    - `ConditionOperator` (3.x compat name: `ConditionOp`)
     - `ConditionLogicOp`
-    - `ImplementationCondition`
-    - `LogicalImplementationCondition`
+    - `ConditionLeaf` (3.x compat name: `ImplementationCondition`)
+    - `ConditionGroup` (3.x compat name: `LogicalImplementationCondition`)
+    - `CONDITION_OPERATOR_META`, `evaluateConditionTreeOnScope`, `validateConditionTree`
 - Scope:
   - governed `INPUT` / `OUTPUT` processing around intent execution
   - not the OpenAI-compatible `/v1` gateway proxy
@@ -205,6 +203,12 @@ Provider/model governance limits:
 - `DcdrProviderLimitEntry` extends that gate with optional per-model overrides via `models[modelId]`.
 - `DcdrProviderLimitsConfig` groups those entries by `IntentProvider`.
 - This contract is intentionally configuration-only: it does not prescribe where live counters are stored or decremented.
+
+## Workflow contract (3.0.0)
+
+`src/contracts/src/workflow.contract.ts` defines the declarative state machine that composes intents, HTTP calls, choices and transforms, its value-mapping DSL (`$ref` / `$fn` / `$template` shorthand parsed into `WorkflowValueNode` trees), a non-throwing validator (`validateWorkflowDefinition`) and the pure engine core shared by every host (`resolveWorkflowValue`, `evaluateLocalWorkflowState`, `resolveWorkflowTransition`, `computeWorkflowDefinitionSha256`). `CHOICE` cases reuse the shared condition tree. Full reference: [WORKFLOWS.md](WORKFLOWS.md). Workflows are not a registry section: the runtime executes intents only, and `WorkflowContract` is the published shape handed to the workflow runner and editors.
+
+`src/contracts/src/workflow.runner.contract.ts` (runner protocol shapes and `DcdrWorkflowRunnerClient`) is an **internal** surface shared by the DCDR control plane and its workflow runner workers; customers do not call it and it is not documented here.
 
 ## IntentContract (deep dive)
 

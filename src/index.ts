@@ -1,6 +1,7 @@
 export * from "./control.contract";
 export * from "./errors.contract";
 export * from "./execution.contract";
+export * from "./conditions.contract";
 export * from "./implementations.contract";
 export * from "./messages.contract";
 export * from "./intent.contract";
@@ -20,6 +21,8 @@ export * from "./capabilities.contract";
 export * from "./subscription.contract";
 export * from "./runtime.client";
 export * from "./utils.contract";
+export * from "./workflow.contract";
+export * from "./workflow.runner.contract";
 export * from "./cache.contract";
 export * from "./storage.credentials.contract";
 export * from "./tracked-call-rating.contract";
