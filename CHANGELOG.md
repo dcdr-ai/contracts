@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260907.3] — 18:44UTC
+
+<!--
+sourceCommit: 6dfaa1be1ec2c8e73e759e6ccaf9b319dd6afb5a
+queuedAtUtc: 
+previousMirroredBuild: 20260907.2 (2026-09-07)
+contractsSubmodule: eca020132643..544b7a520249
+-->
+
+### Changed
+- <kbd>CONTRACTS</kbd> v3.0.1 — `WorkflowRunnerWorkflowDescriptor.version` typed as a string label (masked versions), matching the control plane; patch release, no consumer existed.
+
 ## [20260907.2] — 15:55UTC
 
 <!--

@@ -171,7 +171,8 @@ export interface WorkflowRunnerRunDescriptor {
 export interface WorkflowRunnerWorkflowDescriptor {
   id: string;
   key: string;
-  version: number;
+  /** User-facing version label of the published version (masked text, e.g. `1.4.0`). */
+  version: string;
   /** `computeWorkflowDefinitionSha256` of `definition`. */
   sha256: string;
   /** Tenant registry sha the run executes against (traceability). */
