@@ -205,6 +205,8 @@ export interface WorkflowRunnerResumeState {
   resumePayload?: unknown;
   /** Next step sequence number to use. */
   nextSequence: number;
+  /** Cursor of the `AGENT` loop the run was checkpointed or parked in (v3.1.0). */
+  agent?: WorkflowRunnerAgentCursor;
 }
 
 /** `GET /api/workflows/:runId/input` response. */

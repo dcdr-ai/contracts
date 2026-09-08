@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260908.2] — 10:18UTC
+
+<!--
+sourceCommit: aed109b35e0817c74d466cbbefda3917629d8fa0
+queuedAtUtc: 
+previousMirroredBuild: 20260907.3 (2026-09-07)
+contractsSubmodule: 544b7a520249..22e5331c9a51
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> Workflow runner launchers in `package.json` (`dev:workflow-runner`, `workflow-runner`, `start:workflow-runner`, `test:workflow-runner`) and a runtime-style start-up banner with the effective configuration.
+- <kbd>RUNTIME</kbd> New `dcdr-workflow-runner` process (`src/workflow-runner.ts`, `Dockerfile.workflow-runner`): polls the backend workflow protocol, walks workflow definitions with the shared engine helpers, runs `INTENT` states through the runtime, `HTTP` states through an egress guard, `WAIT` as checkpoint-and-exit and `AGENT` as a bounded, checkpointed loop. Work in progress: see `internal_docs/WORKFLOW_RUNNER.md`.
+- <kbd>CONTRACTS</kbd> v3.1.0 — `WorkflowRunnerResumeState.agent` carries the `AGENT` loop cursor of a resumed run.
+
 ## [20260907.3] — 18:44UTC
 
 <!--

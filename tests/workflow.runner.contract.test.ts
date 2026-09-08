@@ -233,6 +233,34 @@ describe("workflow.runner.contract DcdrWorkflowRunnerClient", () => {
     await expect(client.isCanceled("r1")).rejects.toThrow("expected JSON");
   });
 
+  it("hands the agent cursor back through the resume state (v3.1.0)", async () => {
+    const cursor: WorkflowRunnerAgentCursor = {
+      stateId: "research",
+      iteration: 3,
+      history: [{ iteration: 1, tool: "search", args: { q: "acme" }, output: { hits: 2 } }, { iteration: 2, tool: "ask_human", args: { question: "Proceed?" } }],
+      notes: ["asked the operator"],
+      trackedCalls: 2,
+      startedAt: "2026-09-08T10:00:00.000Z",
+    };
+    const { fetchFn, calls } = makeFetch([
+      {
+        json: {
+          run: { id: "run-1", attempt: 2, deadlineAt: "2026-09-08T12:00:00.000Z" },
+          workflow: { id: "wf-1", key: "SUPPLIER_CHECK", version: "1.2.0", sha256: "a".repeat(64) },
+          definition: { schemaVersion: 1, key: "SUPPLIER_CHECK", name: "x", settings: { timeoutMs: 1000, maxTransitionsPerRun: 5 }, startAt: "research", states: {} },
+          input: {},
+          connections: [],
+          resume: { currentStateId: "research", transitions: 1, states: {}, waitStateId: "research", resumePayload: { approved: true }, nextSequence: 4, agent: cursor },
+        },
+      },
+    ]);
+    const client = new DcdrWorkflowRunnerClient({ baseUrl: "https://backend.test", token: "t", fetchFn });
+    const input = await client.input("run-1");
+    expect(calls).toHaveLength(1);
+    expect(input.resume?.agent).toEqual(cursor);
+    expect(input.resume?.agent?.history[1].output).toBeUndefined();
+  });
+
   it("uses the run status snapshot enum shared with the workflow contract", () => {
     expect(WorkflowStateRunStatus.COMPLETED).toBe("COMPLETED");
   });
