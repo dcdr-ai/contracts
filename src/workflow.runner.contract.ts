@@ -207,6 +207,8 @@ export interface WorkflowRunnerResumeState {
   nextSequence: number;
   /** Cursor of the `AGENT` loop the run was checkpointed or parked in (v3.1.0). */
   agent?: WorkflowRunnerAgentCursor;
+  /** `waitStateId` parked on its approval gate, not on a `WAIT` state: `resumePayload` is the decision (v3.1.1). */
+  approval?: boolean;
 }
 
 /** `GET /api/workflows/:runId/input` response. */
@@ -397,6 +399,8 @@ export interface WorkflowRunnerWaitDetails {
   /** `HUMAN_TASK`: resolved assignees and instructions for the inbox. */
   assignees?: unknown;
   instructions?: unknown;
+  /** The wait is the approval gate of `stateId` (`WorkflowState.approval`, v3.1.1): the answer is a `WorkflowApprovalDecision`. */
+  approval?: boolean;
 }
 
 /** `POST /api/workflows/:runId/output` body. */

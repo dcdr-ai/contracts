@@ -805,6 +805,8 @@ export interface WorkflowState {
   timeoutMs?: number;
   /** Declared output shape; `INTENT` states inherit the intent `outputSchema` when omitted. */
   outputSchema?: Record<string, PromptVariable>;
+  /** Human approval required before the state executes (any type but `END`, v3.1.1). */
+  approval?: WorkflowStateApproval;
 
   intent?: WorkflowIntentStateConfig;
   http?: WorkflowHttpStateConfig;
@@ -817,6 +819,43 @@ export interface WorkflowState {
   subworkflow?: WorkflowSubworkflowStateConfig;
   agent?: WorkflowAgentStateConfig;
 }
+
+/**
+ * Human approval gate evaluated before a state executes (v3.1.1).
+ *
+ * The runner parks the run (`WAITING`, `HUMAN_TASK` semantics, `WorkflowRunnerWaitDetails.approval`)
+ * right before executing the state; the resume payload is the fixed {@link WORKFLOW_APPROVAL_FORM}
+ * (`approved`, optional `comment`). An approval executes the state as usual; a rejection fails the
+ * state with the error code {@link WORKFLOW_APPROVAL_REJECTED_CODE}, so the state `onError` policy
+ * decides what happens next. A timeout applies `onError` like any other wait.
+ */
+export interface WorkflowStateApproval {
+  /** Inbox routing hint (group key). */
+  assignmentGroupKey?: string;
+  /** Mapping resolving to approver identifiers (user ids or emails). */
+  assignees?: WorkflowValueNode;
+  /** Mapping resolving to the text shown to the approver. */
+  instructions?: WorkflowValueNode;
+  /** Notify the requester when the gate opens. */
+  notifyRequester?: boolean;
+  /** Maximum wait for the decision before `onError` applies. */
+  timeoutMs: number;
+}
+
+/** Payload of an approval decision (`WorkflowRunnerResumeState.resumePayload` of an approval gate). */
+export interface WorkflowApprovalDecision {
+  approved: boolean;
+  comment?: string;
+}
+
+/** Fixed form of an approval decision (what the resume payload is validated against). */
+export const WORKFLOW_APPROVAL_FORM: Record<string, PromptVariable> = {
+  approved: { type: PromptVariableType.BOOLEAN, required: true, description: "Approve the state execution." },
+  comment: { type: PromptVariableType.STRING, required: false, description: "Optional note of the approver." },
+};
+
+/** Error code of a state whose approval gate was rejected. */
+export const WORKFLOW_APPROVAL_REJECTED_CODE = "APPROVAL_REJECTED";
 
 /** Config block field name per state type. */
 export const WORKFLOW_STATE_CONFIG_FIELDS: Record<WorkflowStateType, keyof WorkflowState> = {
@@ -2131,6 +2170,13 @@ function parseStatesShorthand(states: Record<string, unknown>): Record<string, W
         correlation: parseRecord(raw.wait.correlation),
       };
     }
+    if (isPlainObject(raw.approval)) {
+      state.approval = {
+        ...raw.approval,
+        assignees: raw.approval.assignees === undefined ? undefined : parseWorkflowValueShorthand(raw.approval.assignees),
+        instructions: raw.approval.instructions === undefined ? undefined : parseWorkflowValueShorthand(raw.approval.instructions),
+      };
+    }
     if (isPlainObject(raw.foreach)) {
       state.foreach = {
         ...raw.foreach,
@@ -2206,6 +2252,13 @@ function formatStatesShorthand(states: Record<string, WorkflowState>): Record<st
         assignees: state.wait.assignees ? formatWorkflowValueShorthand(state.wait.assignees) : undefined,
         instructions: state.wait.instructions ? formatWorkflowValueShorthand(state.wait.instructions) : undefined,
         correlation: formatRecord(state.wait.correlation),
+      };
+    }
+    if (state.approval) {
+      raw.approval = {
+        ...state.approval,
+        assignees: state.approval.assignees ? formatWorkflowValueShorthand(state.approval.assignees) : undefined,
+        instructions: state.approval.instructions ? formatWorkflowValueShorthand(state.approval.instructions) : undefined,
       };
     }
     if (state.foreach) {
@@ -2803,6 +2856,8 @@ function validateGraphScope(
       acc,
     };
 
+    if (state.approval !== undefined) validateApprovalGate(state, `${statePath}.approval`, valueArgs);
+
     switch (state.type) {
       case WorkflowStateType.INTENT:
         if (state.intent) validateIntentState(state.intent, `${statePath}.intent`, valueArgs);
@@ -3247,6 +3302,32 @@ function validateWaitState(config: WorkflowWaitStateConfig, path: string, acc: G
   if (config.kind === WorkflowWaitKind.HUMAN_TASK && !isPlainObject(config.form)) {
     push(`${path}.form`, WorkflowValidationIssueCode.STATE_CONFIG_MISSING, "HUMAN_TASK requires form.");
   }
+}
+
+/**
+ * Validates the approval gate of a state: not on `END` (nothing to gate), a positive timeout, an
+ * optional group key and well-formed assignee / instruction mappings.
+ */
+function validateApprovalGate(state: WorkflowState, path: string, args: ValueValidationArgs): void {
+  const push = (p: string, code: WorkflowValidationIssueCode, message: string): void => {
+    args.acc.issues.push({ path: p, code, message });
+  };
+  const approval = state.approval;
+  if (!isPlainObject(approval)) {
+    push(path, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, "approval must be an object.");
+    return;
+  }
+  if (state.type === WorkflowStateType.END) {
+    push(path, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, "END states cannot require approval.");
+  }
+  if (!isPositiveInteger(approval.timeoutMs)) {
+    push(`${path}.timeoutMs`, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, "approval requires timeoutMs >= 1.");
+  }
+  if (approval.assignmentGroupKey !== undefined && (typeof approval.assignmentGroupKey !== "string" || !approval.assignmentGroupKey.trim())) {
+    push(`${path}.assignmentGroupKey`, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, "assignmentGroupKey must be a non-empty string.");
+  }
+  if (approval.assignees !== undefined) validateValueNode(approval.assignees, `${path}.assignees`, args);
+  if (approval.instructions !== undefined) validateValueNode(approval.instructions, `${path}.instructions`, args);
 }
 
 /**

@@ -42,7 +42,11 @@ One `WorkflowState` shape discriminated by `type`, with exactly one config block
 | `SUBWORKFLOW` | `subworkflow { workflowKey, version?, input }` | |
 | `AGENT` | `agent { plannerIntent, goal, tools[], maxIterations, maxTrackedCalls?, maxToolErrors?, maxDurationMs?, maxEstimatedCost?, historyWindow?, summarizerIntent?, finishOnBound?, context? }` | bounded plan-act loop over a closed tool set; output `WorkflowAgentOutput` |
 
-Common fields: `next` (required unless `CHOICE` / `END`), `onError { action: FAIL_RUN | CONTINUE | GOTO, next? }`, `retry { maxAttempts, backoff, backoffMs, backoffCapMs?, safe? }`, `timeoutMs`, `outputSchema`, `display`.
+Common fields: `next` (required unless `CHOICE` / `END`), `onError { action: FAIL_RUN | CONTINUE | GOTO, next? }`, `retry { maxAttempts, backoff, backoffMs, backoffCapMs?, safe? }`, `timeoutMs`, `outputSchema`, `display`, `approval`.
+
+### Approval gate
+
+Any state but `END` may carry `approval { timeoutMs, assignmentGroupKey?, assignees?, instructions?, notifyRequester? }`. The run parks right before the state executes (a `WAITING` step with `HUMAN_TASK` semantics and `approval: true` in the runner wait details); the resume payload is the fixed `WORKFLOW_APPROVAL_FORM` (`approved`, optional `comment`). An approval executes the state normally; a rejection fails it with `WORKFLOW_APPROVAL_REJECTED_CODE` so the state `onError` policy decides; a timeout applies `onError` like any other wait. Approvals are not a state type: a gated state keeps its own transitions and output.
 
 `PARALLEL`, `FOREACH`, `WAIT`, `SUBWORKFLOW` and `AGENT` are advanced states (`WORKFLOW_ADVANCED_STATE_TYPES`), gated by `WorkflowValidationCaps.allowAdvancedStates`.
 

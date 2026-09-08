@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260908.3] — 18:46UTC
+
+<!--
+sourceCommit: 94396b837b95c4ad8b051eece1255c07ff7b5212
+queuedAtUtc: 
+previousMirroredBuild: 20260908.2 (2026-09-08)
+contractsSubmodule: 22e5331c9a51..3d176c6c3bc0
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v3.1.1 — `WorkflowState.approval`: optional human approval gate on any state but `END` (`WorkflowStateApproval`, fixed `WORKFLOW_APPROVAL_FORM` decision, `WORKFLOW_APPROVAL_REJECTED_CODE`); `WorkflowRunnerWaitDetails.approval` / `WorkflowRunnerResumeState.approval` flag the parked wait as a gate. Validator, shorthand and `docs/WORKFLOWS.md` updated.
+- <kbd>RUNTIME</kbd> Workflow runner: approval gates. A state carrying `approval` parks the run before executing (`WAITING`, `HUMAN_TASK` semantics, step `details.approval = true`); on resume an approved decision executes the state as usual and a rejected one fails it with `APPROVAL_REJECTED` so the state `onError` policy applies.
+
 ## [20260908.2] — 10:18UTC
 
 <!--
