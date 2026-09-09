@@ -4,6 +4,23 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260909.3] — 21:32UTC
+
+<!--
+sourceCommit: 6cacf5c61a51430135abdfc18bbe463111db03fa
+queuedAtUtc: 
+previousMirroredBuild: 20260909.2 (2026-09-09)
+contractsSubmodule: de11bb23ee66..f1c5090acd36
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v3.3.1 — `ARRAY_OBJECT_PROPERTIES_REQUIRED` also fires when `properties` is an empty record. An `array<object>` declaring `properties: {}` supplies no item shape, yet it passed validation and then threw in the provider path; it now fails at the editor like a missing one.
+- <kbd>RUNTIME</kbd> **Schema conformance suite** `tests/providers/schema.type-conformance.test.ts`: 60 shapes — every prompt variable type bare, shorthand, optional, bounded, inside an array, inside an object, three levels deep, and malformed — measured through both `@dcdr/contracts` and the provider path. It pins two invariants that had never been checked: **nothing the platform calls valid may fail to build for a provider**, and **nothing the platform rejects may build anyway**. It also records which valid shapes survive strict Structured Outputs, which is the table the schema editor's free-form warning is aligned against.
+- <kbd>RUNTIME</kbd> `tests/providers/schema.output-type-conformance.test.ts`: the per-type output matrix (`strict` / open object / `anyOf`) that the conformance invariants build on.
+- <kbd>RUNTIME</kbd> Provider E2E extended with `any`, `array<any>` and `openInput` shapes. Measured 2026-09-09: `array<any>` in an output schema makes **Anthropic refuse the request** (`additionalProperties: true is not supported`) while Grok, OpenAI and Gemini accept it; an **open input schema costs nothing on all four**, since an input schema never reaches a provider.
+### Fixed
+- <kbd>RUNTIME</kbd> Shorthand `"object"` no longer disagrees with `{ type: "object" }`. The provider path and the registry check validated with `strictShorthandObject: true` while the control plane uses `false`, so a schema a tenant could save was rejected at registry load and threw on every execution. Both now accept it and treat it as the open object it is; shorthand `"array"` stays rejected, because with no `itemsType` it is genuinely unusable and the platform validator rejects it too.
+
 ## [20260909.2] — 20:25UTC
 
 <!--

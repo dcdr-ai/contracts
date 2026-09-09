@@ -612,6 +612,15 @@ export function validatePromptVariableSchemaRecord(
           });
           return;
         }
+        // An empty record declares no item shape, so it fails the same requirement as a missing
+        // one: the item would compile to an object with no fields, which no provider can enforce.
+        if (Object.keys(propsRaw).length === 0) {
+          push({
+            path: `${path}.properties`,
+            code: PromptVariableSchemaIssueCode.ARRAY_OBJECT_PROPERTIES_REQUIRED,
+          });
+          return;
+        }
 
         for (const [propName, propDef] of Object.entries(propsRaw)) {
           if (!isValidVarName(propName)) {

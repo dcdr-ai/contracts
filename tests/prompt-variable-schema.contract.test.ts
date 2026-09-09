@@ -191,6 +191,27 @@ describe("prompt-variable-schema.contract", () => {
     ).toBe(true);
   });
 
+  it("fails array<object> when properties is an empty record", () => {
+    const schema: Record<string, unknown> = {
+      incidents: {
+        type: "array",
+        required: true,
+        itemsType: "object",
+        properties: {},
+      },
+    };
+
+    const res = validatePromptVariableSchemaRecord(schema);
+    expect(res.valid).toBe(false);
+    expect(
+      res.issues.some(
+        (i) =>
+          i.code ===
+          PromptVariableSchemaIssueCode.ARRAY_OBJECT_PROPERTIES_REQUIRED,
+      ),
+    ).toBe(true);
+  });
+
   it("canonicalizes casing and trims enum values", () => {
     const schema: Record<string, unknown> = {
       urgency: {
