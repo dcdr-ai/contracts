@@ -4,6 +4,23 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260909.1] — 14:19UTC
+
+<!--
+sourceCommit: 27738c260bf2bfa61001308e7bba6365e6e440b6
+queuedAtUtc: 
+previousMirroredBuild: 20260908.3 (2026-09-08)
+contractsSubmodule: 3d176c6c3bc0..63ddbcc0dfd4
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v3.2.0 — Connection protocols. A workflow connection declares the transport it speaks (`WorkflowConnectionProtocol`: `HTTP`, `MCP`, `SMTP`, `SFTP`) and carries one self-contained settings block per transport (`WorkflowConnectionSettings` with an optional block per protocol, discriminated like `WorkflowState`, plus `WORKFLOW_CONNECTION_SETTINGS_FIELDS`). Each block declares everything a runner needs to operate the destination, including `allowedHosts` and `timeoutMs`, so the control plane interpolates its own columns into it and the runner never joins anything. `WORKFLOW_CONNECTION_IMPLEMENTED_PROTOCOLS` lists what actually executes today (`HTTP`), so an editor never offers a dead transport. Plain `FTP` is deliberately absent: it moves credentials and payloads in clear text.
+- <kbd>CONTRACTS</kbd> v3.2.0 — `WorkflowAgentToolKind.MCP`: an `AGENT` may expose every tool an `MCP` connection advertises, discovered at run time and optionally narrowed by name. One entry expands into as many catalog entries as the server exposes, which is why it cannot be enumerated when the workflow is authored.
+- <kbd>CONTRACTS</kbd> v3.2.0 — `computeDominators` is exported. The definition editor can now compute which `states.<id>.output` references are guaranteed at a given state, exactly the way the validator decides `REF_STATE_NOT_DOMINATING`, instead of duplicating the dataflow and drifting from it.
+- <kbd>RUNTIME</kbd> Workflow runner: `httpSettingsOf` in the egress guard refuses an `HTTP` state pointed at a connection that does not speak HTTP, with the protocol in the message, instead of failing further down as a malformed URL. `allowedHostsOf` now derives the fallback host from whichever settings block the connection carries.
+### Changed
+- <kbd>CONTRACTS</kbd> **BREAKING (v3.2.0)** — `WorkflowRunnerConnectionDescriptor` is protocol-shaped: `baseUrl`, `timeoutMs`, `maxResponseBytes`, `allowedHosts` and `allowInsecure` move into `settings.http`, and the descriptor becomes `{ key, protocol, settings }`. Authorized as a breaking change because no runner of 3.1.x is deployed; the runner and its fixtures were migrated in the same change.
+
 ## [20260908.3] — 18:46UTC
 
 <!--

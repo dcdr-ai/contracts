@@ -1,5 +1,7 @@
 import { HttpRequestParams } from "./http.contract";
 import {
+  WorkflowConnectionProtocol,
+  WorkflowConnectionSettings,
   WorkflowDefinition,
   WorkflowStateError,
   WorkflowStateSnapshot,
@@ -179,16 +181,18 @@ export interface WorkflowRunnerWorkflowDescriptor {
   registrySha256?: string;
 }
 
-/** Connection descriptor without secrets; the runner fetches secrets per run through `connection`. */
+/**
+ * Connection descriptor without secrets; the runner fetches secrets per run through `connection`.
+ *
+ * Self-contained by design: the control plane interpolates its own columns (`allowedHosts`, whether
+ * credentials exist) into the settings block, so the runner reads one object and never joins
+ * anything. Exactly one block of `settings` is present, the one `protocol` names
+ * (`WORKFLOW_CONNECTION_SETTINGS_FIELDS`).
+ */
 export interface WorkflowRunnerConnectionDescriptor {
   key: string;
-  baseUrl: string;
-  timeoutMs: number;
-  maxResponseBytes: number;
-  /** Hosts the egress guard accepts for this connection (base URL host by default). */
-  allowedHosts: string[];
-  /** Allow plain `http://` (self-hosted only). */
-  allowInsecure?: boolean;
+  protocol: WorkflowConnectionProtocol;
+  settings: WorkflowConnectionSettings;
 }
 
 /** Where a resumed run continues from (rebuilt by the backend from the stored checkpoints). */

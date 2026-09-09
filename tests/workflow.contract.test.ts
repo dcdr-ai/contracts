@@ -10,6 +10,8 @@ import {
   DEFAULT_WORKFLOW_VALIDATION_CAPS,
   evaluateLocalWorkflowState,
   formatWorkflowDefinitionShorthand,
+  WORKFLOW_APPROVAL_FORM,
+  WORKFLOW_APPROVAL_REJECTED_CODE,
   formatWorkflowValueShorthand,
   inferWorkflowStateOutputSchema,
   isHostExecutedWorkflowState,
@@ -567,6 +569,67 @@ describe("workflow.contract choices and transitions", () => {
     const ctx = makeCtx({}, { start: { status: WorkflowStateRunStatus.COMPLETED, output: 42 } });
     const end = resolveWorkflowTransition(def, "done", evaluateLocalWorkflowState(def.states.done, ctx), ctx);
     expect(end.runOutput).toBe(42);
+  });
+});
+
+describe("workflow.contract approval gates (v3.1.1)", () => {
+  /** Minimal valid definition with one gated state. */
+  const gated = (approval: unknown, type: WorkflowStateType = WorkflowStateType.TRANSFORM): WorkflowDefinition => ({
+    schemaVersion: WorkflowSchemaVersion.V1,
+    key: "GATE",
+    name: "Gate",
+    settings: { timeoutMs: 60_000, maxTransitionsPerRun: 10 },
+    startAt: "step",
+    states: {
+      step: {
+        type,
+        ...(type === WorkflowStateType.END ? {} : { next: "done" }),
+        ...(type === WorkflowStateType.TRANSFORM ? { transform: { output: { kind: WorkflowValueKind.LITERAL, literal: 1 } } } : {}),
+        ...(type === WorkflowStateType.END ? { end: { outcome: WorkflowEndOutcome.SUCCEED } } : {}),
+        approval: approval as never,
+      },
+      done: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+    },
+  });
+
+  it("accepts a gate with a timeout, a group and resolved mappings", () => {
+    const result = validateWorkflowDefinition(gated({
+      timeoutMs: 3_600_000,
+      assignmentGroupKey: "ops",
+      notifyRequester: true,
+      assignees: { kind: WorkflowValueKind.REF, ref: "input.approvers", default: null },
+      instructions: { kind: WorkflowValueKind.TEMPLATE, template: "Approve {{input.subject}}" },
+    }));
+    expect(result.valid).toBe(true);
+  });
+
+  it("requires a positive timeout, a usable group key and an object", () => {
+    expect(validateWorkflowDefinition(gated({ timeoutMs: 0 })).issues.map((i) => i.path)).toContain("states.step.approval.timeoutMs");
+    expect(validateWorkflowDefinition(gated({ timeoutMs: 1_000, assignmentGroupKey: "  " })).issues.map((i) => i.path)).toContain("states.step.approval.assignmentGroupKey");
+    expect(validateWorkflowDefinition(gated("nope")).issues.map((i) => i.path)).toContain("states.step.approval");
+  });
+
+  it("refuses a gate on an END state: there is nothing left to approve", () => {
+    const issues = validateWorkflowDefinition(gated({ timeoutMs: 1_000 }, WorkflowStateType.END)).issues;
+    expect(issues.some((i) => i.path === "states.step.approval" && i.code === WorkflowValidationIssueCode.STATE_CONFIG_INVALID)).toBe(true);
+  });
+
+  it("validates the mappings of the gate like any other value", () => {
+    const issues = validateWorkflowDefinition(gated({ timeoutMs: 1_000, instructions: { kind: WorkflowValueKind.REF, ref: "nope.field" } })).issues;
+    expect(issues.some((i) => i.path.startsWith("states.step.approval.instructions") && i.code === WorkflowValidationIssueCode.REF_INVALID)).toBe(true);
+  });
+
+  it("survives the shorthand round trip with its mappings", () => {
+    const definition = gated({ timeoutMs: 1_000, assignees: { kind: WorkflowValueKind.LITERAL, literal: "ops@example.org" } });
+    const round = parseWorkflowDefinitionShorthand(formatWorkflowDefinitionShorthand(definition));
+    expect(round.states.step.approval).toEqual(definition.states.step.approval);
+  });
+
+  it("publishes the decision form and the rejection code", () => {
+    expect(Object.keys(WORKFLOW_APPROVAL_FORM)).toEqual(["approved", "comment"]);
+    expect(WORKFLOW_APPROVAL_FORM.approved.required).toBe(true);
+    expect(WORKFLOW_APPROVAL_FORM.approved.type).toBe(PromptVariableType.BOOLEAN);
+    expect(WORKFLOW_APPROVAL_REJECTED_CODE).toBe("APPROVAL_REJECTED");
   });
 });
 

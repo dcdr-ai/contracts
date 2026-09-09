@@ -70,6 +70,12 @@ export enum WorkflowAgentToolKind {
   INTENT = "INTENT",
   /** A state of the same scope (`INTENT`, `HTTP`, `TRANSFORM` or `SUBWORKFLOW`) executed as a tool; its mappings read `agent.args.*`. */
   STATE = "STATE",
+  /**
+   * Every tool an `MCP` connection advertises, discovered at run time and optionally narrowed by
+   * name. One entry expands into as many catalog entries as the server exposes, which is why it
+   * cannot be enumerated when the workflow is authored.
+   */
+  MCP = "MCP",
 }
 
 /** Decision the planner intent must return on every iteration. */
@@ -129,6 +135,118 @@ export enum WorkflowRetryBackoff {
   FIXED = "FIXED",
   EXPONENTIAL = "EXPONENTIAL",
 }
+
+/**
+ * Transport a workflow connection speaks.
+ *
+ * A connection is a destination the tenant approved, with its credentials, so the transport is a
+ * property of the destination and everything specific to it lives in its own settings block. Adding
+ * a transport is then a settings shape plus a runner, never another column or another entity.
+ *
+ * Notes
+ * - Values are persisted by the control plane; never rename them.
+ * - Declared ahead of the implementations on purpose; `WORKFLOW_CONNECTION_IMPLEMENTED_PROTOCOLS`
+ *   says which ones actually execute today, so an editor never offers a dead transport.
+ * - Plain `FTP` is deliberately absent: it moves credentials and payloads in clear text, and real
+ *   deployments use `SFTP`.
+ */
+export enum WorkflowConnectionProtocol {
+  /** Outbound HTTP(S); what `HTTP` states call. */
+  HTTP = "HTTP",
+  /** Model Context Protocol server: a discovered catalog of tools an `AGENT` may call. */
+  MCP = "MCP",
+  /** Mail relay for outbound messages. */
+  SMTP = "SMTP",
+  /** File exchange over SSH. */
+  SFTP = "SFTP",
+}
+
+/** Protocols with a runner implementation behind them. */
+export const WORKFLOW_CONNECTION_IMPLEMENTED_PROTOCOLS: WorkflowConnectionProtocol[] = [
+  WorkflowConnectionProtocol.HTTP,
+];
+
+/**
+ * What every connection carries whatever its transport.
+ *
+ * The control plane stores `allowedHosts` and the credentials reference as its own columns and
+ * interpolates them into the settings block it hands the runner, so a runner receives one
+ * self-contained object and never has to join anything.
+ */
+export interface WorkflowConnectionCommonSettings {
+  /**
+   * Destinations the egress guard accepts. The tenant-approved boundary of this connection; the
+   * control plane defaults it from the endpoint host when the tenant declares none.
+   */
+  allowedHosts: string[];
+  /** Wall-clock budget of a single operation. */
+  timeoutMs: number;
+  /**
+   * Whether this connection needs secrets. The runner fetches them per run through
+   * `GET /api/workflows/:runId/connection/:key`; they never travel in the descriptor.
+   */
+  requiresCredentials?: boolean;
+}
+
+/** `HTTP` connection settings. */
+export interface WorkflowHttpConnectionSettings extends WorkflowConnectionCommonSettings {
+  /** Absolute base URL every `HTTP` state path is resolved against. */
+  baseUrl: string;
+  maxResponseBytes: number;
+  /** Allow plain `http://` (self-hosted deployments only; ignored in cloud). */
+  allowInsecure?: boolean;
+}
+
+/** `MCP` connection settings. */
+export interface WorkflowMcpConnectionSettings extends WorkflowConnectionCommonSettings {
+  /** Absolute URL of the MCP server endpoint. */
+  serverUrl: string;
+  maxResponseBytes: number;
+  /**
+   * Tools the tenant approves from this server, by name. Empty or absent means every tool the
+   * server advertises; an `AGENT` may narrow this further, never widen it.
+   */
+  allowedTools?: string[];
+}
+
+/** `SMTP` connection settings. */
+export interface WorkflowSmtpConnectionSettings extends WorkflowConnectionCommonSettings {
+  host: string;
+  port: number;
+  /** Implicit TLS (typically `465`); `false` still upgrades through STARTTLS when offered. */
+  secure: boolean;
+  /** Envelope sender used when a message carries none. */
+  fromAddress: string;
+}
+
+/** `SFTP` connection settings. */
+export interface WorkflowSftpConnectionSettings extends WorkflowConnectionCommonSettings {
+  host: string;
+  port: number;
+  /** Directory every path is resolved against, so a workflow stays inside its own tree. */
+  basePath: string;
+}
+
+/**
+ * Settings of a connection: exactly one block, matching its `protocol`.
+ *
+ * Shaped like `WorkflowState` (one optional block per type) rather than as a union, so it follows
+ * the same discrimination rule the rest of this contract uses.
+ */
+export interface WorkflowConnectionSettings {
+  http?: WorkflowHttpConnectionSettings;
+  mcp?: WorkflowMcpConnectionSettings;
+  smtp?: WorkflowSmtpConnectionSettings;
+  sftp?: WorkflowSftpConnectionSettings;
+}
+
+/** Settings block a protocol must fill, mirroring `WORKFLOW_STATE_CONFIG_FIELDS`. */
+export const WORKFLOW_CONNECTION_SETTINGS_FIELDS: Record<WorkflowConnectionProtocol, keyof WorkflowConnectionSettings> = {
+  [WorkflowConnectionProtocol.HTTP]: "http",
+  [WorkflowConnectionProtocol.MCP]: "mcp",
+  [WorkflowConnectionProtocol.SMTP]: "smtp",
+  [WorkflowConnectionProtocol.SFTP]: "sftp",
+};
 
 /** HTTP methods an `HTTP` state may use. */
 export enum WorkflowHttpMethod {
@@ -2658,7 +2776,7 @@ function successorsOf(state: WorkflowState): string[] {
  * Computes, for every state, the set of states that appear on every path from `startAt` to it
  * (dominators, iterative dataflow). Unreachable states get an empty set.
  */
-function computeDominators(states: Record<string, WorkflowState>, startAt: string): Map<string, Set<string>> {
+export function computeDominators(states: Record<string, WorkflowState>, startAt: string): Map<string, Set<string>> {
   const ids = Object.keys(states);
   const preds = new Map<string, Set<string>>();
   for (const id of ids) preds.set(id, new Set());
