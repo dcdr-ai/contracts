@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260909.2] — 20:25UTC
+
+<!--
+sourceCommit: 0d279571b6a507d6acdfebcf426395343b458ee1
+queuedAtUtc: 
+previousMirroredBuild: 20260909.1 (2026-09-09)
+contractsSubmodule: 63ddbcc0dfd4..de11bb23ee66
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v3.3.0 — `WorkflowAgentDecisionPayload`: what the `AGENT` planner emits, separate from `WorkflowAgentDecision`, which is documented as the parsed form the host works with. The open parts of a decision (`args`, `result`) travel as JSON strings (`argsJson`, `resultJson`), so the decision schema is made of primitives and can be enforced structurally by every provider.
+- <kbd>RUNTIME</kbd> Workflow runner: `parseAgentDecision` accepts the portable wire shape and parses `argsJson` / `resultJson` back into `args` / `result`; a plain object is still accepted, so a tenant clone on the older prompt keeps working, and an unparseable string names the field in the error.
+- <kbd>RUNTIME</kbd> New provider E2E `tests/e2e/providers/freeform.schema.e2e.test.ts`: measures strict, open-object and planner-shaped output schemas against OpenAI, Grok, Anthropic and Gemini, and prints the matrix. **Why this was needed:** the freeform fallback (`isFreeformJsonPromptVariable` -> JSON mode) exists only in the OpenAI adapter, so the behaviour of the other three was unknown. Measured 2026-09-09: with an open object in the output schema **Anthropic refuses the request** (`additionalProperties: true is not supported`) and **OpenAI answers 200 with the field silently empty**; Grok and Gemini return it intact. With the primitives-only planner shape all four answer 200 and honour the schema.
+
 ## [20260909.1] — 14:19UTC
 
 <!--

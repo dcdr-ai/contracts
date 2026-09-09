@@ -59,7 +59,9 @@ import {
   WORKFLOW_AGENT_TOOL_STATE_TYPES,
   WORKFLOW_ADVANCED_STATE_TYPES,
   workflowUsesAdvancedStates,
+  WorkflowAgentAction,
 } from "../src/workflow.contract";
+import type { WorkflowAgentDecision, WorkflowAgentDecisionPayload } from "../src/workflow.contract";
 
 /** Shape of the golden fixture file. */
 interface GoldenCase {
@@ -1250,4 +1252,33 @@ describe("workflow.contract golden replay", () => {
       expect(run.runOutput).toEqual(goldenCase.expected.runOutput);
     });
   }
+});
+
+describe("workflow.contract agent decision payload (v3.3.0)", () => {
+  it("separates what the planner puts on the wire from what the host works with", () => {
+    // The wire shape is primitives only. An output schema carrying an open object is not portable:
+    // measured against real providers in 2026-09, Anthropic refuses the request outright
+    // (`additionalProperties: true` is not supported) and OpenAI answers 200 with the field empty.
+    const payload: WorkflowAgentDecisionPayload = {
+      action: WorkflowAgentAction.CALL_TOOL,
+      tool: "search",
+      argsJson: JSON.stringify({ q: "acme" }),
+      rationale: "probe",
+    };
+    for (const value of Object.values(payload)) {
+      expect(["string", "number", "boolean"]).toContain(typeof value);
+    }
+
+    // The parsed form keeps the structured fields, so hosts and mappings are unchanged.
+    const decision: WorkflowAgentDecision = {
+      action: payload.action,
+      tool: payload.tool,
+      args: JSON.parse(String(payload.argsJson)),
+      rationale: payload.rationale,
+    };
+    expect(decision.args).toEqual({ q: "acme" });
+
+    const finish: WorkflowAgentDecisionPayload = { action: WorkflowAgentAction.FINISH, resultJson: JSON.stringify({ ok: true }) };
+    expect(JSON.parse(String(finish.resultJson))).toEqual({ ok: true });
+  });
 });

@@ -856,7 +856,36 @@ export interface WorkflowEvidence {
   iteration?: number;
 }
 
-/** What the planner intent returns on each iteration. */
+/**
+ * What the planner intent puts on the wire each iteration.
+ *
+ * Separate from {@link WorkflowAgentDecision} on purpose: `args` and `result` are open by nature, and
+ * an output schema carrying an open object is not portable across providers. Measured on real
+ * providers in 2026-09: Anthropic refuses the request (`additionalProperties: true` is not
+ * supported), OpenAI answers `200` with the field silently empty, and only Grok and Gemini return it
+ * intact. Carrying them as JSON strings keeps the decision schema made of primitives, so every
+ * provider can enforce it structurally; the host parses them back into the typed decision.
+ */
+export interface WorkflowAgentDecisionPayload {
+  action: WorkflowAgentAction;
+  /** `CALL_TOOL`: tool id from the catalog. */
+  tool?: string;
+  /** `CALL_TOOL`: arguments as a JSON object string, matching the tool `inputSchema`. */
+  argsJson?: string;
+  /** `FINISH`: final result as a JSON string. */
+  resultJson?: string;
+  /** Optional short explanation recorded in the trace. */
+  rationale?: string;
+  /** Scratchpad note persisted with the iteration and exposed as `agent.notes[]`. */
+  notes?: string;
+  /** Evidence declared by the planner (citations, sources). */
+  evidence?: WorkflowEvidence[];
+}
+
+/**
+ * The planner decision as the host works with it, once
+ * {@link WorkflowAgentDecisionPayload} has been parsed.
+ */
 export interface WorkflowAgentDecision {
   action: WorkflowAgentAction;
   /** `CALL_TOOL`: tool id from the catalog. */
