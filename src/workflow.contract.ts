@@ -53,6 +53,8 @@ export enum WorkflowStateType {
   SUBWORKFLOW = "SUBWORKFLOW",
   /** Bounded agentic loop: a planner intent picks tools from a closed set until it finishes or a bound is hit. */
   AGENT = "AGENT",
+  /** Runs one capability of the published catalog with a typed argument form (see `WORKFLOW_CAPABILITIES`). */
+  TOOL = "TOOL",
 }
 
 /** States that require the advanced-steps capability. */
@@ -118,6 +120,12 @@ export const WORKFLOW_AGENT_TOOL_STATE_TYPES: readonly WorkflowStateType[] = [
   WorkflowStateType.SUBWORKFLOW,
   /** Lets the planner ask a human or wait for an event; the run parks until it is resumed. */
   WorkflowStateType.WAIT,
+  /**
+   * A published capability. This is what keeps the catalog out of the state-type list: a capability
+   * is written once as a `TOOL` state and is reachable both from a deterministic flow and from a
+   * planner, through the `STATE` tool kind that already exists.
+   */
+  WorkflowStateType.TOOL,
 ];
 
 /** What a host does when a state fails after its retries. */
@@ -247,6 +255,132 @@ export const WORKFLOW_CONNECTION_SETTINGS_FIELDS: Record<WorkflowConnectionProto
   [WorkflowConnectionProtocol.SMTP]: "smtp",
   [WorkflowConnectionProtocol.SFTP]: "sftp",
 };
+
+/**
+ * Who holds the credentials a capability runs with.
+ *
+ * The distinction is what decides whether a `TOOL` state needs a `connection`, and it is a real
+ * split rather than a convenience: a platform-brokered capability runs on our account and is billed
+ * per call, while a connection-brokered one reaches the tenant's own server with the tenant's own
+ * secrets and costs us nothing.
+ */
+export enum WorkflowCapabilityBroker {
+  /** We run it with our own credentials and bill the call. The tenant configures nothing. */
+  PLATFORM = "PLATFORM",
+  /** The tenant supplies a connection of the capability's protocol. */
+  CONNECTION = "CONNECTION",
+}
+
+/**
+ * One capability of the published catalog.
+ *
+ * A capability is a *typed* action ("search the web", "send an email"), as opposed to the `HTTP`
+ * state, which is the untyped escape hatch where the tenant maps a URL and a body by hand. That is
+ * the whole point: the tenant fills a form we designed, and a planner gets an `inputSchema` it can
+ * satisfy without knowing anything about transports.
+ *
+ * Capabilities are versioned independently of the package: `version` moves when the argument or
+ * result shape changes, so a workflow pinned to an older revision keeps validating.
+ */
+export interface WorkflowCapability {
+  /** Stable dotted id, e.g. `web.search`. Never reused for a different meaning. */
+  id: string;
+  /** Revision of this capability's own contract, independent of the package version. */
+  version: string;
+  /** One line, in English. A planner reads this to decide whether the tool fits. */
+  description: string;
+  broker: WorkflowCapabilityBroker;
+  /** Transport the connection must speak; set only for `CONNECTION` capabilities. */
+  protocol?: WorkflowConnectionProtocol;
+  /** Arguments the tenant form (or the planner) must produce. */
+  inputSchema: Record<string, PromptVariable>;
+  /** Shape of the result, so downstream states can reference it without running the flow. */
+  outputSchema: Record<string, PromptVariable>;
+}
+
+/**
+ * The catalog we publish.
+ *
+ * Deliberately small: every entry is a contract we have to keep working for every tenant that wired
+ * it into a workflow, so a capability is added when it earns its place, not because a provider
+ * happens to expose an endpoint.
+ */
+export const WORKFLOW_CAPABILITIES: readonly WorkflowCapability[] = [
+  {
+    id: "web.search",
+    version: "1.0.0",
+    description: "Searches the public web and returns ranked results with title, url and snippet.",
+    broker: WorkflowCapabilityBroker.PLATFORM,
+    inputSchema: {
+      query: new PromptVariable(PromptVariableType.STRING, true, "What to search for, as a person would type it."),
+      maxResults: new PromptVariable(PromptVariableType.INTEGER, false, "How many results to return (1-10, default 5).", undefined, undefined, undefined, undefined, 1, 10),
+    },
+    outputSchema: {
+      results: new PromptVariable(PromptVariableType.ARRAY, true, "Ranked results, best first.", PromptVariableType.OBJECT, {
+        title: new PromptVariable(PromptVariableType.STRING, true, "Result title."),
+        url: new PromptVariable(PromptVariableType.STRING, true, "Absolute result URL."),
+        snippet: new PromptVariable(PromptVariableType.STRING, false, "Extract of the page around the match."),
+      }),
+    },
+  },
+  {
+    id: "mail.send",
+    version: "1.0.0",
+    description: "Sends an email through the tenant's own SMTP server.",
+    broker: WorkflowCapabilityBroker.CONNECTION,
+    protocol: WorkflowConnectionProtocol.SMTP,
+    inputSchema: {
+      to: new PromptVariable(PromptVariableType.ARRAY, true, "Recipient addresses.", PromptVariableType.STRING),
+      subject: new PromptVariable(PromptVariableType.STRING, true, "Subject line."),
+      body: new PromptVariable(PromptVariableType.STRING, true, "Message body."),
+      html: new PromptVariable(PromptVariableType.BOOLEAN, false, "Whether the body is HTML rather than plain text."),
+      cc: new PromptVariable(PromptVariableType.ARRAY, false, "Addresses in copy.", PromptVariableType.STRING),
+    },
+    outputSchema: {
+      messageId: new PromptVariable(PromptVariableType.STRING, true, "Identifier the SMTP server assigned to the message."),
+      accepted: new PromptVariable(PromptVariableType.ARRAY, true, "Addresses the server accepted.", PromptVariableType.STRING),
+    },
+  },
+];
+
+/**
+ * Capabilities a runner can actually execute today.
+ *
+ * Same idea as `WORKFLOW_CONNECTION_IMPLEMENTED_PROTOCOLS`: an editor may show the rest so a tenant
+ * can see what is coming, but it must not let them wire up something that will not run.
+ */
+export const WORKFLOW_IMPLEMENTED_CAPABILITIES: readonly string[] = ["web.search"];
+
+/**
+ * Looks a capability up by id.
+ *
+ * @param id Capability id.
+ * @returns The capability, or `undefined` when the id is not in the catalog.
+ */
+export function findWorkflowCapability(id: string | null | undefined): WorkflowCapability | undefined {
+  const key = String(id ?? "").trim();
+  if (!key) return undefined;
+  return WORKFLOW_CAPABILITIES.find((capability) => capability.id === key);
+}
+
+/**
+ * `TOOL` state configuration: run one capability of the catalog.
+ *
+ * Why this is one state type and not one per capability: for a planner a tool is only
+ * `{id, description, inputSchema}`, so the extension point is the catalog, not the state machine.
+ * A state type per capability would be a treadmill of contracts to version.
+ */
+export interface WorkflowToolStateConfig {
+  /** Capability id, from `WORKFLOW_CAPABILITIES`. */
+  capability: string;
+  /**
+   * Connection key. Required when the capability is `CONNECTION`-brokered, and rejected when it is
+   * `PLATFORM`-brokered, where the credentials are ours and a tenant connection would be ignored.
+   */
+  connection?: string;
+  /** Arguments, validated against the capability's `inputSchema`. */
+  args?: Record<string, WorkflowValueNode>;
+}
 
 /** HTTP methods an `HTTP` state may use. */
 export enum WorkflowHttpMethod {
@@ -440,6 +574,14 @@ export enum WorkflowValidationIssueCode {
   INTENT_VAR_MISSING = "INTENT_VAR_MISSING",
   INTENT_INPUT_PARTS_NOT_SUPPORTED = "INTENT_INPUT_PARTS_NOT_SUPPORTED",
   CONNECTION_UNKNOWN = "CONNECTION_UNKNOWN",
+  /** `TOOL` state naming a capability that is not in the published catalog. */
+  CAPABILITY_UNKNOWN = "CAPABILITY_UNKNOWN",
+  /** `TOOL` state naming a catalog capability no runner executes yet. */
+  CAPABILITY_NOT_IMPLEMENTED = "CAPABILITY_NOT_IMPLEMENTED",
+  /** `TOOL` argument that the capability does not declare. */
+  CAPABILITY_ARG_UNKNOWN = "CAPABILITY_ARG_UNKNOWN",
+  /** Required `TOOL` argument left unmapped. */
+  CAPABILITY_ARG_MISSING = "CAPABILITY_ARG_MISSING",
   HTTP_HEADER_FORBIDDEN = "HTTP_HEADER_FORBIDDEN",
   CONSTANT_INVALID = "CONSTANT_INVALID",
   AGENT_TOOL_INVALID = "AGENT_TOOL_INVALID",
@@ -965,6 +1107,7 @@ export interface WorkflowState {
   foreach?: WorkflowForeachStateConfig;
   subworkflow?: WorkflowSubworkflowStateConfig;
   agent?: WorkflowAgentStateConfig;
+  tool?: WorkflowToolStateConfig;
 }
 
 /**
@@ -1016,6 +1159,7 @@ export const WORKFLOW_STATE_CONFIG_FIELDS: Record<WorkflowStateType, keyof Workf
   [WorkflowStateType.FOREACH]: "foreach",
   [WorkflowStateType.SUBWORKFLOW]: "subworkflow",
   [WorkflowStateType.AGENT]: "agent",
+  [WorkflowStateType.TOOL]: "tool",
 };
 
 /**
@@ -2454,6 +2598,11 @@ export function inferWorkflowStateOutputSchema(
     return found?.outputSchema ?? null;
   }
   if (state.type === WorkflowStateType.WAIT && state.wait?.form) return state.wait.form;
+  if (state.type === WorkflowStateType.TOOL && state.tool) {
+    // The result shape is ours and fixed, so a downstream state can reference it before the workflow
+    // has ever run - which is the whole reason a capability beats a hand-mapped HTTP call.
+    return findWorkflowCapability(state.tool.capability)?.outputSchema ?? null;
+  }
   return null;
 }
 
@@ -3082,6 +3231,9 @@ function validateGraphScope(
       case WorkflowStateType.AGENT:
         if (state.agent) validateAgentState(state.agent, `${statePath}.agent`, states, caps, valueArgs);
         break;
+      case WorkflowStateType.TOOL:
+        if (state.tool) validateToolState(state.tool, `${statePath}.tool`, valueArgs);
+        break;
       case WorkflowStateType.SUBWORKFLOW:
         if (state.subworkflow) {
           if (typeof state.subworkflow.workflowKey !== "string" || !WORKFLOW_KEY_PATTERN.test(state.subworkflow.workflowKey)) {
@@ -3213,6 +3365,67 @@ function validateIntentState(config: WorkflowIntentStateConfig, path: string, ar
 /**
  * Validates an `HTTP` state block.
  */
+/**
+ * Validates a `TOOL` state against the published capability catalog.
+ *
+ * The catalog is what makes this state worth having: because the argument shape is ours and not the
+ * tenant's, everything here can be checked before a single call is made - that the capability exists,
+ * that a runner can actually execute it, that the connection matches the broker, and that the
+ * arguments are the ones the capability declares.
+ *
+ * @param config State configuration.
+ * @param path Path of the config block, for issue reporting.
+ * @param args Shared validation context.
+ */
+function validateToolState(config: WorkflowToolStateConfig, path: string, args: ValueValidationArgs): void {
+  const push = (p: string, code: WorkflowValidationIssueCode, message: string): void => {
+    args.acc.issues.push({ path: p, code, message });
+  };
+
+  const id = String(config.capability ?? "").trim();
+  if (!id) {
+    push(`${path}.capability`, WorkflowValidationIssueCode.STATE_CONFIG_MISSING, "TOOL requires capability.");
+    return;
+  }
+
+  const capability = findWorkflowCapability(id);
+  if (!capability) {
+    push(`${path}.capability`, WorkflowValidationIssueCode.CAPABILITY_UNKNOWN, `Capability '${id}' is not in the catalog.`);
+    return;
+  }
+  if (!WORKFLOW_IMPLEMENTED_CAPABILITIES.includes(capability.id)) {
+    push(`${path}.capability`, WorkflowValidationIssueCode.CAPABILITY_NOT_IMPLEMENTED, `Capability '${id}' has no runner support yet.`);
+  }
+
+  // The broker decides who holds the credentials, so it decides whether a connection belongs here.
+  // A connection on a platform-brokered capability is not harmless noise: it reads as if the tenant
+  // controlled the call, and they do not.
+  const connection = String(config.connection ?? "").trim();
+  if (capability.broker === WorkflowCapabilityBroker.CONNECTION) {
+    if (!connection) {
+      push(`${path}.connection`, WorkflowValidationIssueCode.STATE_CONFIG_MISSING, `Capability '${id}' requires a ${String(capability.protocol)} connection.`);
+    } else if (args.context.connections && !args.context.connections.includes(connection)) {
+      push(`${path}.connection`, WorkflowValidationIssueCode.CONNECTION_UNKNOWN, `Connection '${connection}' is not defined.`);
+    }
+  } else if (connection) {
+    push(`${path}.connection`, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, `Capability '${id}' runs on platform credentials and takes no connection.`);
+  }
+
+  if (config.args !== undefined) validateValueRecord(config.args, `${path}.args`, args);
+
+  const provided = isPlainObject(config.args) ? Object.keys(config.args as Record<string, unknown>) : [];
+  for (const key of provided) {
+    if (!(key in capability.inputSchema)) {
+      push(`${path}.args.${key}`, WorkflowValidationIssueCode.CAPABILITY_ARG_UNKNOWN, `Capability '${id}' has no argument '${key}'.`);
+    }
+  }
+  for (const [key, variable] of Object.entries(capability.inputSchema)) {
+    if (variable?.required === true && !provided.includes(key)) {
+      push(`${path}.args.${key}`, WorkflowValidationIssueCode.CAPABILITY_ARG_MISSING, `Capability '${id}' requires argument '${key}'.`);
+    }
+  }
+}
+
 function validateHttpState(config: WorkflowHttpStateConfig, path: string, args: ValueValidationArgs): void {
   const push = (p: string, code: WorkflowValidationIssueCode, message: string): void => {
     args.acc.issues.push({ path: p, code, message });

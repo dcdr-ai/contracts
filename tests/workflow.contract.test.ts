@@ -13,6 +13,10 @@ import {
   WORKFLOW_APPROVAL_FORM,
   WORKFLOW_APPROVAL_REJECTED_CODE,
   formatWorkflowValueShorthand,
+  findWorkflowCapability,
+  WORKFLOW_CAPABILITIES,
+  WORKFLOW_IMPLEMENTED_CAPABILITIES,
+  WorkflowCapabilityBroker,
   inferWorkflowStateOutputSchema,
   isHostExecutedWorkflowState,
   listWorkflowConnections,
@@ -1051,7 +1055,16 @@ describe("workflow.contract AGENT state", () => {
   it("declares AGENT as an advanced, host-executed state with its config block", () => {
     expect(WORKFLOW_ADVANCED_STATE_TYPES).toContain(WorkflowStateType.AGENT);
     expect(isHostExecutedWorkflowState(WorkflowStateType.AGENT)).toBe(true);
-    expect(WORKFLOW_AGENT_TOOL_STATE_TYPES).toEqual([WorkflowStateType.INTENT, WorkflowStateType.HTTP, WorkflowStateType.TRANSFORM, WorkflowStateType.SUBWORKFLOW, WorkflowStateType.WAIT]);
+    // `TOOL` joins the list on purpose: a capability is written once as a state and is reachable
+    // both from a deterministic flow and from a planner, through the `STATE` tool kind.
+    expect(WORKFLOW_AGENT_TOOL_STATE_TYPES).toEqual([
+      WorkflowStateType.INTENT,
+      WorkflowStateType.HTTP,
+      WorkflowStateType.TRANSFORM,
+      WorkflowStateType.SUBWORKFLOW,
+      WorkflowStateType.WAIT,
+      WorkflowStateType.TOOL,
+    ]);
   });
 
   it("parses, validates and round-trips an agent definition; tools may read agent.*", () => {
@@ -1280,5 +1293,115 @@ describe("workflow.contract agent decision payload (v3.3.0)", () => {
 
     const finish: WorkflowAgentDecisionPayload = { action: WorkflowAgentAction.FINISH, resultJson: JSON.stringify({ ok: true }) };
     expect(JSON.parse(String(finish.resultJson))).toEqual({ ok: true });
+  });
+});
+
+describe("workflow.contract capability catalog and the TOOL state", () => {
+  /**
+   * Builds a one-state definition around a `TOOL` config, so each case states only what it changes.
+   *
+   * @param tool The tool config under test.
+   * @returns A definition ready to validate.
+   */
+  /**
+   * A literal value node, which is what a mapping holds; a bare string is not a valid mapping.
+   *
+   * @param value Scalar to wrap.
+   * @returns The node.
+   */
+  function literal(value: string | number | boolean): Record<string, unknown> {
+    return { kind: WorkflowValueKind.LITERAL, literal: value };
+  }
+
+  function definitionWith(tool: Record<string, unknown>): WorkflowDefinition {
+    return {
+      schemaVersion: WorkflowSchemaVersion.V1,
+      key: "CAPABILITY_FLOW",
+      name: "Capability flow",
+      settings: { timeoutMs: 60_000, maxTransitionsPerRun: 50 },
+      startAt: "run",
+      states: {
+        run: { type: WorkflowStateType.TOOL, tool, next: "done" },
+        done: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+      },
+    } as unknown as WorkflowDefinition;
+  }
+
+  /**
+   * Validates and returns the issue codes, which is all these cases assert on.
+   *
+   * @param definition Definition to validate.
+   * @param connections Connection keys the tenant has.
+   * @returns Issue codes, in order.
+   */
+  function codes(definition: WorkflowDefinition, connections: string[] = []): string[] {
+    const result = validateWorkflowDefinition(definition, { connections });
+    return result.issues.map((issue) => String(issue.code));
+  }
+
+  it("publishes every capability with a version, a broker and both schemas", () => {
+    expect(WORKFLOW_CAPABILITIES.length).toBeGreaterThan(0);
+
+    for (const capability of WORKFLOW_CAPABILITIES) {
+      expect({ id: capability.id, hasVersion: Boolean(capability.version), hasDescription: Boolean(capability.description) })
+        .toEqual({ id: capability.id, hasVersion: true, hasDescription: true });
+      expect(Object.keys(capability.inputSchema).length).toBeGreaterThan(0);
+      expect(Object.keys(capability.outputSchema).length).toBeGreaterThan(0);
+
+      // A connection-brokered capability without a protocol could not be matched to a connection,
+      // and a platform-brokered one with a protocol would imply the tenant configures something.
+      if (capability.broker === WorkflowCapabilityBroker.CONNECTION) expect(Boolean(capability.protocol)).toBe(true);
+      else expect(capability.protocol).toBeUndefined();
+    }
+
+    // Ids are the contract; a duplicate would silently shadow one of them.
+    const ids = WORKFLOW_CAPABILITIES.map((capability) => capability.id);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    // Nothing may be advertised as runnable that is not in the catalog at all.
+    for (const id of WORKFLOW_IMPLEMENTED_CAPABILITIES) expect(findWorkflowCapability(id)).toBeTruthy();
+  });
+
+  it("accepts a well-formed platform-brokered capability", () => {
+    const definition = definitionWith({ capability: "web.search", args: { query: literal("acme") } });
+    expect(codes(definition)).toEqual([]);
+  });
+
+  it("rejects a capability that is not in the catalog", () => {
+    expect(codes(definitionWith({ capability: "web.scrape", args: {} }))).toEqual(["CAPABILITY_UNKNOWN"]);
+  });
+
+  it("flags a catalog capability no runner executes yet", () => {
+    // `mail.send` is published but not implemented, so the editor can show it while refusing to let
+    // a tenant wire up something that will not run.
+    const issues = codes(definitionWith({ capability: "mail.send", connection: "smtp_main", args: { to: literal("a@b.c"), subject: literal("s"), body: literal("b") } }), ["smtp_main"]);
+    expect(issues).toEqual(["CAPABILITY_NOT_IMPLEMENTED"]);
+  });
+
+  it("requires a connection for a connection-brokered capability, and refuses one otherwise", () => {
+    const missing = codes(definitionWith({ capability: "mail.send", args: { to: literal("a@b.c"), subject: literal("s"), body: literal("b") } }));
+    expect(missing).toContain("STATE_CONFIG_MISSING");
+
+    const unknown = codes(definitionWith({ capability: "mail.send", connection: "nope", args: { to: literal("a@b.c"), subject: literal("s"), body: literal("b") } }), ["smtp_main"]);
+    expect(unknown).toContain("CONNECTION_UNKNOWN");
+
+    // A connection on a platform-brokered capability reads as if the tenant controlled the call.
+    const spurious = codes(definitionWith({ capability: "web.search", connection: "smtp_main", args: { query: literal("acme") } }), ["smtp_main"]);
+    expect(spurious).toEqual(["STATE_CONFIG_INVALID"]);
+  });
+
+  it("checks the arguments against the capability schema, both ways", () => {
+    expect(codes(definitionWith({ capability: "web.search", args: {} }))).toEqual(["CAPABILITY_ARG_MISSING"]);
+    expect(codes(definitionWith({ capability: "web.search", args: { query: literal("acme"), depth: literal(3) } }))).toEqual(["CAPABILITY_ARG_UNKNOWN"]);
+  });
+
+  it("infers the output schema from the catalog, so downstream states resolve before any run", () => {
+    const state = { type: WorkflowStateType.TOOL, tool: { capability: "web.search", args: { query: literal("acme") } } } as never;
+    const inferred = inferWorkflowStateOutputSchema(state);
+    expect(Object.keys(inferred ?? {})).toEqual(["results"]);
+
+    // An explicit outputSchema still wins, as it does for every other state type.
+    const overridden = { type: WorkflowStateType.TOOL, outputSchema: { custom: { type: PromptVariableType.STRING } }, tool: { capability: "web.search" } } as never;
+    expect(Object.keys(inferWorkflowStateOutputSchema(overridden) ?? {})).toEqual(["custom"]);
   });
 });

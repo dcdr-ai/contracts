@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260909.6] — 23:47UTC
+
+<!--
+sourceCommit: 294af23df1034486f3cea8e9971f67383b905457
+queuedAtUtc: 
+previousMirroredBuild: 20260909.3 (2026-09-09)
+contractsSubmodule: f1c5090acd36..36025ec62948
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v3.4.0 — **Capability catalog and the `TOOL` state (D34b).** `WORKFLOW_CAPABILITIES` publishes typed actions with their own `version`, `inputSchema` and `outputSchema`, so a workflow anchored to an older revision of a capability keeps validating when the shape moves. `WorkflowCapabilityBroker` says who holds the credentials: `PLATFORM` (we run it on our account and bill the call, like `web.search`) or `CONNECTION` (the tenant supplies a connection of the declared protocol, like `mail.send` over SMTP) — which is what lets the validator demand a connection on one and refuse it on the other, because a connection hung off a platform-brokered call reads as if the tenant controlled it. The `TOOL` state (`{ capability, connection?, args }`) runs one capability from a typed form instead of a hand-mapped URL and body, and joins `WORKFLOW_AGENT_TOOL_STATE_TYPES`, so a capability written once is reachable from a deterministic flow and from a planner alike — this is the point of D34: the catalog is the extension point, not the state-type list. `WORKFLOW_IMPLEMENTED_CAPABILITIES` lists what a runner executes today (`web.search`), so an editor can show `mail.send` without letting anyone wire up something that will not run. `findWorkflowCapability` looks one up and `inferWorkflowStateOutputSchema` resolves a `TOOL` state's output from the catalog, so a downstream state can reference `states.<id>.output.*` before the workflow has ever run — exactly what a hand-mapped HTTP call cannot offer. New issue codes: `CAPABILITY_UNKNOWN`, `CAPABILITY_NOT_IMPLEMENTED`, `CAPABILITY_ARG_UNKNOWN`, `CAPABILITY_ARG_MISSING`.
+- <kbd>RUNTIME</kbd> Runner support for `TOOL` states is **not** in this version: `WORKFLOW_IMPLEMENTED_CAPABILITIES` is the contract's own warning about that, and the validator rejects a capability without runner support, so nothing can be published that the runner would fail to execute.
+
 ## [20260909.3] — 21:32UTC
 
 <!--
