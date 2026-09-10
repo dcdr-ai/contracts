@@ -172,6 +172,7 @@ export enum WorkflowConnectionProtocol {
 /** Protocols with a runner implementation behind them. */
 export const WORKFLOW_CONNECTION_IMPLEMENTED_PROTOCOLS: WorkflowConnectionProtocol[] = [
   WorkflowConnectionProtocol.HTTP,
+  WorkflowConnectionProtocol.MCP,
 ];
 
 /**
@@ -215,6 +216,14 @@ export interface WorkflowMcpConnectionSettings extends WorkflowConnectionCommonS
    * server advertises; an `AGENT` may narrow this further, never widen it.
    */
   allowedTools?: string[];
+  /**
+   * Allow plain `http://` and a server on a private or loopback address.
+   *
+   * Self-hosted deployments only: an MCP server running as a sidecar of the tenant's own stack is
+   * the ordinary shape for MCP, unlike an `HTTP` state pointed at a private address. Ignored in
+   * cloud, where nothing private is reachable from the fleet anyway.
+   */
+  allowInsecure?: boolean;
 }
 
 /** `SMTP` connection settings. */
@@ -955,6 +964,16 @@ export interface WorkflowAgentTool {
   intent?: string;
   /** `STATE` kind: state id in the same scope (see `WORKFLOW_AGENT_TOOL_STATE_TYPES`). */
   state?: string;
+  /** `MCP` kind: key of a connection whose protocol is `MCP`. */
+  connection?: string;
+  /**
+   * `MCP` kind: tool names to expose from that server, by exact name.
+   *
+   * Absent or empty means every tool the connection itself allows. This list can only ever narrow
+   * what the connection permits (`WorkflowMcpConnectionSettings.allowedTools`), never widen it: the
+   * tenant grants at the connection, the workflow author restricts further.
+   */
+  tools?: string[];
   /** Natural-language description the planner uses to pick the tool. */
   description: string;
   /** Arguments the planner must produce; defaults to the intent `inputSchema` for `INTENT` tools. */
@@ -2672,6 +2691,26 @@ export function inferWorkflowStateOutputSchema(
 /**
  * Lists every sub-workflow key referenced by the definition, including nested sub-graphs (deduplicated, sorted).
  */
+/**
+ * Every MCP server an `AGENT` in the definition may reach, by connection key (deduplicated, sorted).
+ *
+ * The control plane needs this to resolve the descriptors of a run, and it is not covered by
+ * `listWorkflowConnections`, which walks the states: an MCP server is named inside an agent's tool
+ * catalog, not by a state.
+ *
+ * @param definition Workflow definition.
+ * @returns Connection keys.
+ */
+export function listWorkflowMcpConnections(definition: WorkflowDefinition): string[] {
+  const out = new Set<string>();
+  forEachWorkflowState(definition.states, (state) => {
+    for (const tool of state.agent?.tools ?? []) {
+      if (tool?.kind === WorkflowAgentToolKind.MCP && typeof tool.connection === "string" && tool.connection) out.add(tool.connection);
+    }
+  });
+  return Array.from(out).sort();
+}
+
 export function listWorkflowSubworkflows(definition: WorkflowDefinition): string[] {
   const out = new Set<string>();
   forEachWorkflowState(definition.states, (state) => {
@@ -3692,6 +3731,31 @@ function validateAgentState(
         }
         if (tool.intent !== undefined) {
           push(`${toolPath}.intent`, WorkflowValidationIssueCode.AGENT_TOOL_INVALID, "STATE tool must not set intent.");
+        }
+        break;
+      }
+      case WorkflowAgentToolKind.MCP: {
+        // One entry expands into as many catalog entries as the server advertises, discovered at run
+        // time - which is why there is nothing here to check against a state or an intent, only the
+        // connection it speaks through.
+        if (typeof tool.connection !== "string" || !tool.connection.trim()) {
+          push(`${toolPath}.connection`, WorkflowValidationIssueCode.AGENT_TOOL_INVALID, "MCP tool requires connection.");
+        } else if (args.context.connections && !args.context.connections.includes(tool.connection)) {
+          push(`${toolPath}.connection`, WorkflowValidationIssueCode.CONNECTION_UNKNOWN, `Connection '${tool.connection}' is not defined.`);
+        }
+        if (tool.tools !== undefined && (!Array.isArray(tool.tools) || tool.tools.some((name) => typeof name !== "string" || !name.trim()))) {
+          push(`${toolPath}.tools`, WorkflowValidationIssueCode.AGENT_TOOL_INVALID, "MCP tool narrowing must be a list of tool names.");
+        }
+        if (tool.intent !== undefined) {
+          push(`${toolPath}.intent`, WorkflowValidationIssueCode.AGENT_TOOL_INVALID, "MCP tool must not set intent.");
+        }
+        if (tool.state !== undefined) {
+          push(`${toolPath}.state`, WorkflowValidationIssueCode.AGENT_TOOL_INVALID, "MCP tool must not set state.");
+        }
+        // The argument shape is the server's and is only known at run time, so declaring one here
+        // would be a promise the workflow cannot keep.
+        if (tool.inputSchema !== undefined) {
+          push(`${toolPath}.inputSchema`, WorkflowValidationIssueCode.AGENT_TOOL_INVALID, "MCP tool arguments are discovered from the server; do not declare inputSchema.");
         }
         break;
       }

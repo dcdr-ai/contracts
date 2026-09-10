@@ -62,7 +62,8 @@ The workflow stays the cage; the model only chooses *which tool* to call next, f
     "goal": { "$template": "Assess supplier {{input.supplier}}" },
     "tools": [
       { "id": "search_news", "kind": "INTENT", "intent": "NEWS_SEARCH", "description": "Search recent news about a company." },
-      { "id": "fetch_registry", "kind": "STATE", "state": "registry_lookup", "description": "Official registry lookup." }
+      { "id": "fetch_registry", "kind": "STATE", "state": "registry_lookup", "description": "Official registry lookup." },
+      { "id": "registry", "kind": "MCP", "connection": "company_mcp", "tools": ["lookup"], "description": "The official company registry server." }
     ],
     "maxIterations": 6, "maxTrackedCalls": 20, "maxToolErrors": 1
   }
@@ -70,9 +71,10 @@ The workflow stays the cage; the model only chooses *which tool* to call next, f
 ```
 
 - Loop: the planner receives the goal, the tool catalog, `agent.history` and `context` → `{ action: CALL_TOOL, tool, args }` runs the tool and appends `{ tool, args, output | error }` to the history; `{ action: FINISH, result }` ends the state with `WorkflowAgentOutput { result, stopReason, iterations, trackedCalls, trace }`.
-- Tools are either intents (`INTENT`, called with the planner's `args`) or states of the same scope (`STATE`: `INTENT`, `HTTP`, `TRANSFORM`, `SUBWORKFLOW`, `WAIT`) whose mappings read `agent.args.*`, `agent.iteration`, `agent.history[]`, `agent.goal`, `agent.notes[]`, `agent.summary`; `agent.*` is rejected anywhere else. A `WAIT` tool lets the planner ask a human (`HUMAN_TASK`) or wait for an event: the run parks and resumes inside the loop. A tool state is reached through the agent, so it may omit `next` (never followed when invoked as a tool) and it counts as dominated by the agent for reference visibility.
+- Tools are intents (`INTENT`, called with the planner's `args`), MCP servers (`MCP`, see below) or states of the same scope (`STATE`: `INTENT`, `HTTP`, `TRANSFORM`, `SUBWORKFLOW`, `WAIT`) whose mappings read `agent.args.*`, `agent.iteration`, `agent.history[]`, `agent.goal`, `agent.notes[]`, `agent.summary`; `agent.*` is rejected anywhere else. A `WAIT` tool lets the planner ask a human (`HUMAN_TASK`) or wait for an event: the run parks and resumes inside the loop. A tool state is reached through the agent, so it may omit `next` (never followed when invoked as a tool) and it counts as dominated by the agent for reference visibility.
 - Bounds are mandatory (`maxIterations`, capped by `WorkflowValidationCaps.maxAgentIterations`) and optional (`maxTrackedCalls`, `maxToolErrors`, `maxDurationMs` capped by `maxAgentDurationMs`, `maxEstimatedCost`); hitting one stops the loop with a `WorkflowAgentStopReason` (`MAX_ITERATIONS`, `BUDGET_EXHAUSTED`, `TOO_MANY_TOOL_ERRORS`, `TIMEOUT`, `CANCELED`, `PLANNER_ERROR`) and fails the state unless `finishOnBound` is set.
 - Long loops keep their context bounded: `historyWindow` limits the trace entries handed to the planner and `summarizerIntent` compacts the rest into `agent.summary`. The planner may leave a `notes` scratchpad entry per iteration (`agent.notes[]`).
+- `MCP` tools name a connection whose protocol is `MCP`, never an intent or a state, and never declare an `inputSchema`: the catalog is discovered at run time (`tools/list`), so one declared entry becomes as many planner-visible tools as the server advertises, each with the server's own description and argument schema. Two allowlists apply and they are **intersected**: `WorkflowMcpConnectionSettings.allowedTools` is the tenant's grant on the connection, and the tool's own `tools` can only narrow further inside it — a workflow author can never reach a tool the tenant did not approve. `listWorkflowMcpConnections(definition)` lists the servers a definition reaches, which `listWorkflowConnections` cannot: it walks the states, and an MCP server is named inside an agent's catalog.
 - Evidence: every tool execution is performed by the host, so what was fetched, called or stored is recorded per iteration as `WorkflowEvidence` (`URL`, `ARTIFACT`, `CALL_LOG`, `NOTE`); the planner may add its own citations in `decision.evidence`, and hosts may refuse a `FINISH` whose citations do not match the trace.
 - Deterministic composition still applies around it: a `CHOICE` after the agent routes on `states.research.output.result`, and an `AGENT` can itself be a tool of another via a `SUBWORKFLOW` state.
 
@@ -121,7 +123,7 @@ Truthiness (`IF`/`AND`/`OR`/`NOT`): `false`, `null`, `0`, `""`, empty arrays and
 - `evaluateLocalWorkflowState(state, ctx)` for `CHOICE` / `TRANSFORM` / `END`; `isHostExecutedWorkflowState(type)` for the rest.
 - `resolveWorkflowTransition(definition, stateId, outcome, ctx)` → `{ kind: CONTINUE | END | ERROR_HANDLED | FAIL, next?, snapshot, endOutcome?, runOutput?, error?, caseId? }`.
 - `computeWorkflowDefinitionSha256(definition, { sha256Hex })` over the canonical form (`display` stripped, keys sorted); `canonicalizeWorkflowDefinition` / `canonicalWorkflowDefinitionJson`.
-- `listWorkflowIntents`, `listWorkflowConnections`, `listWorkflowSubworkflows`, `workflowUsesAdvancedStates`, `inferWorkflowStateOutputSchema` (intent output schema for `INTENT`, child `outputSchema` for `SUBWORKFLOW`, `form` for `WAIT`), `validateWorkflowValueAgainstSchema`, `toWorkflowValidationIntents`.
+- `listWorkflowIntents`, `listWorkflowConnections`, `listWorkflowMcpConnections`, `listWorkflowSubworkflows`, `workflowUsesAdvancedStates`, `inferWorkflowStateOutputSchema` (intent output schema for `INTENT`, child `outputSchema` for `SUBWORKFLOW`, `form` for `WAIT`), `validateWorkflowValueAgainstSchema`, `toWorkflowValidationIntents`.
 
 A complete example definition with replay cases lives in `tests/fixtures/workflows/support_ticket_triage.golden.json`.
 
