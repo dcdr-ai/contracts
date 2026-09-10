@@ -410,6 +410,15 @@ export interface WorkflowRunnerUsage {
   outputTokens?: number;
   estimatedCost?: number;
   currency?: string;
+  /**
+   * Calls to platform-brokered capabilities, counted per capability id (v3.6.0).
+   *
+   * Kept apart from `trackedCalls`, which counts model calls: a capability runs on our account and
+   * is billed per call on its own terms, and mixing the two would make a run's model usage
+   * unreadable. A `CONNECTION`-brokered capability reaches the tenant's own server and is never
+   * counted here.
+   */
+  capabilityCalls?: Record<string, number>;
 }
 
 /** Details of a parked run (`WAITING`). */

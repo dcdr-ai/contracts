@@ -364,6 +364,23 @@ export function findWorkflowCapability(id: string | null | undefined): WorkflowC
 }
 
 /**
+ * One tool discovered on an MCP server at run time (v3.6.0).
+ *
+ * An `MCP` agent tool entry expands into as many of these as the server advertises, which is why it
+ * cannot be enumerated when the workflow is authored. The runner discovers them through `tools/list`
+ * and narrows them by the connection allowlist and the agent's own list before they ever reach a
+ * planner, so this is the shape a planner sees, not the raw server payload.
+ */
+export interface WorkflowMcpDiscoveredTool {
+  /** Name as the server advertises it, used verbatim in the `tools/call` request. */
+  name: string;
+  /** Description the planner reads to decide whether the tool fits. */
+  description?: string;
+  /** JSON Schema of the arguments, as published by the server. */
+  inputSchema?: Record<string, unknown>;
+}
+
+/**
  * `TOOL` state configuration: run one capability of the catalog.
  *
  * Why this is one state type and not one per capability: for a planner a tool is only
@@ -1175,6 +1192,42 @@ export interface WorkflowSettings {
   maxTransitionsPerRun: number;
   /** Default error policy for states that declare none (`FAIL_RUN` when omitted). */
   onError?: WorkflowStateErrorPolicy;
+  /** Optional quality sampling of the run's model calls (v3.6.0). */
+  qcSampling?: WorkflowQcSamplingPolicy;
+}
+
+/** What a failed quality sample does to the run. */
+export enum WorkflowQcFailAction {
+  /** Record the failure and let the run continue; the sample is a measurement, not a gate. */
+  CONTINUE = "CONTINUE",
+  /** Park the run for a human to look at, with `HUMAN_TASK` semantics. */
+  PARK = "PARK",
+  /** Fail the sampled state, so its own `onError` policy decides what happens next. */
+  FAIL_STATE = "FAIL_STATE",
+}
+
+/**
+ * Quality sampling of a workflow's model calls (v3.6.0).
+ *
+ * Sampling exists because checking every call is not affordable and checking none is not credible.
+ * A sampled step enters the QC queue that already exists for intent calls, so nothing new has to be
+ * built to review it; what this policy adds is *which* calls get sampled and what a failure does.
+ *
+ * `everyNth` and `tools` compose as a union: a step is sampled if either rule selects it, which lets
+ * a tenant watch one risky tool closely while sampling the rest thinly.
+ */
+export interface WorkflowQcSamplingPolicy {
+  /** Sample one call in every N. `1` samples everything; `0` or absent disables the rule. */
+  everyNth?: number;
+  /**
+   * Always sample calls made by these tools or states, whatever `everyNth` says. Ids are state ids,
+   * or capability ids for a `TOOL` state.
+   */
+  tools?: string[];
+  /** What a failed sample does; `CONTINUE` when omitted, so enabling sampling never changes control flow by surprise. */
+  onQcFail?: WorkflowQcFailAction;
+  /** Inbox routing hint for `PARK`, mirroring `WorkflowStateApproval.assignmentGroupKey`. */
+  assignmentGroupKey?: string;
 }
 
 /** The declarative workflow. */
@@ -2264,7 +2317,10 @@ export function isHostExecutedWorkflowState(type: WorkflowStateType): boolean {
     type === WorkflowStateType.PARALLEL ||
     type === WorkflowStateType.FOREACH ||
     type === WorkflowStateType.SUBWORKFLOW ||
-    type === WorkflowStateType.AGENT
+    type === WorkflowStateType.AGENT ||
+    // A capability reaches a third party over the network, so it belongs to the host like `HTTP`
+    // does; it can never be evaluated locally from the context.
+    type === WorkflowStateType.TOOL
   );
 }
 

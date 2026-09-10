@@ -39,6 +39,7 @@ import {
   WorkflowHttpResponseType,
   WorkflowMappingFunction,
   WorkflowRefRoot,
+  WorkflowQcFailAction,
   WorkflowSchemaVersion,
   WorkflowState,
   WorkflowStateErrorAction,
@@ -1403,5 +1404,36 @@ describe("workflow.contract capability catalog and the TOOL state", () => {
     // An explicit outputSchema still wins, as it does for every other state type.
     const overridden = { type: WorkflowStateType.TOOL, outputSchema: { custom: { type: PromptVariableType.STRING } }, tool: { capability: "web.search" } } as never;
     expect(Object.keys(inferWorkflowStateOutputSchema(overridden) ?? {})).toEqual(["custom"]);
+  });
+});
+
+describe("workflow.contract v3.6.0 additions", () => {
+  it("marks TOOL as host-executed, so it is never evaluated from the local context", () => {
+    // A capability reaches a third party over the network. Treating it as a local state would make
+    // the runner "evaluate" it with no I/O and produce an empty output instead of calling anything.
+    expect(isHostExecutedWorkflowState(WorkflowStateType.TOOL)).toBe(true);
+    expect(isHostExecutedWorkflowState(WorkflowStateType.TRANSFORM)).toBe(false);
+  });
+
+  it("defaults a QC sampling policy to something that cannot change control flow by surprise", () => {
+    // The enum exists so `onQcFail` is a decision, not a magic string; CONTINUE is the safe default
+    // a reader should assume when the field is absent.
+    expect(Object.values(WorkflowQcFailAction).sort()).toEqual(["CONTINUE", "FAIL_STATE", "PARK"]);
+
+    const definition = {
+      schemaVersion: WorkflowSchemaVersion.V1,
+      key: "SAMPLED_FLOW",
+      name: "Sampled flow",
+      settings: {
+        timeoutMs: 60_000,
+        maxTransitionsPerRun: 10,
+        qcSampling: { everyNth: 5, tools: ["classify"], onQcFail: WorkflowQcFailAction.PARK, assignmentGroupKey: "ops" },
+      },
+      startAt: "done",
+      states: { done: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } } },
+    } as unknown as WorkflowDefinition;
+
+    // A sampling policy is settings, not structure: it must not affect whether a definition is valid.
+    expect(validateWorkflowDefinition(definition, {}).issues).toEqual([]);
   });
 });

@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260910.2] — 00:57UTC
+
+<!--
+sourceCommit: 0bf39c84426979335c95fc87a625add745f36e52
+queuedAtUtc: 
+previousMirroredBuild: 20260910.1 (2026-09-10)
+contractsSubmodule: 4f69d25ccdb3..7e43637880c2
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v3.6.0 — batched additions for the next roadmap rows, published in one go rather than one per change: `TOOL` joins `isHostExecutedWorkflowState` (without it a runner evaluates a capability locally and returns an empty output instead of calling anything); `WorkflowQcSamplingPolicy` + `WorkflowQcFailAction` on `WorkflowSettings` for per-workflow quality sampling, defaulting to `CONTINUE` so turning sampling on never changes control flow by surprise; `WorkflowRunnerUsage.capabilityCalls` counting platform-brokered capability calls per id, kept apart from the model-call counter because the two are billed on different terms; and `WorkflowMcpDiscoveredTool`, the post-allowlist shape a planner sees for an MCP tool.
+- <kbd>RUNTIME</kbd> Workflow runner executes `TOOL` states, in the main state dispatch and as a planner tool (`runToolState`) alike — which is the point of `TOOL` being in `WORKFLOW_AGENT_TOOL_STATE_TYPES`: a capability is written once and works in a deterministic flow and inside an agent loop. A capability's timeout is capped by its state's own budget however generous the descriptor is, and the step records which capability ran and at which catalog revision, so a run stays explainable after the catalog moves on. An unavailable capability fails the state **without attempting a call**: that is a configuration failure, not a failed attempt.
+
 ## [20260910.1] — 00:40UTC
 
 <!--
