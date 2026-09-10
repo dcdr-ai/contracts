@@ -195,6 +195,25 @@ export interface WorkflowRunnerConnectionDescriptor {
   settings: WorkflowConnectionSettings;
 }
 
+/**
+ * A platform-brokered capability, resolved for this run only (v3.5.0).
+ *
+ * `PLATFORM` capabilities run on our credentials, so the tenant configures nothing and there is no
+ * connection to point at. The control plane resolves the endpoint and the secrets and hands the
+ * runner one self-contained block, exactly the way it does for a connection - which is why the
+ * settings reuse `WorkflowConnectionSettings` instead of inventing a second shape. A
+ * `CONNECTION`-brokered capability never appears here: it resolves through `connections` like any
+ * other destination the tenant owns.
+ */
+export interface WorkflowRunnerCapabilityDescriptor {
+  /** Capability id, matching one of `WORKFLOW_CAPABILITIES`. */
+  id: string;
+  /** Catalog revision the control plane resolved, so a runner can refuse a shape it does not know. */
+  version: string;
+  /** Endpoint and credentials, in the settings block of the transport it speaks. */
+  settings: WorkflowConnectionSettings;
+}
+
 /** Where a resumed run continues from (rebuilt by the backend from the stored checkpoints). */
 export interface WorkflowRunnerResumeState {
   /** State to execute next. */
@@ -223,6 +242,11 @@ export interface WorkflowRunnerInputResponse {
   /** Validated run input (asset variables as references, never blobs). */
   input: Record<string, unknown>;
   connections: WorkflowRunnerConnectionDescriptor[];
+  /**
+   * Platform-brokered capabilities this run may use (v3.5.0), already resolved with our credentials.
+   * Absent or empty when the definition uses none.
+   */
+  capabilities?: WorkflowRunnerCapabilityDescriptor[];
   /** Present when the run continues after a requeue or a resumed `WAIT`. */
   resume?: WorkflowRunnerResumeState;
 }

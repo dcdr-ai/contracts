@@ -4,6 +4,21 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260910.1] — 00:40UTC
+
+<!--
+sourceCommit: eca36e9aa62cab58956b09f50c4ede3b688c6ec6
+queuedAtUtc: 
+previousMirroredBuild: 20260909.6 (2026-09-09)
+contractsSubmodule: 36025ec62948..4f69d25ccdb3
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> v3.5.0 — `WorkflowRunnerCapabilityDescriptor` (`{ id, version, settings }`) plus the optional `WorkflowRunnerInputResponse.capabilities`. This is how a `PLATFORM`-brokered capability reaches a runner: the tenant configures nothing, so there is no connection to point at, and the control plane resolves the endpoint and the credentials and hands over one self-contained block. It reuses `WorkflowConnectionSettings` on purpose — a second settings shape for the same job would have to be kept in step with the first. `CONNECTION`-brokered capabilities are unaffected and keep resolving through `connections`. Additive.
+- <kbd>RUNTIME</kbd> **Capability executor** `src/workflow-runner/workflow-runner.capabilities.service.ts`: resolves where a `TOOL` state's call must go (platform descriptor vs tenant connection, refusing a connection that speaks the wrong protocol) and runs `web.search` against SearxNG with axios.
+  Both details that shape the adapter were measured against a live container on 2026-09-10, not read from documentation: a result carries its extract in **`content`**, not `snippet`, and a JSON request to an instance without `json` in `search.formats` is answered with a bare **403** and no body — so that status is translated into a message naming the setting, instead of surfacing as "no results". Engine failures are deliberately not fatal: the same probe had DuckDuckGo answering with a CAPTCHA and Startpage failing to parse while the aggregate still returned 39 results.
+  Covered by `tests/workflow-runner/workflow-runner.capabilities.test.ts` (11 unit cases over a real trimmed payload) and `tests/e2e/capabilities/web.search.e2e.test.ts`, which runs against an actual instance (`DCDR_E2E_SEARXNG_URL`) and asserts that at least one extract comes back non-empty — the one failure a fixture-only suite cannot see, since a renamed field would map to empty strings and keep every unit test green.
+
 ## [20260909.6] — 23:47UTC
 
 <!--
