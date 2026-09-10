@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260910.3] — 02:32UTC
+
+<!--
+sourceCommit: d4df5386fccaae9936f690395faea9598fbc0825
+queuedAtUtc: 
+previousMirroredBuild: 20260910.2 (2026-09-10)
+contractsSubmodule: 7e43637880c2..750c070ba25d
+-->
+
+### Fixed
+- <kbd>CONTRACTS</kbd> v3.6.1 — the shorthand parser now walks a `TOOL` state's `args`, and the formatter mirrors it. Found by importing a real definition: every argument came back as `VALUE_INVALID`, because the mappings of every other state type were parsed at the boundary and this one had been overlooked when `TOOL` was added.
+
 ## [20260910.2] — 00:57UTC
 
 <!--

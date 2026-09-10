@@ -1396,6 +1396,39 @@ describe("workflow.contract capability catalog and the TOOL state", () => {
     expect(codes(definitionWith({ capability: "web.search", args: { query: literal("acme"), depth: literal(3) } }))).toEqual(["CAPABILITY_ARG_UNKNOWN"]);
   });
 
+  it("parses and formats a TOOL state's arguments like any other mapping", () => {
+    // Regression: `tool.args` was not walked by the shorthand parser, so an imported `{ "$ref": ... }`
+    // reached the validator unparsed ("unsupported value kind 'undefined'") and a bare scalar was
+    // rejected outright. Every other state's mappings were parsed; this one was simply forgotten.
+    const shorthand = {
+      schemaVersion: 1,
+      key: "TOOL_SHORTHAND",
+      name: "Tool shorthand",
+      settings: { timeoutMs: 60_000, maxTransitionsPerRun: 10 },
+      startAt: "search",
+      states: {
+        search: {
+          type: "TOOL",
+          next: "done",
+          tool: { capability: "web.search", args: { query: { $ref: "input.q" }, maxResults: 8 } },
+        },
+        done: { type: "END", end: { outcome: "SUCCEED" } },
+      },
+    } as unknown as Record<string, unknown>;
+
+    const parsed = parseWorkflowDefinitionShorthand(shorthand);
+    const args = (parsed.states.search as { tool?: { args?: Record<string, { kind?: string; ref?: string; literal?: unknown }> } }).tool?.args ?? {};
+    expect(args.query).toMatchObject({ kind: WorkflowValueKind.REF, ref: "input.q" });
+    expect(args.maxResults).toMatchObject({ kind: WorkflowValueKind.LITERAL, literal: 8 });
+
+    // Parsed, it must validate; unparsed it did not.
+    expect(validateWorkflowDefinition(parsed, {}).issues).toEqual([]);
+
+    // And it survives the round trip back to shorthand.
+    const formatted = formatWorkflowDefinitionShorthand(parsed) as unknown as { states: Record<string, { tool?: { args?: Record<string, unknown> } }> };
+    expect(formatted.states.search.tool?.args).toEqual({ query: { $ref: "input.q" }, maxResults: 8 });
+  });
+
   it("infers the output schema from the catalog, so downstream states resolve before any run", () => {
     const state = { type: WorkflowStateType.TOOL, tool: { capability: "web.search", args: { query: literal("acme") } } } as never;
     const inferred = inferWorkflowStateOutputSchema(state);

@@ -2542,6 +2542,12 @@ function parseStatesShorthand(states: Record<string, unknown>): Record<string, W
     if (isPlainObject(raw.subworkflow)) {
       state.subworkflow = { ...raw.subworkflow, input: parseRecord(raw.subworkflow.input) ?? {} };
     }
+    if (isPlainObject(raw.tool)) {
+      // A capability's arguments are mappings like any other state's, so they go through the same
+      // parser. Without this a shorthand `{ "$ref": ... }` reached the validator unparsed and was
+      // rejected as an unsupported value kind - and a bare scalar was rejected outright.
+      state.tool = { ...raw.tool, args: parseRecord(raw.tool.args) ?? {} };
+    }
     if (isPlainObject(raw.agent)) {
       state.agent = {
         ...raw.agent,
@@ -2615,6 +2621,7 @@ function formatStatesShorthand(states: Record<string, WorkflowState>): Record<st
       raw.parallel = { branches: state.parallel.branches.map((b) => ({ ...b, states: formatStatesShorthand(b.states) })) };
     }
     if (state.subworkflow) raw.subworkflow = { ...state.subworkflow, input: formatRecord(state.subworkflow.input) };
+    if (state.tool) raw.tool = { ...state.tool, args: formatRecord(state.tool.args) };
     if (state.agent) raw.agent = { ...state.agent, goal: formatWorkflowValueShorthand(state.agent.goal), context: formatRecord(state.agent.context) };
     stripUndefined(raw);
     for (const key of Object.keys(raw)) {
