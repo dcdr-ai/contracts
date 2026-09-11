@@ -11,7 +11,7 @@ A **workflow** is a declarative state machine that composes intents, HTTP calls,
   "schemaVersion": 1,
   "key": "SUPPORT_TRIAGE",              // ^[A-Z][A-Z0-9_-]*$ (same rule as intents)
   "name": "Support ticket triage",
-  "input": { "ticket": { "type": "object", "required": true }, "customerId": { "type": "string", "required": true } },
+  "inputSchema": { "ticket": { "type": "object", "required": true }, "customerId": { "type": "string", "required": true } },
   "outputSchema": { "category": { "type": "string", "required": true }, "reply": { "type": "string" } },
   "output": { "category": { "$ref": "states.classify.output.category" }, "reply": { "$ref": "states.respond.output.reply", "default": null } },
   "settings": { "timeoutMs": 600000, "maxTransitionsPerRun": 20 },
@@ -20,7 +20,7 @@ A **workflow** is a declarative state machine that composes intents, HTTP calls,
 }
 ```
 
-- A workflow has the same contract shape as an intent: a typed `input` and a typed `outputSchema` (both `PromptVariable` records, so the same editor and validators apply). `output` is the mapping that produces a value of that shape; it is checked against `outputSchema` at publish time (unknown keys, missing required keys), `END.output` overrides are checked the same way, and the resolved run output is validated against the schema when the run finishes. `asset` variables carry file references (`ExecutionAssetReference`), never blobs.
+- A workflow has the same contract shape as an intent: a typed `inputSchema` and a typed `outputSchema` (both `PromptVariable` records, so the same editor and validators apply). `output` is the mapping that produces a value of that shape; it is checked against `outputSchema` at publish time (unknown keys, missing required keys), `END.output` overrides are checked the same way, and the resolved run output is validated against the schema when the run finishes. `asset` variables carry file references (`ExecutionAssetReference`), never blobs.
 - `constants` are definition-level scalars exposed to references as `constants.*` (SLA hours, team names, thresholds).
 - A definition never says how it runs: every run executes in the dedicated workflow runner, and whether the caller waits for the result is a property of the trigger, not of the workflow. `settings.maxTransitionsPerRun` is the loop guard; `settings.onError` is the default error policy for states that declare none (`FAIL_RUN` when omitted, `GOTO` a cleanup state is the usual choice).
 - `states` is a map; every state names its successor(s). Editor layout goes in `display` and is excluded from the hash.
@@ -115,7 +115,7 @@ Truthiness (`IF`/`AND`/`OR`/`NOT`): `false`, `null`, `0`, `""`, empty arrays and
 - graph: transitions target existing states of the same scope, every state reachable, an `END` reachable, `next` present/absent as required, cycles only through `WAIT`;
 - values: node kinds and payloads, function arity, reference grammar and roots, `item.*` only inside `FOREACH`, `states.<id>` references only to states that run before the referencing state on every path (dominators) unless a `default` is given, templates without sections, size limits;
 - output contract: `output` / `END.output` mappings checked against `outputSchema`, and a declared schema must be covered by a mapping;
-- cross-checks when context is given: intent exists, `vars` ⊆ `inputSchema`, required vars mapped, `inputParts` only for intents with asset variables, connection exists, forbidden credential headers, `SUBWORKFLOW` target published with its `input` checked against the child's input schema (a workflow cannot call itself).
+- cross-checks when context is given: intent exists, `vars` ⊆ `inputSchema`, required vars mapped, `inputParts` only for intents with asset variables, connection exists, forbidden credential headers, `SUBWORKFLOW` target published with its `input` mapping checked against the child's `inputSchema` (a workflow cannot call itself).
 
 ## Helpers
 
@@ -130,3 +130,17 @@ A complete example definition with replay cases lives in `tests/fixtures/workflo
 ## Published shape
 
 `WorkflowContract { id, key, version, sha256, active, definition }` is the shape hosts receive for a published workflow. Workflows are not part of `DcdrRegistry`: the runtime keeps executing intents one at a time and never sees a workflow definition.
+
+## Driving one from code
+
+This document is the *definition* format. To run workflows from an application, use the typed client:
+[WORKFLOW_CLIENT.md](WORKFLOW_CLIENT.md) - `DcdrWorkflowClient`, with `runWorkflowAndWait` as the one
+call most integrations need.
+
+
+## Driving one from code
+
+This document is the *definition* format. To create, publish and **run** workflows from an
+application, use the typed client: [WORKFLOW_CLIENT.md](WORKFLOW_CLIENT.md)
+(`DcdrWorkflowClient`, with `runAndWait` / `runAndWaitByKey` as the one call most integrations need).
+

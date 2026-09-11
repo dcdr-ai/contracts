@@ -431,6 +431,8 @@ Cloud-managed assets keep tenant-visible storage descriptors and concrete secret
 - [docs/CONTRACTS.md](docs/CONTRACTS.md) — How Registries, Intents, implementations, policies, and capabilities fit together.
 - [docs/PROCESSING_RULES.md](docs/PROCESSING_RULES.md) — Shared processing-rule engine contracts (`INPUT`/`OUTPUT`, bounded mutation trail, preview semantics).
 - [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — Workflow contract (state-machine definition, value-mapping DSL, validator, shared engine core; 3.0.0).
+- [docs/WORKFLOW_CLIENT.md](docs/WORKFLOW_CLIENT.md) — Typed client for the tenant workflow API (`DcdrWorkflowClient`, and `DcdrClient` over both surfaces).
+- [docs/WORKFLOW_CLIENT.md](docs/WORKFLOW_CLIENT.md) — Typed client for the tenant workflow API: run a workflow and wait for its result, publish versions, answer approvals.
 - [docs/EXECUTION_POLICY.md](docs/EXECUTION_POLICY.md) — ExecutionPolicy reference (availability matrix + tie-breakers).
 - [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md) — Runtime (self-hosted) vs Cloud vs Cloud Pro (what runs where, who owns what).
 - [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRIX.md) — One-page feature/tier reference.
@@ -439,6 +441,8 @@ Cloud-managed assets keep tenant-visible storage descriptors and concrete secret
 ### Development
 
 - [docs/CLIENT.md](docs/CLIENT.md) — Full `DcdrRuntimeClient` reference (methods, auth options, errors).
+- [docs/WORKFLOW_CLIENT.md](docs/WORKFLOW_CLIENT.md) — Full `DcdrWorkflowClient` reference: run a workflow and wait, follow runs, answer approvals, read the evidence trail.
+- [docs/WORKFLOW_CLIENT.md](docs/WORKFLOW_CLIENT.md) — Full `DcdrWorkflowClient` reference (run a workflow and wait, author/publish versions, human tasks, evidence, errors).
 - [docs/EXECUTION_ERROR_CODES.md](docs/EXECUTION_ERROR_CODES.md) — Stable runtime execution error codes and their meanings.
 - [docs/CLI.md](docs/CLI.md) — CLI usage patterns (healthcheck, run, demo, dry-run).
 - [docs/STREAMING_EXECUTION_SSE.md](docs/STREAMING_EXECUTION_SSE.md) — Streaming intent execution over SSE (`/api/execution/stream/:intent`).

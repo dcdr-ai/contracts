@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "key": "SUPPORT_TRIAGE",
   "name": "Support ticket triage",
-  "input": {
+  "inputSchema": {
     "ticket": {
       "type": "object",
       "required": true

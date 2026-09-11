@@ -1033,8 +1033,14 @@ export interface WorkflowDefinition {
   key: string;
   name: string;
   description?: string;
-  /** Typed run input; `ASSET` variables allowed. */
-  input?: Record<string, PromptVariable>;
+  /**
+   * Typed run input; `ASSET` variables allowed.
+   *
+   * Named to match `outputSchema`, because the two are the same kind of thing and calling one
+   * `input` made it read like the run's values rather than their shape - which is exactly what
+   * `subworkflow.input` and `ctx.input` are, one level down.
+   */
+  inputSchema?: Record<string, PromptVariable>;
   /** Definition-level scalar constants, exposed to references as `constants.*`. */
   constants?: Record<string, string | number | boolean | null>;
   /**
@@ -2715,8 +2721,8 @@ export function validateWorkflowDefinition(
     }
   }
 
-  if (definition.input !== undefined && !isPlainObject(definition.input)) {
-    push("input", WorkflowValidationIssueCode.DEFINITION_INVALID, "input must be a record of prompt variables.");
+  if (definition.inputSchema !== undefined && !isPlainObject(definition.inputSchema)) {
+    push("inputSchema", WorkflowValidationIssueCode.DEFINITION_INVALID, "inputSchema must be a record of prompt variables.");
   }
 
   if (!isPlainObject(definition.states)) {

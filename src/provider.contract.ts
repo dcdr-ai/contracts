@@ -14,8 +14,7 @@ import { CredentialsContract } from "./credentials.contract";
  *
  * - A hosted LLM service (OpenAI, Gemini, Grok, etc.)
  * - A local inference runtime (OFFICE, OLLAMA, VLLM)
- * - A specialized processing engine (OCR, CLIP)
- * - An internal execution system (RULES, HTTP_TOOL)
+ * - An internal execution marker (RULES), used when no provider executed the call
  */
 export enum IntentProvider {
   /**
@@ -72,24 +71,11 @@ export enum IntentProvider {
   OPEN_AI_COMPATIBLE = "OPEN_AI_COMPATIBLE",
 
   /**
-   * Optical character recognition engine.
-   */
-  OCR = "OCR",
-
-  /**
-   * CLIP-like models for multimodal embedding.
-   */
-  CLIP = "CLIP",
-
-  /**
-   * Generic HTTP tool provider.
-   * Used to call external APIs or services.
-   */
-  HTTP_TOOL = "HTTP_TOOL",
-
-  /**
-   * Internal rule-based execution engine.
-   * Used for deterministic logic instead of LLMs.
+   * Not a provider: the marker DCDR reports when **no provider executed the call**.
+   *
+   * It appears in an `ExecutionReport` for a rejection, a dry run, a demo answer or a failure that
+   * never reached a model, because `provider` has to say something and none of the real ones is
+   * true. Never dispatchable: an implementation declaring it fails with `NO_CONFIG`.
    */
   RULES = "RULES",
 }

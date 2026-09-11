@@ -248,6 +248,89 @@ export interface WorkflowRunnerInputResponse {
   capabilities?: WorkflowRunnerCapabilityDescriptor[];
   /** Present when the run continues after a requeue or a resumed `WAIT`. */
   resume?: WorkflowRunnerResumeState;
+
+  /**
+   * How to reach the asset API, when this run may need to store a payload outside its history.
+   *
+   * Absent when the tenant keeps payloads inline (`payloadLogging: FULL` with nothing oversized),
+   * because then there is nothing to offload and no reason to mint a session.
+   */
+  assets?: WorkflowRunnerAssetAccess;
+}
+
+/**
+ * How the runner reaches the DCDR runtime's asset API for this run.
+ *
+ * Separate from `WorkflowRunnerAiExecutionPlanResponse` because that one is minted per intent, and a
+ * workflow with no `INTENT` state still needs somewhere to put a payload it may not persist inline.
+ * Which storage the object lands in is **not** decided here: the runtime resolves the tenant's own
+ * default from its entitlements and falls back to the platform's, which is the rule everywhere else
+ * assets are written.
+ */
+export interface WorkflowRunnerAssetAccess {
+  /** Runtime base URL; the runner appends `/api/assets`. */
+  baseUrl: string;
+
+  /** Customer-mode session token accepted by the runtime's asset routes. */
+  sessionToken: string;
+
+  /** Extra headers required to reach the runtime (e.g. access-gateway headers). */
+  headers?: Record<string, string>;
+
+  /** When the session expires (ISO-8601). */
+  expiresAt: string;
+}
+
+/**
+ * What a step payload is replaced with when it is stored outside the run history.
+ *
+ * A tenant's `payloadLogging` says how much of a payload they want **persisted**, and honouring it
+ * used to mean the resume state lost the value too: a run that parked and later referenced an
+ * earlier state's output resumed with `undefined`, silently. The payload now goes to the tenant's
+ * own asset storage and only this reference is persisted, so the policy and the engine stop
+ * contradicting each other.
+ *
+ * `sha256` is not decoration: the runner verifies it after reading, because a resume that continues
+ * on the wrong bytes is worse than one that fails.
+ */
+export interface WorkflowRunnerPayloadAssetRef {
+  /** Discriminator, so a consumer can tell this from an ordinary payload object. */
+  kind: "ASSET";
+
+  /** Content-addressed path inside the storage. */
+  assetPath: string;
+
+  /** SHA-256 of the JSON the reference stands for. */
+  sha256: string;
+
+  /** Size of that JSON in bytes, so a UI can show it without fetching. */
+  bytes: number;
+
+  /** Type of the original value (`object`, `array`, `string`, ...), for the same reason. */
+  type: string;
+
+  /** Storage the object was written to; absent means the tenant default was used. */
+  storageId?: string;
+}
+
+/**
+ * Whether a value is a payload stored outside the run history.
+ *
+ * Shape-based, because this crosses the wire as plain JSON and lands in a `jsonb` column.
+ *
+ * @param value Candidate.
+ * @returns True when the value is an asset reference.
+ */
+export function isWorkflowRunnerPayloadAssetRef(value: unknown): value is WorkflowRunnerPayloadAssetRef {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Partial<WorkflowRunnerPayloadAssetRef>;
+  return (
+    candidate.kind === "ASSET" &&
+    typeof candidate.assetPath === "string" &&
+    candidate.assetPath.length > 0 &&
+    typeof candidate.sha256 === "string" &&
+    candidate.sha256.length > 0
+  );
 }
 
 /** `GET /api/workflows/:runId/connection/:key` response: secrets resolved for this run only. */

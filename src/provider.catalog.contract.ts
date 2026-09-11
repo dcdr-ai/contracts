@@ -11,10 +11,6 @@ import {
   buildAnthropicProviderModelE2EOverrides,
 } from "./catalog/anthropic.contract";
 import {
-  buildClipProviderModelDefinitions,
-  buildClipProviderModelE2EOverrides,
-} from "./catalog/clip.contract";
-import {
   buildCohereProviderModelDefinitions,
   buildCohereProviderModelE2EOverrides,
 } from "./catalog/cohere.contract";
@@ -31,18 +27,10 @@ import {
   buildGrokProviderModelE2EOverrides,
 } from "./catalog/grok.contract";
 import {
-  buildHttpToolProviderModelDefinitions,
-  buildHttpToolProviderModelE2EOverrides,
-} from "./catalog/http-tool.contract";
-import {
   buildMistralProviderModelDefinitions,
   buildMistralProviderModelE2EOverrides,
   MISTRAL_PROVIDER_PRICING_FALLBACK_RULES,
 } from "./catalog/mistral.contract";
-import {
-  buildOcrProviderModelDefinitions,
-  buildOcrProviderModelE2EOverrides,
-} from "./catalog/ocr.contract";
 import {
   buildOfficeProviderModelDefinitions,
   buildOfficeProviderModelE2EOverrides,
@@ -478,9 +466,6 @@ const PRICING_FALLBACK_RULES_BY_PROVIDER: Record<
   [IntentProvider.OFFICE]: [],
   [IntentProvider.OLLAMA]: [],
   [IntentProvider.OPEN_AI_COMPATIBLE]: [],
-  [IntentProvider.OCR]: [],
-  [IntentProvider.CLIP]: [],
-  [IntentProvider.HTTP_TOOL]: [],
   [IntentProvider.RULES]: [],
 };
 
@@ -652,15 +637,6 @@ const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW: Record<
     buildOpenAICompatibleProviderModelDefinitions(
       PROVIDER_CATALOG_MODULE_BUILD_ARGS,
     ),
-  [IntentProvider.OCR]: buildOcrProviderModelDefinitions(
-    PROVIDER_CATALOG_MODULE_BUILD_ARGS,
-  ),
-  [IntentProvider.CLIP]: buildClipProviderModelDefinitions(
-    PROVIDER_CATALOG_MODULE_BUILD_ARGS,
-  ),
-  [IntentProvider.HTTP_TOOL]: buildHttpToolProviderModelDefinitions(
-    PROVIDER_CATALOG_MODULE_BUILD_ARGS,
-  ),
   [IntentProvider.RULES]: buildRulesProviderModelDefinitions(
     PROVIDER_CATALOG_MODULE_BUILD_ARGS,
   ),
@@ -1072,15 +1048,6 @@ export const PROVIDER_MODEL_E2E_OVERRIDES: Record<
     buildOpenAICompatibleProviderModelE2EOverrides(
       PROVIDER_CATALOG_MODULE_BUILD_ARGS,
     ),
-  [IntentProvider.OCR]: buildOcrProviderModelE2EOverrides(
-    PROVIDER_CATALOG_MODULE_BUILD_ARGS,
-  ),
-  [IntentProvider.CLIP]: buildClipProviderModelE2EOverrides(
-    PROVIDER_CATALOG_MODULE_BUILD_ARGS,
-  ),
-  [IntentProvider.HTTP_TOOL]: buildHttpToolProviderModelE2EOverrides(
-    PROVIDER_CATALOG_MODULE_BUILD_ARGS,
-  ),
   [IntentProvider.RULES]: buildRulesProviderModelE2EOverrides(
     PROVIDER_CATALOG_MODULE_BUILD_ARGS,
   ),

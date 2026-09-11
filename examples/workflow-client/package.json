@@ -1,0 +1,22 @@
+{
+  "name": "dcdr-workflow-client-example",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start:run-and-wait": "ts-node ./run-workflow-and-wait-example.ts",
+    "start:catalogue": "ts-node ./list-workflows-example.ts",
+    "start:tasks": "ts-node ./answer-tasks-example.ts",
+    "start:validate": "ts-node ./validate-definition-example.ts"
+  },
+  "dependencies": {
+    "@dcdr/contracts": "^3.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "volta": {
+    "node": "22.22.0"
+  }
+}
