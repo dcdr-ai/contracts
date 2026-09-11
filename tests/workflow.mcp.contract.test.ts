@@ -1,9 +1,7 @@
 import { PromptVariableType } from "../src/prompts.contract";
+import { WORKFLOW_CONNECTION_IMPLEMENTED_PROTOCOLS, WORKFLOW_CONNECTION_SETTINGS_FIELDS, WorkflowConnectionProtocol } from "../src/workflow.connections.contract";
 import {
-  WORKFLOW_CONNECTION_IMPLEMENTED_PROTOCOLS,
-  WORKFLOW_CONNECTION_SETTINGS_FIELDS,
   WorkflowAgentToolKind,
-  WorkflowConnectionProtocol,
   WorkflowDefinition,
   WorkflowSchemaVersion,
   WorkflowStateType,

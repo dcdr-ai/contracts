@@ -5,14 +5,14 @@ import { ExecutionAssetDatasourceType } from "./asset.contract";
  *
  * Notes
  * - This is intentionally separate from `ExecutionAssetDatasourceType`.
- * - `datasourceType` describes the storage family (`S3`, `FTP`, `NAS`).
+ * - `datasourceType` describes the storage family (`S3`, `FTP`, `SFTP`).
  * - `kind` describes the exact credential material returned to runtime.
  */
 export enum AssetStorageCredentialsKind {
   GOOGLE_CLOUD_SERVICE_ACCOUNT = "GOOGLE_CLOUD_SERVICE_ACCOUNT",
   S3_ACCESS_KEY = "S3_ACCESS_KEY",
   FTP_BASIC = "FTP_BASIC",
-  NAS_BASIC = "NAS_BASIC",
+  SFTP_KEY = "SFTP_KEY",
 }
 
 /**
@@ -47,13 +47,22 @@ export interface AssetStorageFtpBasicCredentials {
 }
 
 /**
- * NAS credentials for future share/path-backed asset storages.
+ * SFTP credentials for SSH-backed asset storages.
+ *
+ * Notes
+ * - **Not the same protocol as FTP**, despite the name: SFTP is a subsystem of SSH, with no passive
+ *   mode and no plaintext variant. `AssetStorageFtpBasicCredentials` carries `passive`, which exists
+ *   only in FTP, so the two cannot share one credential shape without lying about one of them.
+ * - `password` and `privateKey` are alternatives; a storage carrying both is one mid-rotation, and
+ *   the key wins because it is the stronger credential.
  */
-export interface AssetStorageNasBasicCredentials {
-  sharePath: string;
-  username?: string;
+export interface AssetStorageSftpKeyCredentials {
+  host: string;
+  port?: number;
+  username: string;
   password?: string;
-  domain?: string;
+  privateKey?: string;
+  passphrase?: string;
 }
 
 /**
@@ -75,7 +84,7 @@ export interface AssetStorageCredentialsContract {
   googleCloudServiceAccount?: AssetStorageGoogleCloudServiceAccountCredentials;
   s3AccessKey?: AssetStorageS3AccessKeyCredentials;
   ftpBasic?: AssetStorageFtpBasicCredentials;
-  nasBasic?: AssetStorageNasBasicCredentials;
+  sftpKey?: AssetStorageSftpKeyCredentials;
 }
 
 /**

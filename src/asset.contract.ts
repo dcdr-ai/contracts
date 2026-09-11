@@ -39,7 +39,7 @@ export const ASSET_TYPE_LABELS: Readonly<Record<AssetType, string>> = {
 export enum ExecutionAssetDatasourceType {
   S3 = "S3",
   FTP = "FTP",
-  NAS = "NAS",
+  SFTP = "SFTP",
 }
 
 /**

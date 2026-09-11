@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { ConditionLogicOp, ConditionOperator } from "../src/conditions.contract";
 import { PromptVariableType } from "../src/prompts.contract";
+import { WORKFLOW_CAPABILITIES, WORKFLOW_IMPLEMENTED_CAPABILITIES, WorkflowCapabilityBroker, findWorkflowCapability } from "../src/workflow.capabilities.contract";
 import {
   applyWorkflowMappingFunction,
   canonicalizeWorkflowDefinition,
@@ -13,10 +14,6 @@ import {
   WORKFLOW_APPROVAL_FORM,
   WORKFLOW_APPROVAL_REJECTED_CODE,
   formatWorkflowValueShorthand,
-  findWorkflowCapability,
-  WORKFLOW_CAPABILITIES,
-  WORKFLOW_IMPLEMENTED_CAPABILITIES,
-  WorkflowCapabilityBroker,
   inferWorkflowStateOutputSchema,
   isHostExecutedWorkflowState,
   listWorkflowConnections,
@@ -1373,10 +1370,44 @@ describe("workflow.contract capability catalog and the TOOL state", () => {
   });
 
   it("flags a catalog capability no runner executes yet", () => {
-    // `mail.send` is published but not implemented, so the editor can show it while refusing to let
-    // a tenant wire up something that will not run.
-    const issues = codes(definitionWith({ capability: "mail.send", connection: "smtp_main", args: { to: literal("a@b.c"), subject: literal("s"), body: literal("b") } }), ["smtp_main"]);
-    expect(issues).toEqual(["CAPABILITY_NOT_IMPLEMENTED"]);
+    // A capability is published ahead of its adapter so an editor can show what is coming; the
+    // validator then refuses to let a tenant wire up something that will not run.
+    //
+    // Every entry in the catalogue happens to have an adapter today, so this branch has no real
+    // example to point at - and it is exactly the branch that matters on the day the next capability
+    // is published. The implemented list is therefore narrowed for the length of this assertion and
+    // put back, rather than the case being deleted for want of a subject.
+    const implemented = WORKFLOW_IMPLEMENTED_CAPABILITIES as string[];
+    const withdrawn = implemented.splice(implemented.indexOf("mail.send"), 1);
+    try {
+      const issues = codes(
+        definitionWith({ capability: "mail.send", connection: "smtp_main", args: { to: literal("a@b.c"), subject: literal("s"), body: literal("b") } }),
+        ["smtp_main"],
+      );
+      expect(issues).toEqual(["CAPABILITY_NOT_IMPLEMENTED"]);
+    } finally {
+      implemented.push(...withdrawn);
+    }
+  });
+
+  it("publishes nothing a runner cannot execute today", () => {
+    // The other half of the same rule, and the one that is true right now: an editor offering a
+    // capability the runner has no adapter for is a tenant building a workflow that fails on its
+    // first run, with nothing in the editor having warned them.
+    const unimplemented = WORKFLOW_CAPABILITIES.filter((capability) => !WORKFLOW_IMPLEMENTED_CAPABILITIES.includes(capability.id)).map((capability) => capability.id);
+    expect(unimplemented).toEqual([]);
+  });
+
+  it("only demands an endpoint for a capability that calls a platform service", () => {
+    // `PLATFORM` says whose credentials are spent, not that there is something to point at.
+    const services = WORKFLOW_CAPABILITIES.filter((capability) => capability.requiresEndpoint).map((capability) => capability.id);
+    expect(services).toEqual(["web.search"]);
+    expect(findWorkflowCapability("web.fetch")?.requiresEndpoint).toBeUndefined();
+  });
+
+  it("declares nothing implemented that the catalog does not publish", () => {
+    const orphans = WORKFLOW_IMPLEMENTED_CAPABILITIES.filter((id) => !WORKFLOW_CAPABILITIES.some((capability) => capability.id === id));
+    expect(orphans).toEqual([]);
   });
 
   it("requires a connection for a connection-brokered capability, and refuses one otherwise", () => {

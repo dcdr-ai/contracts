@@ -68,7 +68,7 @@ describe("Asset storage credentials contracts", () => {
     expect(roundTrip.credentials.s3AccessKey?.forcePathStyle).toBe(true);
   });
 
-  it("supports FTP and NAS credential payloads (JSON round-trip)", () => {
+  it("supports FTP and SFTP credential payloads (JSON round-trip)", () => {
     const ftpResponse: ResolveAssetStorageCredentialsResponse = {
       storageId: "tenant-ftp",
       datasourceId: "tenant-ftp",
@@ -87,18 +87,19 @@ describe("Asset storage credentials contracts", () => {
       },
     };
 
-    const nasResponse: ResolveAssetStorageCredentialsResponse = {
-      storageId: "tenant-nas",
-      datasourceId: "tenant-nas",
+    const sftpResponse: ResolveAssetStorageCredentialsResponse = {
+      storageId: "tenant-sftp",
+      datasourceId: "tenant-sftp",
       credentials: {
-        kind: AssetStorageCredentialsKind.NAS_BASIC,
-        datasourceType: ExecutionAssetDatasourceType.NAS,
-        basePath: "customer-1/assets",
-        nasBasic: {
-          sharePath: "\\\\nas-01\\customers",
-          username: "nas-user",
-          password: "nas-password",
-          domain: "ACME",
+        kind: AssetStorageCredentialsKind.SFTP_KEY,
+        datasourceType: ExecutionAssetDatasourceType.SFTP,
+        basePath: "/home/dcdr/customer-1",
+        sftpKey: {
+          host: "sftp.example.invalid",
+          port: 22,
+          username: "sftp-user",
+          privateKey: ["-----BEGIN OPENSSH PRIVATE KEY-----", "key", "-----END OPENSSH PRIVATE KEY-----", ""].join("\n"),
+          passphrase: "sftp-passphrase",
         },
       },
     };
@@ -106,19 +107,20 @@ describe("Asset storage credentials contracts", () => {
     const ftpRoundTrip = JSON.parse(
       JSON.stringify(ftpResponse),
     ) as ResolveAssetStorageCredentialsResponse;
-    const nasRoundTrip = JSON.parse(
-      JSON.stringify(nasResponse),
+    const sftpRoundTrip = JSON.parse(
+      JSON.stringify(sftpResponse),
     ) as ResolveAssetStorageCredentialsResponse;
 
     expect(ftpRoundTrip.credentials.kind).toBe(
       AssetStorageCredentialsKind.FTP_BASIC,
     );
     expect(ftpRoundTrip.credentials.ftpBasic?.host).toBe("ftp.example.invalid");
-    expect(nasRoundTrip.credentials.kind).toBe(
-      AssetStorageCredentialsKind.NAS_BASIC,
+    expect(sftpRoundTrip.credentials.kind).toBe(
+      AssetStorageCredentialsKind.SFTP_KEY,
     );
-    expect(nasRoundTrip.credentials.nasBasic?.sharePath).toBe(
-      "\\\\nas-01\\customers",
-    );
+    // The PEM survives the round trip with its newlines intact, which is the one thing that breaks
+    // a key credential in transit and stays invisible until the handshake fails.
+    expect(sftpRoundTrip.credentials.sftpKey?.privateKey?.split("\n")).toHaveLength(4);
+    expect(sftpRoundTrip.credentials.sftpKey?.host).toBe("sftp.example.invalid");
   });
 });

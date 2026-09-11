@@ -1,6 +1,7 @@
 export * from "./src/control.contract";
 export * from "./src/asset.contract";
 export * from "./src/storage.credentials.contract";
+export * from "./src/storage.providers.contract";
 export * from "./src/tracked-call-rating.contract";
 export * from "./src/errors.contract";
 export * from "./src/execution.contract";
@@ -21,6 +22,9 @@ export * from "./src/entitlements.contract";
 export * from "./src/service-tokens.contract";
 export * from "./src/runtime.client";
 export * from "./src/utils.contract";
+export * from "./src/workflow.connections.contract";
+export * from "./src/workflow.tool-rating.contract";
+export * from "./src/workflow.capabilities.contract";
 export * from "./src/workflow.contract";
 export * from "./src/workflow.runner.contract";
 export * from "./src/prompt-variable-schema.contract";

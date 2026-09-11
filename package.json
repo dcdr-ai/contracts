@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "homepage": "https://dcdr.ai",
   "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,
@@ -50,72 +50,242 @@
     "node": "22.22.0"
   },
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./asset.contract": { "types": "./dist/asset.contract.d.ts", "default": "./dist/asset.contract.js" },
-    "./storage.credentials.contract": { "types": "./dist/storage.credentials.contract.d.ts", "default": "./dist/storage.credentials.contract.js" },
-    "./tracked-call-rating.contract": { "types": "./dist/tracked-call-rating.contract.d.ts", "default": "./dist/tracked-call-rating.contract.js" },
-    "./runtime.client": { "types": "./dist/runtime.client.d.ts", "default": "./dist/runtime.client.js" },
-    "./cache.contract": { "types": "./dist/cache.contract.d.ts", "default": "./dist/cache.contract.js" },
-    "./capabilities.contract": { "types": "./dist/capabilities.contract.d.ts", "default": "./dist/capabilities.contract.js" },
-    "./conditions.contract": { "types": "./dist/conditions.contract.d.ts", "default": "./dist/conditions.contract.js" },
-    "./control.contract": { "types": "./dist/control.contract.d.ts", "default": "./dist/control.contract.js" },
-    "./credentials.contract": { "types": "./dist/credentials.contract.d.ts", "default": "./dist/credentials.contract.js" },
-    "./subscription.contract": { "types": "./dist/subscription.contract.d.ts", "default": "./dist/subscription.contract.js" },
-    "./utils.contract": { "types": "./dist/utils.contract.d.ts", "default": "./dist/utils.contract.js" },
-    "./workflow.contract": { "types": "./dist/workflow.contract.d.ts", "default": "./dist/workflow.contract.js" },
-    "./workflow.runner.contract": { "types": "./dist/workflow.runner.contract.d.ts", "default": "./dist/workflow.runner.contract.js" },
-    "./prompt-variable-schema.contract": { "types": "./dist/prompt-variable-schema.contract.d.ts", "default": "./dist/prompt-variable-schema.contract.js" },
-    "./registry.stats.contract": { "types": "./dist/registry.stats.contract.d.ts", "default": "./dist/registry.stats.contract.js" },
-    "./http.contract": { "types": "./dist/http.contract.d.ts", "default": "./dist/http.contract.js" },
-    "./entitlements.contract": { "types": "./dist/entitlements.contract.d.ts", "default": "./dist/entitlements.contract.js" },
-    "./errors.contract": { "types": "./dist/errors.contract.d.ts", "default": "./dist/errors.contract.js" },
-    "./execution.contract": { "types": "./dist/execution.contract.d.ts", "default": "./dist/execution.contract.js" },
-    "./implementations.contract": { "types": "./dist/implementations.contract.d.ts", "default": "./dist/implementations.contract.js" },
-    "./intent.contract": { "types": "./dist/intent.contract.d.ts", "default": "./dist/intent.contract.js" },
-    "./logs.contract": { "types": "./dist/logs.contract.d.ts", "default": "./dist/logs.contract.js" },
-    "./messages.contract": { "types": "./dist/messages.contract.d.ts", "default": "./dist/messages.contract.js" },
-    "./policies.contract": { "types": "./dist/policies.contract.d.ts", "default": "./dist/policies.contract.js" },
-    "./prompts.contract": { "types": "./dist/prompts.contract.d.ts", "default": "./dist/prompts.contract.js" },
-    "./processing.contract": { "types": "./dist/processing.contract.d.ts", "default": "./dist/processing.contract.js" },
-    "./provider.contract": { "types": "./dist/provider.contract.d.ts", "default": "./dist/provider.contract.js" },
-    "./provider-limits.contract": { "types": "./dist/provider-limits.contract.d.ts", "default": "./dist/provider-limits.contract.js" },
-    "./provider.catalog.contract": { "types": "./dist/provider.catalog.contract.d.ts", "default": "./dist/provider.catalog.contract.js" },
-    "./service-tokens.contract": { "types": "./dist/service-tokens.contract.d.ts", "default": "./dist/service-tokens.contract.js" },
-    "./session.contract": { "types": "./dist/session.contract.d.ts", "default": "./dist/session.contract.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./asset.contract": {
+      "types": "./dist/asset.contract.d.ts",
+      "default": "./dist/asset.contract.js"
+    },
+    "./storage.credentials.contract": {
+      "types": "./dist/storage.credentials.contract.d.ts",
+      "default": "./dist/storage.credentials.contract.js"
+    },
+    "./storage.providers.contract": {
+      "types": "./dist/storage.providers.contract.d.ts",
+      "default": "./dist/storage.providers.contract.js"
+    },
+    "./tracked-call-rating.contract": {
+      "types": "./dist/tracked-call-rating.contract.d.ts",
+      "default": "./dist/tracked-call-rating.contract.js"
+    },
+    "./runtime.client": {
+      "types": "./dist/runtime.client.d.ts",
+      "default": "./dist/runtime.client.js"
+    },
+    "./cache.contract": {
+      "types": "./dist/cache.contract.d.ts",
+      "default": "./dist/cache.contract.js"
+    },
+    "./capabilities.contract": {
+      "types": "./dist/capabilities.contract.d.ts",
+      "default": "./dist/capabilities.contract.js"
+    },
+    "./conditions.contract": {
+      "types": "./dist/conditions.contract.d.ts",
+      "default": "./dist/conditions.contract.js"
+    },
+    "./control.contract": {
+      "types": "./dist/control.contract.d.ts",
+      "default": "./dist/control.contract.js"
+    },
+    "./credentials.contract": {
+      "types": "./dist/credentials.contract.d.ts",
+      "default": "./dist/credentials.contract.js"
+    },
+    "./subscription.contract": {
+      "types": "./dist/subscription.contract.d.ts",
+      "default": "./dist/subscription.contract.js"
+    },
+    "./utils.contract": {
+      "types": "./dist/utils.contract.d.ts",
+      "default": "./dist/utils.contract.js"
+    },
+    "./workflow.connections.contract": {
+      "types": "./dist/workflow.connections.contract.d.ts",
+      "default": "./dist/workflow.connections.contract.js"
+    },
+    "./workflow.capabilities.contract": {
+      "types": "./dist/workflow.capabilities.contract.d.ts",
+      "default": "./dist/workflow.capabilities.contract.js"
+    },
+    "./workflow.contract": {
+      "types": "./dist/workflow.contract.d.ts",
+      "default": "./dist/workflow.contract.js"
+    },
+    "./workflow.runner.contract": {
+      "types": "./dist/workflow.runner.contract.d.ts",
+      "default": "./dist/workflow.runner.contract.js"
+    },
+    "./prompt-variable-schema.contract": {
+      "types": "./dist/prompt-variable-schema.contract.d.ts",
+      "default": "./dist/prompt-variable-schema.contract.js"
+    },
+    "./registry.stats.contract": {
+      "types": "./dist/registry.stats.contract.d.ts",
+      "default": "./dist/registry.stats.contract.js"
+    },
+    "./http.contract": {
+      "types": "./dist/http.contract.d.ts",
+      "default": "./dist/http.contract.js"
+    },
+    "./entitlements.contract": {
+      "types": "./dist/entitlements.contract.d.ts",
+      "default": "./dist/entitlements.contract.js"
+    },
+    "./errors.contract": {
+      "types": "./dist/errors.contract.d.ts",
+      "default": "./dist/errors.contract.js"
+    },
+    "./execution.contract": {
+      "types": "./dist/execution.contract.d.ts",
+      "default": "./dist/execution.contract.js"
+    },
+    "./implementations.contract": {
+      "types": "./dist/implementations.contract.d.ts",
+      "default": "./dist/implementations.contract.js"
+    },
+    "./intent.contract": {
+      "types": "./dist/intent.contract.d.ts",
+      "default": "./dist/intent.contract.js"
+    },
+    "./logs.contract": {
+      "types": "./dist/logs.contract.d.ts",
+      "default": "./dist/logs.contract.js"
+    },
+    "./messages.contract": {
+      "types": "./dist/messages.contract.d.ts",
+      "default": "./dist/messages.contract.js"
+    },
+    "./policies.contract": {
+      "types": "./dist/policies.contract.d.ts",
+      "default": "./dist/policies.contract.js"
+    },
+    "./prompts.contract": {
+      "types": "./dist/prompts.contract.d.ts",
+      "default": "./dist/prompts.contract.js"
+    },
+    "./processing.contract": {
+      "types": "./dist/processing.contract.d.ts",
+      "default": "./dist/processing.contract.js"
+    },
+    "./provider.contract": {
+      "types": "./dist/provider.contract.d.ts",
+      "default": "./dist/provider.contract.js"
+    },
+    "./provider-limits.contract": {
+      "types": "./dist/provider-limits.contract.d.ts",
+      "default": "./dist/provider-limits.contract.js"
+    },
+    "./provider.catalog.contract": {
+      "types": "./dist/provider.catalog.contract.d.ts",
+      "default": "./dist/provider.catalog.contract.js"
+    },
+    "./service-tokens.contract": {
+      "types": "./dist/service-tokens.contract.d.ts",
+      "default": "./dist/service-tokens.contract.js"
+    },
+    "./session.contract": {
+      "types": "./dist/session.contract.d.ts",
+      "default": "./dist/session.contract.js"
+    }
   },
   "typesVersions": {
     "*": {
-      "asset.contract": ["dist/asset.contract.d.ts"],
-      "storage.credentials.contract": ["dist/storage.credentials.contract.d.ts"],
-      "tracked-call-rating.contract": ["dist/tracked-call-rating.contract.d.ts"],
-      "runtime.client": ["dist/runtime.client.d.ts"],
-      "cache.contract": ["dist/cache.contract.d.ts"],
-      "capabilities.contract": ["dist/capabilities.contract.d.ts"],
-      "conditions.contract": ["dist/conditions.contract.d.ts"],
-      "control.contract": ["dist/control.contract.d.ts"],
-      "credentials.contract": ["dist/credentials.contract.d.ts"],
-      "subscription.contract": ["dist/subscription.contract.d.ts"],
-      "utils.contract": ["dist/utils.contract.d.ts"],
-      "workflow.contract": ["dist/workflow.contract.d.ts"],
-      "workflow.runner.contract": ["dist/workflow.runner.contract.d.ts"],
-      "prompt-variable-schema.contract": ["dist/prompt-variable-schema.contract.d.ts"],
-      "registry.stats.contract": ["dist/registry.stats.contract.d.ts"],
-      "http.contract": ["dist/http.contract.d.ts"],
-      "entitlements.contract": ["dist/entitlements.contract.d.ts"],
-      "errors.contract": ["dist/errors.contract.d.ts"],
-      "execution.contract": ["dist/execution.contract.d.ts"],
-      "implementations.contract": ["dist/implementations.contract.d.ts"],
-      "intent.contract": ["dist/intent.contract.d.ts"],
-      "logs.contract": ["dist/logs.contract.d.ts"],
-      "messages.contract": ["dist/messages.contract.d.ts"],
-      "policies.contract": ["dist/policies.contract.d.ts"],
-      "prompts.contract": ["dist/prompts.contract.d.ts"],
-      "processing.contract": ["dist/processing.contract.d.ts"],
-      "provider.contract": ["dist/provider.contract.d.ts"],
-      "provider-limits.contract": ["dist/provider-limits.contract.d.ts"],
-      "provider.catalog.contract": ["dist/provider.catalog.contract.d.ts"],
-      "service-tokens.contract": ["dist/service-tokens.contract.d.ts"],
-      "session.contract": ["dist/session.contract.d.ts"]
+      "asset.contract": [
+        "dist/asset.contract.d.ts"
+      ],
+      "storage.credentials.contract": [
+        "dist/storage.credentials.contract.d.ts"
+      ],
+      "tracked-call-rating.contract": [
+        "dist/tracked-call-rating.contract.d.ts"
+      ],
+      "runtime.client": [
+        "dist/runtime.client.d.ts"
+      ],
+      "cache.contract": [
+        "dist/cache.contract.d.ts"
+      ],
+      "capabilities.contract": [
+        "dist/capabilities.contract.d.ts"
+      ],
+      "conditions.contract": [
+        "dist/conditions.contract.d.ts"
+      ],
+      "control.contract": [
+        "dist/control.contract.d.ts"
+      ],
+      "credentials.contract": [
+        "dist/credentials.contract.d.ts"
+      ],
+      "subscription.contract": [
+        "dist/subscription.contract.d.ts"
+      ],
+      "utils.contract": [
+        "dist/utils.contract.d.ts"
+      ],
+      "workflow.contract": [
+        "dist/workflow.contract.d.ts"
+      ],
+      "workflow.runner.contract": [
+        "dist/workflow.runner.contract.d.ts"
+      ],
+      "prompt-variable-schema.contract": [
+        "dist/prompt-variable-schema.contract.d.ts"
+      ],
+      "registry.stats.contract": [
+        "dist/registry.stats.contract.d.ts"
+      ],
+      "http.contract": [
+        "dist/http.contract.d.ts"
+      ],
+      "entitlements.contract": [
+        "dist/entitlements.contract.d.ts"
+      ],
+      "errors.contract": [
+        "dist/errors.contract.d.ts"
+      ],
+      "execution.contract": [
+        "dist/execution.contract.d.ts"
+      ],
+      "implementations.contract": [
+        "dist/implementations.contract.d.ts"
+      ],
+      "intent.contract": [
+        "dist/intent.contract.d.ts"
+      ],
+      "logs.contract": [
+        "dist/logs.contract.d.ts"
+      ],
+      "messages.contract": [
+        "dist/messages.contract.d.ts"
+      ],
+      "policies.contract": [
+        "dist/policies.contract.d.ts"
+      ],
+      "prompts.contract": [
+        "dist/prompts.contract.d.ts"
+      ],
+      "processing.contract": [
+        "dist/processing.contract.d.ts"
+      ],
+      "provider.contract": [
+        "dist/provider.contract.d.ts"
+      ],
+      "provider-limits.contract": [
+        "dist/provider-limits.contract.d.ts"
+      ],
+      "provider.catalog.contract": [
+        "dist/provider.catalog.contract.d.ts"
+      ],
+      "service-tokens.contract": [
+        "dist/service-tokens.contract.d.ts"
+      ],
+      "session.contract": [
+        "dist/session.contract.d.ts"
+      ]
     }
   },
   "dependencies": {

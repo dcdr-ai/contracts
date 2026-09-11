@@ -1,7 +1,6 @@
 import { HttpRequestParams } from "./http.contract";
+import { WorkflowConnectionProtocol, WorkflowConnectionSettings } from "./workflow.connections.contract";
 import {
-  WorkflowConnectionProtocol,
-  WorkflowConnectionSettings,
   WorkflowDefinition,
   WorkflowStateError,
   WorkflowStateSnapshot,
@@ -419,6 +418,36 @@ export interface WorkflowRunnerUsage {
    * counted here.
    */
   capabilityCalls?: Record<string, number>;
+  /**
+   * What the run's tool calls consumed (v3.8.0), both ways of counting.
+   *
+   * Two numbers rather than one because they catch opposite abuses, and a ceiling on either alone
+   * is gameable through the other: `calls` catches an agent looping through ten thousand tiny
+   * invocations, where the frequency itself is the cost - a connection opened, a secret fetched, a
+   * step recorded, every time - while `credits` catches the single call that drags two hundred
+   * megabytes back. It is the same pair the platform already keeps for model usage
+   * (`maxCallsPerMonth` beside `maxTrackedCallsPerMonth`).
+   *
+   * Rated **per call, as the run goes**, never from these totals: ten calls of six hundred rows are
+   * ten one-credit calls, and rating the six thousand rows afterwards would price them as one large
+   * call and charge twice as much for the same work.
+   */
+  tools?: WorkflowToolUsage;
+}
+
+/** Tool consumption of a run, per capability id. */
+export interface WorkflowToolUsage {
+  /** Invocations, per capability id (`MCP` for a tool call on an MCP server). */
+  calls: Record<string, number>;
+  /** Credits those invocations cost, per capability id. */
+  credits: Record<string, number>;
+  /**
+   * Version of the rating matrix the runner used.
+   *
+   * Carried so a run stays explainable after prices move: a charge nobody can reproduce six months
+   * later is a charge nobody can defend, and the matrix is versioned precisely so it can change.
+   */
+  matrixVersion: string;
 }
 
 /** Details of a parked run (`WAITING`). */
