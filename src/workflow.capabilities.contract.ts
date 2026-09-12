@@ -94,7 +94,7 @@ export const WORKFLOW_CAPABILITIES: readonly WorkflowCapability[] = [
   {
     id: "web.fetch",
     version: "1.0.0",
-    description: "Downloads one public web page and returns its readable text.",
+    description: "Downloads one URL and returns its readable text. Reads HTML, plain text, Markdown and JSON, so it also works against a status or health endpoint.",
     broker: WorkflowCapabilityBroker.PLATFORM,
     inputSchema: {
       url: new PromptVariable(PromptVariableType.STRING, true, "Absolute https URL to read."),

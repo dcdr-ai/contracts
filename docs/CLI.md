@@ -69,7 +69,7 @@ npm run dcdr -- wf-publish SUPPORT_TRIAGE --control-url https://dcdr.ai --sessio
 
 # Human work: inbox, then answer an approval gate
 npm run dcdr -- wf-inbox --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN --scope MINE
-npm run dcdr -- wf-resume <runId> --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN   --payload-json '{"approved":true,"comment":"ok"}'
+npm run dcdr -- wf-resume <runId> --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN   --payload-json '{"approved":true,"comment":"ok"}' [--frame-id <frameId>]
 
 # What a run did
 npm run dcdr -- wf-report <runId> --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN --json
@@ -117,6 +117,10 @@ npm run dcdr -- wf-evidence <runId> --control-url https://dcdr.ai --service-toke
 # Human work: what is parked, then answer one
 npm run dcdr -- wf-tasks  --control-url https://dcdr.ai --service-token $SVC
 npm run dcdr -- wf-resume <runId> --control-url https://dcdr.ai --service-token $SVC   --payload-json '{"approved":true,"comment":"ok"}'
+
+# One run can hold several tasks (a FOREACH asking a person per item): --frame-id says which one
+# you are answering. Every row of wf-tasks prints its frameId and a readable path.
+npm run dcdr -- wf-resume <runId> --control-url https://dcdr.ai --service-token $SVC   --frame-id 'root/each:2/fan:signoff' --payload-json '{"approved":true}'
 
 # CI gate: does this definition still compile against our tenant?
 npm run dcdr -- wf-validate --control-url https://dcdr.ai --service-token $SVC --definition-file ./workflow.json

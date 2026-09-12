@@ -29,6 +29,7 @@ import {
   resolveWorkflowValueRecord,
   selectChoiceNext,
   validateWorkflowDefinition,
+  workflowCanPark,
   WORKFLOW_MAPPING_FUNCTION_META,
   WorkflowDefinition,
   WorkflowEndOutcome,
@@ -1500,4 +1501,105 @@ describe("workflow.contract v3.6.0 additions", () => {
     // A sampling policy is settings, not structure: it must not affect whether a definition is valid.
     expect(validateWorkflowDefinition(definition, {}).issues).toEqual([]);
   });
+});
+
+describe("parking states and where they may sit", () => {
+    /**
+     * A minimal definition around one state.
+     *
+     * @param states States of the definition.
+     * @param startAt Entry state.
+     * @returns The definition.
+     */
+    function definitionOf(states: Record<string, unknown>, startAt: string): WorkflowDefinition {
+        return {
+            schemaVersion: WorkflowSchemaVersion.V1,
+            key: "PARK_TEST",
+            name: "Park test",
+            settings: { timeoutMs: 60_000, maxTransitionsPerRun: 20 },
+            startAt,
+            states: states as WorkflowDefinition["states"],
+        };
+    }
+
+    it("workflowCanPark sees a WAIT, an AGENT and an approval gate, at any depth", () => {
+        const plain = definitionOf({ a: { type: WorkflowStateType.TRANSFORM, next: "z", transform: { output: { kind: WorkflowValueKind.LITERAL, literal: 1 } } }, z: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } } }, "a");
+        expect(workflowCanPark(plain)).toBe(false);
+
+        const waits = definitionOf({ w: { type: WorkflowStateType.WAIT, next: "z", wait: { kind: "DELAY", delayMs: 10, timeoutMs: 1_000 } }, z: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } } }, "w");
+        expect(workflowCanPark(waits)).toBe(true);
+
+        // An approval gate parks before the state runs, whatever the state is.
+        const gated = definitionOf({ a: { type: WorkflowStateType.TRANSFORM, next: "z", approval: { timeoutMs: 1_000 }, transform: { output: { kind: WorkflowValueKind.LITERAL, literal: 1 } } }, z: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } } }, "a");
+        expect(workflowCanPark(gated)).toBe(true);
+
+        // And inside a nested scope, which parks on its own frame since 3.10.0.
+        const nested = definitionOf({
+            fan: {
+                type: WorkflowStateType.PARALLEL,
+                next: "z",
+                parallel: { branches: [{ id: "b", startAt: "w", states: { w: { type: WorkflowStateType.WAIT, next: "e", wait: { kind: "DELAY", delayMs: 10, timeoutMs: 1_000 } }, e: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } } } }] },
+            },
+            z: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+        }, "fan");
+        expect(workflowCanPark(nested)).toBe(true);
+    });
+
+    it("accepts a WAIT inside a branch and an item, and still refuses an AGENT there", () => {
+        // Until 3.10.0 both were refused, and the reason given was addressing: a resume block named
+        // one state of one graph and could not say "branch b, item 7, state ask". Frames removed
+        // that - each scope has its own, each parks on its own, and a resume names the frame it
+        // answers. What is left is the agent, which parks on a cursor of its own that a child frame
+        // does not carry, so that one is still a publish-time refusal rather than a run-time hang.
+        const branchWait = definitionOf({
+            fan: {
+                type: WorkflowStateType.PARALLEL,
+                next: "z",
+                parallel: { branches: [{ id: "b", startAt: "w", states: { w: { type: WorkflowStateType.WAIT, next: "e", wait: { kind: "HUMAN_TASK", timeoutMs: 60_000, form: {} } }, e: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } } } }] },
+            },
+            z: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+        }, "fan");
+        expect(validateWorkflowDefinition(branchWait).issues).toEqual([]);
+
+        const itemWait = definitionOf({
+            each: {
+                type: WorkflowStateType.FOREACH,
+                next: "z",
+                foreach: {
+                    items: { kind: WorkflowValueKind.ARRAY, array: [{ kind: WorkflowValueKind.LITERAL, literal: 1 }] },
+                    maxItems: 5,
+                    concurrency: 1,
+                    startAt: "w",
+                    states: { w: { type: WorkflowStateType.WAIT, next: "e", wait: { kind: "DELAY", delayMs: 10, timeoutMs: 60_000 } }, e: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } } },
+                },
+            },
+            z: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+        }, "each");
+        expect(validateWorkflowDefinition(itemWait).issues).toEqual([]);
+
+        const branchAgent = definitionOf({
+            fan: {
+                type: WorkflowStateType.PARALLEL,
+                next: "z",
+                parallel: { branches: [{ id: "b", startAt: "a", states: { a: { type: WorkflowStateType.AGENT, next: "e", agent: { goal: { kind: WorkflowValueKind.LITERAL, literal: "go" }, maxIterations: 3, tools: [] } }, e: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } } } }] },
+            },
+            z: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+        }, "fan");
+        expect(validateWorkflowDefinition(branchAgent).issues.map((issue) => issue.code)).toContain(WorkflowValidationIssueCode.NESTED_AGENT_NOT_ALLOWED);
+    });
+
+    it("does not refuse a SUBWORKFLOW call to a child that can park: a child may park", () => {
+        // A child parks on its own frame, like every other nested scope. `canPark` is therefore
+        // informational - an editor wants to warn that calling this child can stop the run and put a
+        // task in somebody's inbox - and never a refusal.
+        const parent = definitionOf({
+            call: { type: WorkflowStateType.SUBWORKFLOW, next: "z", subworkflow: { workflowKey: "CHILD", input: {} } },
+            z: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+        }, "call");
+
+        for (const canPark of [true, false, undefined]) {
+            const result = validateWorkflowDefinition(parent, { workflows: [{ key: "CHILD", canPark }] });
+            expect(result.issues.map((issue) => issue.code)).not.toContain("NESTED_AGENT_NOT_ALLOWED");
+        }
+    });
 });

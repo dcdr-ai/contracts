@@ -273,7 +273,16 @@ export interface WorkflowHttpConnectionSettings extends WorkflowConnectionCommon
    * written before this field existed must not be the one connection with no ceiling.
    */
   maxRequestBytes?: number;
-  /** Allow plain `http://` (self-hosted deployments only; ignored in cloud). */
+  /**
+   * Allow plain `http://` **and a host on a private or loopback address**.
+   *
+   * Self-hosted deployments only, and ignored in cloud, where nothing private is reachable from the
+   * fleet anyway. The private-address half was added in 3.10.0: until then the flag lifted only the
+   * scheme, which left the boundary backwards - a self-hosted tenant could not point an `HTTP` state
+   * at their own intranet, the one thing this flag exists for, while `web.fetch`, which runs on the
+   * *platform's* credentials, could. It now means on an `HTTP` connection exactly what it already
+   * meant on an `MCP` one.
+   */
   allowInsecure?: boolean;
 }
 

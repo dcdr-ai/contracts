@@ -331,8 +331,8 @@ export class DcdrClient {
   }
 
   /** @see DcdrWorkflowClient.resumeWorkflowRun */
-  async resumeWorkflowRun(runId: string, payload: unknown): Promise<WorkflowRun> {
-    return this.workflows.resumeWorkflowRun(runId, payload);
+  async resumeWorkflowRun(runId: string, answer: { payload: unknown; frameId?: string } | unknown): Promise<WorkflowRun> {
+    return this.workflows.resumeWorkflowRun(runId, answer);
   }
 
   /** @see DcdrWorkflowClient.listWorkflowRunSteps */

@@ -392,6 +392,16 @@ export enum WorkflowValidationIssueCode {
   OUTPUT_MAPPING_MISSING = "OUTPUT_MAPPING_MISSING",
   OUTPUT_KEY_UNKNOWN = "OUTPUT_KEY_UNKNOWN",
   OUTPUT_KEY_MISSING = "OUTPUT_KEY_MISSING",
+  /**
+   * An `AGENT` declared inside a `PARALLEL` branch or a `FOREACH` body.
+   *
+   * A `WAIT` there is fine since 3.10.0: every scope runs on its own frame, so it parks on that
+   * frame, `waits[]` carries one entry per parked frame and a resume names the frame it answers. An
+   * agent is the one thing that is not covered yet - it parks on a cursor of its own (iteration,
+   * history, pending tool call), and that cursor is not carried on a child frame - so the runner
+   * refuses it at run time and the validator says so while the author is still drawing the graph.
+   */
+  NESTED_AGENT_NOT_ALLOWED = "NESTED_AGENT_NOT_ALLOWED",
   SUBWORKFLOW_UNKNOWN = "SUBWORKFLOW_UNKNOWN",
   SUBWORKFLOW_INPUT_UNKNOWN = "SUBWORKFLOW_INPUT_UNKNOWN",
   SUBWORKFLOW_INPUT_MISSING = "SUBWORKFLOW_INPUT_MISSING",
@@ -727,8 +737,17 @@ export interface WorkflowForeachOutput {
 /** `SUBWORKFLOW` state configuration. */
 export interface WorkflowSubworkflowStateConfig {
   workflowKey: string;
-  /** Pinned version; omitted = published version. */
-  version?: number;
+  /**
+   * Pinned version **label**; omitted = whatever is published when the run starts.
+   *
+   * A string because that is what a workflow version is everywhere else: a masked, user-facing label
+   * (`1.4.0`, `2026.09`) validated against `Workflow.generalSettings.versionMask`, exactly like
+   * `WorkflowRunnerWorkflowDescriptor.version`. Declared as a number here by oversight, which meant
+   * a pin could not name a real version at all; corrected in 3.10.0, the release that gives
+   * `SUBWORKFLOW` an implementation. Nothing can have been stored against the old type: until that
+   * implementation every `SUBWORKFLOW` failed at run time.
+   */
+  version?: string;
   input: Record<string, WorkflowValueNode>;
 }
 
@@ -984,7 +1003,19 @@ export const WORKFLOW_STATE_CONFIG_FIELDS: Record<WorkflowStateType, keyof Workf
 export interface WorkflowSettings {
   /** Whole-run timeout. */
   timeoutMs: number;
-  /** Loop guard: maximum state executions per run. */
+  /**
+   * Loop guard: maximum state executions **in the whole run**, summed across every frame.
+   *
+   * Per run and not per frame, deliberately, because what it guards is a runaway and a runaway does
+   * not care which scope it is in: a `FOREACH` of two hundred items at ten transitions each is two
+   * thousand state executions whoever counts them, and a per-frame cap of two hundred would let all
+   * two thousand through while stopping a single loop of two hundred and one.
+   *
+   * The consequence is that fan-out spends this budget quickly, so a definition with a wide
+   * `FOREACH` needs a ceiling sized for the work rather than for the graph. Fan-out itself is bounded
+   * separately and already: `WorkflowForeachStateConfig.maxItems` per state, and
+   * `WorkflowValidationCaps.maxNestingDepth` on how far those multiply.
+   */
   maxTransitionsPerRun: number;
   /** Default error policy for states that declare none (`FAIL_RUN` when omitted). */
   onError?: WorkflowStateErrorPolicy;
@@ -1106,6 +1137,18 @@ export interface WorkflowValidationWorkflow {
   key: string;
   inputSchema?: Record<string, PromptVariable>;
   outputSchema?: Record<string, PromptVariable>;
+  /**
+   * Whether this workflow contains a state that can park a run (v3.10.0).
+   *
+   * Informational for editors and hosts rather than a refusal: a `SUBWORKFLOW` child **may** park,
+   * because it runs inline and sequentially, so exactly one thing in it can be waiting and one
+   * cursor describes that completely. What a caller wants to know in advance is that this child can
+   * stop the parent run and put a task in somebody's inbox - a `SUBWORKFLOW` called under an HTTP
+   * trigger that waits for its answer, for instance, will never return in time.
+   *
+   * Computed by {@link workflowCanPark}, so a host and an editor cannot disagree about the answer.
+   */
+  canPark?: boolean;
 }
 
 /** Everything the validator may cross-check a definition against. */
@@ -2494,6 +2537,30 @@ export function listWorkflowMcpConnections(definition: WorkflowDefinition): stri
   return Array.from(out).sort();
 }
 
+/**
+ * Whether a definition contains a state that can park a run.
+ *
+ * `WAIT` parks by construction, and an `AGENT` parks whenever its planner calls a `WAIT` tool, so
+ * both count. Exported because two places need the same answer and must not disagree: a host
+ * deciding whether it can run a definition inline, and the validator refusing a `SUBWORKFLOW` call
+ * to one (`WorkflowValidationWorkflow.canPark`).
+ *
+ * Nested scopes are walked too - a `WAIT` inside a `PARALLEL` branch of the child parks the child
+ * just the same, even though that definition would not have validated on its own.
+ *
+ * @param definition Definition to inspect.
+ * @returns Whether anything in it can park.
+ */
+export function workflowCanPark(definition: WorkflowDefinition): boolean {
+  let parks = false;
+  forEachWorkflowState(definition.states, (state) => {
+    if (state.type === WorkflowStateType.WAIT || state.type === WorkflowStateType.AGENT) parks = true;
+    // An approval gate parks before the state runs, whatever the state is.
+    if (state.approval) parks = true;
+  });
+  return parks;
+}
+
 export function listWorkflowSubworkflows(definition: WorkflowDefinition): string[] {
   const out = new Set<string>();
   forEachWorkflowState(definition.states, (state) => {
@@ -3068,6 +3135,8 @@ function validateGraphScope(
         }
         break;
       case WorkflowStateType.WAIT:
+        // Nested waits are allowed: a branch or an item runs on its own frame and parks on it, so
+        // several scopes of one run can sit on somebody's desk at once and each is answered by name.
         if (state.wait) {
           validateWaitState(state.wait, `${statePath}.wait`, acc);
           if (state.wait.assignees !== undefined) validateValueNode(state.wait.assignees, `${statePath}.wait.assignees`, valueArgs);
@@ -3114,6 +3183,16 @@ function validateGraphScope(
         }
         break;
       case WorkflowStateType.AGENT:
+        if (scope.nesting > 0) {
+          // A nested `WAIT` parks on its own frame and is allowed; an agent is not, because what it
+          // parks on is its own cursor - iteration, history, the tool call in flight - and a child
+          // frame does not carry one yet.
+          push(
+            `${statePath}`,
+            WorkflowValidationIssueCode.NESTED_AGENT_NOT_ALLOWED,
+            "An AGENT may not sit inside a PARALLEL branch or a FOREACH body: it parks on a cursor of its own, and a child frame does not carry one yet.",
+          );
+        }
         if (state.agent) validateAgentState(state.agent, `${statePath}.agent`, states, caps, valueArgs);
         break;
       case WorkflowStateType.TOOL:

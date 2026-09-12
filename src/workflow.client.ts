@@ -253,6 +253,10 @@ export interface WorkflowVersionSummary {
 
 /** What a parked run is waiting for. */
 export interface WorkflowRunWait {
+  /** The scope that is waiting; what `resumeWorkflowRun` names when a run has more than one. */
+  frameId: string;
+  /** Human-readable address of that scope (`each/7/approve`), so two of them are tellable apart. */
+  path: string | null;
   stateId: string | null;
   kind: WorkflowWaitKind | null;
   /**
@@ -295,8 +299,13 @@ export interface WorkflowRun {
   output: unknown;
   error: WorkflowRunError | null;
   summary: string | null;
-  /** Set only while the run is `WAITING`. */
-  wait: WorkflowRunWait | null;
+  /**
+   * Every scope currently waiting; empty unless the run is `WAITING`.
+   *
+   * A list and not a field because a run can park more than one at a time - two `PARALLEL` branches
+   * on two different people - and answering one of them is not answering the other.
+   */
+  waits: WorkflowRunWait[];
   usage: WorkflowRunUsage | null;
 }
 
@@ -356,6 +365,20 @@ export interface WorkflowRunReport {
 /** One run waiting for a person. */
 export interface WorkflowTask {
   runId: string;
+  /**
+   * The scope this task belongs to; what `resumeWorkflowRun` names (v3.10.0).
+   *
+   * A run is not the unit any more: a `FOREACH` over three hosts whose body asks a person opens
+   * three tasks on one run, and answering one is not answering the others. Without this id a caller
+   * reading the inbox can only send the run id, which the server refuses as ambiguous.
+   */
+  frameId: string;
+  /**
+   * Human-readable address of that scope (`each/7/approve`), or `null` for a run parked at its root.
+   *
+   * What a person is shown when two rows of the same run would otherwise look identical.
+   */
+  path: string | null;
   workflow: string;
   stateId: string | null;
   approval: boolean;
@@ -544,6 +567,19 @@ interface WorkflowRawResponse {
  * Carries the server's own error code when there was one, so callers branch on
  * {@link DcdrWorkflowErrorCode} rather than on an HTTP status or a message string.
  */
+/**
+ * Whether a resume argument is the `{ payload, frameId? }` envelope rather than a bare payload.
+ *
+ * Told apart by `payload` being present: an approval decision is `{ approved, comment? }` and a
+ * human-task answer is whatever the state's `form` declares, so neither carries that key.
+ *
+ * @param value Argument handed to `resumeWorkflowRun`.
+ * @returns Whether it is the envelope.
+ */
+function isResumeAnswer(value: unknown): value is { payload: unknown; frameId?: string } {
+  return typeof value === "object" && value !== null && "payload" in (value as Record<string, unknown>);
+}
+
 export class DcdrWorkflowError extends Error {
   /** Stable failure code. */
   readonly code: DcdrWorkflowErrorCode;
@@ -916,16 +952,26 @@ export class DcdrWorkflowClient {
    * Calls `POST /api/dcdr/workflows/runs/:runId/resume`.
    *
    * Only `WAITING` runs can be resumed. The payload is validated server-side against whatever the
-   * run is parked on: the fixed `{ approved, comment? }` form for an approval gate, the state's own
-   * `form` for a `HUMAN_TASK`, and the awaited `eventKey` for an `EXTERNAL_EVENT`. `run.wait` says
-   * which of the three it is.
+   * frame is parked on: the fixed `{ approved, comment? }` form for an approval gate, the state's own
+   * `form` for a `HUMAN_TASK`, and the awaited `eventKey` for an `EXTERNAL_EVENT`.
+   *
+   * `frameId` says **which** parked scope is being answered, and is optional on purpose (v3.10.0). A
+   * run parks one frame at a time in every ordinary workflow, and the server resolves it when there
+   * is exactly one - so the single-track case stays one call and nothing written before frames
+   * existed has to change. A run with several parked frames - a `PARALLEL` whose branches are waiting
+   * on two different people - answers `409` listing the candidates rather than guessing which one you
+   * meant. Take the id from `listWorkflowTasks`, whose rows carry it along with a readable `path`.
    *
    * @param runId Run id.
-   * @param payload The answer.
+   * @param answer The answer, and the frame it answers when the run has more than one parked.
    * @returns The re-queued run.
    */
-  async resumeWorkflowRun(runId: string, payload: unknown): Promise<WorkflowRun> {
-    return this.requestJson({ method: "POST", path: this.routes.runResume(runId), body: { payload } });
+  async resumeWorkflowRun(runId: string, answer: { payload: unknown; frameId?: string } | unknown): Promise<WorkflowRun> {
+    // A bare payload is still accepted: `resumeWorkflowRun(runId, { approved: true })` was the whole
+    // API before frames, and breaking it would cost every caller a change to say something the server
+    // can work out on its own.
+    const body = isResumeAnswer(answer) ? { frameId: answer.frameId, payload: answer.payload } : { payload: answer };
+    return this.requestJson({ method: "POST", path: this.routes.runResume(runId), body });
   }
 
   /**

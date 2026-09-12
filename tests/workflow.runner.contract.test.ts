@@ -15,6 +15,8 @@ import {
   WorkflowRunnerAgentCursor,
   WorkflowRunnerStepStatus,
   WorkflowRunOutputStatus,
+    WorkflowRunnerFrameKind,
+    WorkflowRunnerFrameStatus,
 } from "../src/workflow.runner.contract";
 import { WorkflowEvidenceKind, WorkflowStateRunStatus, WorkflowStateType, WorkflowWaitKind } from "../src/workflow.contract";
 
@@ -126,7 +128,7 @@ describe("workflow.runner.contract routes and constants", () => {
           evidence: [{ kind: WorkflowEvidenceKind.URL, ref: "https://example.org/report", sha256: "abc", capturedAt: "2026-09-06T00:00:02.500Z", iteration: 3 }],
         },
       ],
-      cursor: { currentStateId: "respond", transitions: 4 },
+      cursor: { frames: [{ id: "root", kind: WorkflowRunnerFrameKind.ROOT, depth: 0, path: "root", status: WorkflowRunnerFrameStatus.RUNNING, currentStateId: "respond", transitions: 4, states: {} }] },
     };
     expect(JSON.parse(JSON.stringify(steps))).toEqual(steps);
 
@@ -139,12 +141,17 @@ describe("workflow.runner.contract routes and constants", () => {
       estimatedCost: 1.25,
       startedAt: "2026-09-06T00:00:00.000Z",
     };
-    const parked: WorkflowRunnerStepsRequest = { steps: [], cursor: { currentStateId: "research", transitions: 5, agent: agentCursor } };
+    // The agent's place rides on the frame that holds it, which is what retired the standalone
+    // cursor beside it.
+    const parked: WorkflowRunnerStepsRequest = {
+      steps: [],
+      cursor: { frames: [{ id: "root", kind: WorkflowRunnerFrameKind.ROOT, depth: 0, path: "root", status: WorkflowRunnerFrameStatus.RUNNING, currentStateId: "research", transitions: 5, states: {}, agentCursor }] },
+    };
     expect(JSON.parse(JSON.stringify(parked))).toEqual(parked);
 
     const output: WorkflowRunnerOutputRequest = {
       status: WorkflowRunOutputStatus.WAITING,
-      wait: { stateId: "approve", kind: WorkflowWaitKind.HUMAN_TASK, timeoutAt: "2026-09-07T00:00:00.000Z", assignees: ["ana@example.com"] },
+      waits: [{ frameId: "root", path: "root", details: { stateId: "approve", kind: WorkflowWaitKind.HUMAN_TASK, timeoutAt: "2026-09-07T00:00:00.000Z", assignees: ["ana@example.com"] } }],
       usage: { trackedCalls: 2 },
       transitions: 5,
     };
@@ -201,7 +208,7 @@ describe("workflow.runner.contract DcdrWorkflowRunnerClient", () => {
     expect((await client.log("r1", { entries: [{ level: WorkflowRunnerLogLevel.INFO, message: "m", at: "t" }] })).ok).toBe(true);
     expect((await client.logFileUploadUrl("r1", WorkflowRunnerLogFileType.RUN_LOG, { id: "f1", fileName: "run.log" })).uploadUrl).toBe("https://s3/u");
     expect((await client.registerLogFile("r1", WorkflowRunnerLogFileType.RUN_LOG, { id: "f1", fileName: "run.log" })).ok).toBe(true);
-    const stepsRes = await client.steps("r1", { steps: [], cursor: { currentStateId: null, transitions: 0 } });
+    const stepsRes = await client.steps("r1", { steps: [], cursor: { frames: [] } });
     expect(stepsRes.accepted).toBe(2);
     expect((await client.output("r1", { status: WorkflowRunOutputStatus.COMPLETED, output: { x: 1 }, transitions: 3 })).ok).toBe(true);
 
@@ -250,15 +257,19 @@ describe("workflow.runner.contract DcdrWorkflowRunnerClient", () => {
           definition: { schemaVersion: 1, key: "SUPPLIER_CHECK", name: "x", settings: { timeoutMs: 1000, maxTransitionsPerRun: 5 }, startAt: "research", states: {} },
           input: {},
           connections: [],
-          resume: { currentStateId: "research", transitions: 1, states: {}, waitStateId: "research", resumePayload: { approved: true }, nextSequence: 4, agent: cursor },
+          resume: {
+            frames: [{ id: "root", kind: WorkflowRunnerFrameKind.ROOT, depth: 0, path: "root", status: WorkflowRunnerFrameStatus.WAITING, currentStateId: "research", transitions: 1, states: {}, agentCursor: cursor, wait: { stateId: "research", kind: WorkflowWaitKind.HUMAN_TASK, timeoutAt: "2026-09-07T00:00:00.000Z" }, resumePayload: { approved: true } }],
+            nextSequence: 4,
+          },
         },
       },
     ]);
     const client = new DcdrWorkflowRunnerClient({ baseUrl: "https://backend.test", token: "t", fetchFn });
     const input = await client.input("run-1");
     expect(calls).toHaveLength(1);
-    expect(input.resume?.agent).toEqual(cursor);
-    expect(input.resume?.agent?.history[1].output).toBeUndefined();
+    const root = input.resume?.frames.find((frame) => !frame.parentFrameId);
+    expect(root?.agentCursor).toEqual(cursor);
+    expect(root?.agentCursor?.history[1].output).toBeUndefined();
   });
 
   it("uses the run status snapshot enum shared with the workflow contract", () => {

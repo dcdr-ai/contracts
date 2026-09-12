@@ -100,7 +100,7 @@ function makeRun(status: WorkflowRunStatus, extra?: Record<string, unknown>): Re
     output: null,
     error: null,
     summary: null,
-    wait: null,
+    waits: [],
     usage: null,
     ...extra,
   };
@@ -348,13 +348,13 @@ describe("DcdrWorkflowClient run and wait", () => {
 
   it("stops when the run parks on a person, by default, and never sleeps", async () => {
     const { client } = makeClient([
-      { json: makeRun(WorkflowRunStatus.WAITING, { wait: { stateId: "approve", kind: null, human: true, approval: true, eventKey: null, assignmentGroupKey: null, instructions: null, since: null, timeoutAt: null } }) },
+      { json: makeRun(WorkflowRunStatus.WAITING, { waits: [{ frameId: "f1", path: "approve", stateId: "approve", kind: null, human: true, approval: true, eventKey: null, assignmentGroupKey: null, instructions: null, since: null, timeoutAt: null }] }) },
     ]);
     const clock = fakeClock();
     const result = await client.waitForWorkflowRun("r1", { nowFn: clock.nowFn, sleepFn: clock.sleepFn });
     expect(result.outcome).toBe(WorkflowWaitOutcome.WAITING);
     expect(result.succeeded).toBe(false);
-    expect(result.run.wait?.human).toBe(true);
+    expect(result.run.waits[0].human).toBe(true);
     expect(clock.slept).toEqual([]);
   });
 
@@ -436,6 +436,13 @@ describe("DcdrWorkflowClient runs and observability", () => {
     const resume = makeClient([{ json: makeRun(WorkflowRunStatus.QUEUED) }]);
     await resume.client.resumeWorkflowRun("r1", { approved: true, comment: "ok" });
     expect(resume.calls[0].body).toEqual({ payload: { approved: true, comment: "ok" } });
+
+    // Addressed form: a run parked on several frames answers one of them by name. The bare payload
+    // above still has to work, because it was the whole API before frames and the server resolves
+    // the frame itself when there is only one.
+    const addressed = makeClient([{ json: makeRun(WorkflowRunStatus.QUEUED) }]);
+    await addressed.client.resumeWorkflowRun("r1", { frameId: "root/each:7/fan:sign", payload: { approved: true } });
+    expect(addressed.calls[0].body).toEqual({ frameId: "root/each:7/fan:sign", payload: { approved: true } });
   });
 
   it("reads steps, evidence, report and tasks", async () => {
@@ -449,10 +456,26 @@ describe("DcdrWorkflowClient runs and observability", () => {
     const report = makeClient([{ json: { run: makeRun(WorkflowRunStatus.COMPLETED), steps: { total: 2, failed: 0, byStatus: { COMPLETED: 2 }, timeline: [] }, evidence: [] } }]);
     expect((await report.client.getWorkflowRunReport("r1")).steps.total).toBe(2);
 
-    const tasks = makeClient([{ json: { items: [{ runId: "r1", workflow: "K", approval: true, overdue: false }] } }]);
-    await tasks.client.listWorkflowTasks({ groupKey: "finance", limit: 5 });
+    // Every inbox row carries the frame it belongs to. Without it a caller reading the inbox can
+    // only send the run id, and a run holding three tasks refuses that as ambiguous - so this is
+    // what makes the inbox actionable rather than just readable.
+    const tasks = makeClient([
+      {
+        json: {
+          items: [
+            { runId: "r1", frameId: "root/each:0/fan:sign", path: "root/each:0/fan:sign", workflow: "K", approval: true, overdue: false },
+            { runId: "r1", frameId: "root/each:1/fan:sign", path: "root/each:1/fan:sign", workflow: "K", approval: true, overdue: false },
+          ],
+        },
+      },
+    ]);
+    const inbox = await tasks.client.listWorkflowTasks({ groupKey: "finance", limit: 5 });
     expect(tasks.calls[0].url).toContain("groupKey=finance");
     expect(tasks.calls[0].url).toContain("limit=5");
+    // Two rows, one run, and they are tellable apart - which is the whole point of the two fields.
+    expect(inbox.items.map((task) => task.runId)).toEqual(["r1", "r1"]);
+    expect(inbox.items.map((task) => task.frameId)).toEqual(["root/each:0/fan:sign", "root/each:1/fan:sign"]);
+    expect(inbox.items.map((task) => task.path)).toEqual(["root/each:0/fan:sign", "root/each:1/fan:sign"]);
   });
 });
 

@@ -35,8 +35,10 @@ async function main(): Promise<void> {
   for (const task of tasks.items) {
     const flag = task.overdue ? "OVERDUE" : "waiting";
     // eslint-disable-next-line no-console
+    // `path` is printed because one run can hold several tasks - a FOREACH asking a person per
+    // item - and `runId` alone would show three identical-looking rows.
     console.log(
-      `  ${task.approval ? "approval" : "task    "} ${task.workflow}/${task.stateId ?? "?"} run=${task.runId} (${flag} since ${task.since ?? "?"})`,
+      `  ${task.approval ? "approval" : "task    "} ${task.workflow}/${task.stateId ?? "?"} run=${task.runId} at=${task.path ?? "root"} (${flag} since ${task.since ?? "?"})`,
     );
   }
 
@@ -49,9 +51,15 @@ async function main(): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.log(`[tasks] answering ${gate.runId} with approved=${approve}: ${gate.instructions ?? "(no instructions)"}`);
+  // Answered by frame, not just by run: the id is optional and the server resolves it when only one
+  // scope is parked, but a run with three open tasks refuses an unaddressed answer rather than
+  // guessing which one was meant. The inbox row carries the id, so there is no reason not to send it.
   await workflows.resumeWorkflowRun(gate.runId, {
-    approved: approve,
-    comment: approve ? "Looks right." : "Numbers do not match the invoice.",
+    frameId: gate.frameId,
+    payload: {
+      approved: approve,
+      comment: approve ? "Looks right." : "Numbers do not match the invoice.",
+    },
   });
 
   // The run is re-queued: follow it to whatever it does next.

@@ -119,7 +119,7 @@ switch (result.outcome) {
     else reportFailure(result.error);           // { code, message, stateId }
     break;
   case WorkflowWaitOutcome.WAITING:
-    notifyApprover(result.runId, result.run.wait);
+    notifyApprover(result.runId, result.run.waits);
     break;
   case WorkflowWaitOutcome.TIMED_OUT:
     enqueueFollowUp(result.runId);
@@ -207,21 +207,41 @@ validated server-side against whatever it is parked on:
 | `WAIT` / `HUMAN_TASK` | whatever the state's `form` declares | that form |
 | `WAIT` / `EXTERNAL_EVENT` | your event payload | must carry the awaited `eventKey` |
 
-`run.wait` says which:
+### One run can hold several tasks (3.10.0)
+
+A run is no longer the unit a task belongs to. A `FOREACH` over three suppliers whose body asks a
+person opens **three tasks on one run**, and answering one is not answering the others. So every
+inbox row and every entry of `run.waits` carries a `frameId` — the scope it belongs to — and a
+readable `path` (`root/each:2/fan:signoff`) for when two rows of the same run would otherwise look
+identical.
 
 ```ts
 const tasks = await workflows.listWorkflowTasks({ groupKey: "finance" });
 
 for (const task of tasks.items) {
-  await workflows.resumeWorkflowRun(task.runId, task.approval
-    ? { approved: true, comment: "Looks right." }
-    : { refundAmount: 42.5, reason: "duplicate charge" });
+  await workflows.resumeWorkflowRun(task.runId, {
+    frameId: task.frameId,                    // which of that run's tasks you are answering
+    payload: task.approval
+      ? { approved: true, comment: "Looks right." }
+      : { refundAmount: 42.5, reason: "duplicate charge" },
+  });
 }
 ```
 
-`listWorkflowTasks` lists **only** runs waiting on a person. A run sitting on a delay or an external
-event is not somebody's task, and putting it in a queue is how a queue stops being read. The same
-distinction is on a single run as `run.wait.human`.
+`frameId` is **optional**, and the bare payload form still works:
+
+```ts
+await workflows.resumeWorkflowRun(runId, { approved: true });
+```
+
+The server resolves the frame itself when exactly one is parked, which is every single-track
+workflow — so nothing written before 3.10.0 has to change. A run holding several parked frames
+answers `409` listing the candidates rather than guessing which you meant; take the id from
+`listWorkflowTasks` or from `run.waits`.
+
+`listWorkflowTasks` lists **only** scopes waiting on a person. A run sitting on a delay or an
+external event is not somebody's task, and putting it in a queue is how a queue stops being read.
+The same distinction is on each entry of `run.waits` as `human`.
 
 A rejection is **not** an error: it fails the gated state, so that state's own `onError` policy
 decides what the run does next.

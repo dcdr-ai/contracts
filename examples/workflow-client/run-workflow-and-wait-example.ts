@@ -72,7 +72,7 @@ async function main(): Promise<void> {
   if (result.outcome === WorkflowWaitOutcome.WAITING) {
     // eslint-disable-next-line no-console
     console.log(
-      `[run] parked on ${result.run.wait?.stateId} (${result.run.wait?.human ? "a person must act" : "waiting on a timer or an event"})`,
+      `[run] parked on ${result.run.waits.map((wait) => `${wait.path ?? wait.stateId}${wait.human ? " (a person must act)" : ""}`).join(", ")}`,
     );
     return;
   }

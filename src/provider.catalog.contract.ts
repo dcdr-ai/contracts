@@ -1475,4 +1475,50 @@ export class ProviderModelRegistry {
       "tokens",
     );
   }
+
+  /**
+   * Estimates what a completed call cost, from the catalogue's token pricing.
+   *
+   * Deliberately an *estimate* and deliberately narrow. It reads the `tokens` component only, at the
+   * base rate: cached-input discounts and tiered rates depend on what the provider actually billed,
+   * which the usage block does not say, so counting them here would be inventing precision. The
+   * number is for budgets and dashboards - `WorkflowAgentStateConfig.maxEstimatedCost` is the caller
+   * this was written for - never for an invoice.
+   *
+   * Returns `null` rather than `0` when the model carries no token pricing, because a budget must be
+   * able to tell "this costs nothing" from "nobody knows what this costs".
+   *
+   * @param args Provider, model id and the token counts the provider reported.
+   * @returns The estimate and its currency, or `null` when the catalogue prices this model no way.
+   */
+  static estimateTokenCost(args: {
+    provider: IntentProvider;
+    modelId: string;
+    inputTokens?: number;
+    outputTokens?: number;
+  }): { amount: number; currency: string } | null {
+    const pricing = ProviderModelRegistry.getModelPricing(
+      args.provider,
+      args.modelId,
+    );
+    const tokens = ProviderModelRegistry.getTokenPricing(
+      args.provider,
+      args.modelId,
+    );
+    if (!pricing || !tokens) return null;
+
+    const inputTokens = Number.isFinite(args.inputTokens)
+      ? Math.max(0, Number(args.inputTokens))
+      : 0;
+    const outputTokens = Number.isFinite(args.outputTokens)
+      ? Math.max(0, Number(args.outputTokens))
+      : 0;
+
+    const perToken = 1_000_000;
+    const amount =
+      (inputTokens * (tokens.input ?? 0)) / perToken +
+      (outputTokens * (tokens.outputUsd ?? 0)) / perToken;
+
+    return { amount, currency: pricing.currency };
+  }
 }

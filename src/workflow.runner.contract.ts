@@ -215,22 +215,115 @@ export interface WorkflowRunnerCapabilityDescriptor {
 
 /** Where a resumed run continues from (rebuilt by the backend from the stored checkpoints). */
 export interface WorkflowRunnerResumeState {
-  /** State to execute next. */
-  currentStateId: string;
-  /** Transitions already consumed by previous dispatches. */
-  transitions: number;
-  /** Latest snapshot per executed state (what `states.<id>` references see). */
-  states: Record<string, WorkflowStateSnapshot>;
-  /** `WAIT` state that parked the run, when resuming from a wait. */
-  waitStateId?: string;
-  /** Payload delivered on resume (human-task form, external event body); becomes the wait state output. */
-  resumePayload?: unknown;
+  /**
+   * Every execution frame of the run, as the control plane stored them (v3.10.0).
+   *
+   * The root frame is the one with no `parentFrameId`; the rest hang off it and describe the branch,
+   * item, child workflow or agent loop the run was inside. Order is not significant - a runner
+   * rebuilds the tree from the ids - but the control plane sends them parent-first so a consumer
+   * that wants to walk them without indexing can.
+   */
+  frames: WorkflowRunnerFrame[];
   /** Next step sequence number to use. */
   nextSequence: number;
-  /** Cursor of the `AGENT` loop the run was checkpointed or parked in (v3.1.0). */
-  agent?: WorkflowRunnerAgentCursor;
-  /** `waitStateId` parked on its approval gate, not on a `WAIT` state: `resumePayload` is the decision (v3.1.1). */
+}
+
+/**
+ * What opened an execution frame (v3.10.0).
+ *
+ * One vocabulary for every scope a run can be inside, so nesting is a tree of records rather than a
+ * bespoke cursor per state type. `AGENT` is in the list because an agent loop is a scope that parks
+ * exactly like a child workflow does; giving it a frame is what retired the standalone agent cursor
+ * on the resume state.
+ */
+export enum WorkflowRunnerFrameKind {
+  /** The run's own definition. Exactly one per run, with no parent. */
+  ROOT = "ROOT",
+  /** One branch of a `PARALLEL`; `key` is the branch id. */
+  PARALLEL_BRANCH = "PARALLEL_BRANCH",
+  /** One item of a `FOREACH`; `key` is the index and `itemIndex` carries it typed. */
+  FOREACH_ITEM = "FOREACH_ITEM",
+  /** A `SUBWORKFLOW` child; `key` is the child's workflow key. */
+  SUBWORKFLOW = "SUBWORKFLOW",
+  /** An `AGENT` loop; `key` is the agent state id and `agentCursor` holds its place. */
+  AGENT = "AGENT",
+}
+
+/** Lifecycle of one execution frame (v3.10.0). */
+export enum WorkflowRunnerFrameStatus {
+  RUNNING = "RUNNING",
+  /** Parked on a wait of its own; the run is `WAITING` while any frame is. */
+  WAITING = "WAITING",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+  /** Cancelled, or abandoned because a sibling failed under `failFast`. */
+  CANCELLED = "CANCELLED",
+}
+
+/**
+ * One execution scope of a run: where it is, what it produced, and whether it is waiting (v3.10.0).
+ *
+ * This replaces "one position plus a cursor per state type that could hold a place". That worked
+ * while only one thing could be in flight and stopped working the moment a `PARALLEL` had two
+ * branches: there was nowhere to record where each one was, what it had already produced, or that
+ * two of them were waiting on two different people. A frame is that record, and the wait lives on it
+ * rather than on the run - which is what lets N scopes park at once, each its own inbox task with its
+ * own assignees, timeout and correlation, and a resume address a frame instead of guessing.
+ */
+export interface WorkflowRunnerFrame {
+  /** Stable id; the control plane assigns it and a checkpoint upserts on it. */
+  id: string;
+  /** Enclosing frame; absent only on the root. */
+  parentFrameId?: string;
+  kind: WorkflowRunnerFrameKind;
+  /** State **in the parent frame** that opened this one; absent on the root. */
+  ownerStateId?: string;
+  /** Which scope of that state this is: branch id, item index, child key, agent state id. */
+  key?: string;
+  /** `FOREACH_ITEM`: the item's position, so results come back in input order. */
+  itemIndex?: number;
+  /** Depth from the root (0 for the root). */
+  depth: number;
+  /**
+   * Human-readable address, e.g. `each/7/inner/a`; the root's is its own id.
+   *
+   * Required rather than optional: it is a display field every consumer needs, and a nullable one
+   * only means each of them writes the same fallback.
+   */
+  path: string;
+  status: WorkflowRunnerFrameStatus;
+  /** State of **this** scope to execute next; `null` once the frame is terminal. */
+  currentStateId: string | null;
+  /** Transitions this frame has consumed; the run's guard sums them. */
+  transitions: number;
+  /** Snapshots of the states this frame executed (what `states.<id>` sees inside it). */
+  states: Record<string, WorkflowStateSnapshot>;
+  /** The frame's own input: a child's mapped input, or a `FOREACH` item's value. */
+  input?: unknown;
+  /** What the frame produced once terminal. */
+  output?: unknown;
+  error?: WorkflowStateError;
+  /** `AGENT`: iteration, history, notes, summary and budgets of the loop. */
+  agentCursor?: WorkflowRunnerAgentCursor;
+  /** Details of the wait this frame is parked on. */
+  wait?: WorkflowRunnerWaitDetails;
+  /** Payload delivered on resume; becomes the parked `WAIT` state's output. */
+  resumePayload?: unknown;
+  /**
+   * This is the frame being answered on this dispatch.
+   *
+   * Several frames of one run can sit `WAITING` at once, and the runner must re-enter exactly the
+   * one that was answered and leave the others on their desks. Usually `resumePayload` says which,
+   * but not always: a `DELAY` that elapsed and a form with nothing to fill in both answer with
+   * nothing, and an absent payload would be indistinguishable from a task nobody has touched. So the
+   * control plane marks the frame it is handing back. Optional only for a run parked on a single
+   * frame, where there is nothing to tell apart.
+   */
+  resuming?: boolean;
+  /** The frame parked on an approval gate rather than a `WAIT`: `resumePayload` is the decision. */
   approval?: boolean;
+  startedAt?: string;
+  finishedAt?: string;
 }
 
 /** `GET /api/workflows/:runId/input` response. */
@@ -246,6 +339,20 @@ export interface WorkflowRunnerInputResponse {
    * Absent or empty when the definition uses none.
    */
   capabilities?: WorkflowRunnerCapabilityDescriptor[];
+  /**
+   * Definitions of every workflow this run's `SUBWORKFLOW` states call (v3.10.0).
+   *
+   * Shipped with the input rather than fetched through a route of their own, for the same reason
+   * connections and capabilities are: the runner reads one self-contained object and never joins
+   * anything. The control plane resolves each `subworkflow.workflowKey` (at `version`, or at the
+   * published version when the state pins none) and puts the result here; a `SUBWORKFLOW` naming a
+   * key that is absent fails that state rather than the dispatch, so one unpublished child does not
+   * cost the parent its whole run.
+   *
+   * Absent or empty when the definition declares no `SUBWORKFLOW` state.
+   */
+  subworkflows?: WorkflowRunnerSubworkflowDescriptor[];
+
   /** Present when the run continues after a requeue or a resumed `WAIT`. */
   resume?: WorkflowRunnerResumeState;
 
@@ -256,6 +363,26 @@ export interface WorkflowRunnerInputResponse {
    * because then there is nothing to offload and no reason to mint a session.
    */
   assets?: WorkflowRunnerAssetAccess;
+}
+
+/**
+ * One workflow a `SUBWORKFLOW` state of this run may call (v3.10.0).
+ *
+ * A child runs **inside the parent run**, not as a run of its own: its states are checkpointed with
+ * the parent's sequence and `parentStateId`, and its output becomes the `SUBWORKFLOW` state's
+ * output. That keeps one audit trail per business operation - which is the thing a tenant reads -
+ * and keeps the backend free of a child-run lifecycle it would otherwise have to schedule, deadline
+ * and cancel independently.
+ */
+export interface WorkflowRunnerSubworkflowDescriptor {
+  /** Key the `SUBWORKFLOW` state names. */
+  key: string;
+  /** User-facing version label of the resolved version, for the trail. */
+  version: string;
+  /** `computeWorkflowDefinitionSha256` of `definition`. */
+  sha256: string;
+  /** The child's definition, already validated and published. */
+  definition: WorkflowDefinition;
 }
 
 /**
@@ -457,19 +584,37 @@ export interface WorkflowRunnerAgentCursor {
   history: WorkflowAgentTraceEntry[];
   notes?: string[];
   summary?: string;
+  /**
+   * How many leading `history` entries `summary` already accounts for (v3.10.0).
+   *
+   * Without it a compaction cannot tell what has just left the window from what left it ten turns
+   * ago, and the only safe thing to send the summarizer is everything outside the window - which is
+   * what the runner did, on every turn, alongside the previous summary that already covered exactly
+   * those entries. Cost grew with the square of the run length and the model was asked to re-derive
+   * conclusions it had already written down.
+   *
+   * Absent on a cursor written before this existed: such a run compacts everything once more and
+   * then carries on incrementally, which is the old behaviour for one turn rather than a break.
+   */
+  summarizedEntries?: number;
   trackedCalls: number;
   estimatedCost?: number;
   /** ISO-8601: when the loop started (for `maxDurationMs`). */
   startedAt: string;
 }
 
-/** Run cursor persisted with every checkpoint. */
+/**
+ * Where the run stands, posted with every checkpoint (v3.10.0).
+ *
+ * The frames **are** the cursor: each one carries its own position, its own snapshots and its own
+ * wait, so a checkpoint is an upsert of the scopes that moved rather than an overwrite of a single
+ * position. A runner sends the frames it touched, not the whole tree - the control plane holds the
+ * rest and a run with two hundred `FOREACH` items should not re-post two hundred rows to record that
+ * one of them advanced.
+ */
 export interface WorkflowRunnerCursor {
-  /** State to execute next; `null` when the run finished. */
-  currentStateId: string | null;
-  transitions: number;
-  /** Present while the cursor sits inside an `AGENT` loop. */
-  agent?: WorkflowRunnerAgentCursor;
+  /** Frames created or advanced by this checkpoint. */
+  frames: WorkflowRunnerFrame[];
 }
 
 /** `POST /api/workflows/:runId/steps` body: idempotent upsert by `(run, sequence)`. */
@@ -539,7 +684,12 @@ export interface WorkflowRunnerWaitDetails {
   kind: WorkflowWaitKind;
   /** `EXTERNAL_EVENT` */
   eventKey?: string;
-  /** `EXTERNAL_EVENT`: resolved correlation values the event payload must match. */
+  /**
+   * Resolved correlation values: what an `EXTERNAL_EVENT` payload must match, and for any other kind
+   * what this particular wait is about. Resolved for every kind since 3.10.0, because a wait inside
+   * a composite needs it: three items of a `FOREACH` open three tasks off the same state, and the
+   * frame `path` says where each one is without saying which item it is for.
+   */
   correlation?: Record<string, unknown>;
   /** `DELAY`: when the run may be re-queued (ISO-8601). */
   resumeAt?: string;
@@ -552,6 +702,15 @@ export interface WorkflowRunnerWaitDetails {
   approval?: boolean;
 }
 
+/** One frame of a run that is parked, and on what (v3.10.0). */
+export interface WorkflowRunnerFrameWait {
+  /** Frame that is waiting. */
+  frameId: string;
+  /** Human-readable address of that frame, so an inbox row can say which branch or item it is. */
+  path?: string;
+  details: WorkflowRunnerWaitDetails;
+}
+
 /** `POST /api/workflows/:runId/output` body. */
 export interface WorkflowRunnerOutputRequest {
   status: WorkflowRunOutputStatus;
@@ -559,8 +718,21 @@ export interface WorkflowRunnerOutputRequest {
   output?: unknown;
   /** `ERROR` / `TIMEOUT`: error to record. */
   error?: WorkflowStateError;
-  /** `WAITING` */
-  wait?: WorkflowRunnerWaitDetails;
+  /**
+   * `WAITING`: every frame the run is parked on (v3.10.0).
+   *
+   * A list because a `PARALLEL` can park two branches on two different people at once, and the run
+   * comes back only when all of them are answered. Each entry is one inbox task, with its own
+   * assignees, timeout and correlation, and a resume names the frame it answers. It was a single
+   * `wait` for as long as only one thing could be in flight.
+   *
+   * The rule this list encodes, stated once because it is easy to get wrong in every query that
+   * reads frames: **a frame is a task if and only if it carries a `wait` block.** `WAITING` on its
+   * own means "not running" - the composites above a nested task are all `WAITING` and none of them
+   * is anybody's job. Count frames rather than waits and a three-host audit shows nine open tasks
+   * where three people have to act, and a resume refuses as ambiguous when it is not.
+   */
+  waits?: WorkflowRunnerFrameWait[];
   usage?: WorkflowRunnerUsage;
   transitions: number;
   latencyMs?: number;
