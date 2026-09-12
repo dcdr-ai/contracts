@@ -149,7 +149,8 @@ export enum PromptParameterKey {
   TOP_P = "top_p",
   TOP_K = "top_k",
   MAX_TOKENS = "max_tokens",
-  ENABLE_THINKING = "enable_thinking",
+  /** Reasoning level (3.11.0). Was `ENABLE_THINKING = "enable_thinking"`, a flag no provider took. */
+  THINKING = "thinking",
   RESPONSE_FORMAT = "response_format",
   PRESENCE_PENALTY = "presence_penalty",
   FREQUENCY_PENALTY = "frequency_penalty",

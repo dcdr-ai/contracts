@@ -1,5 +1,5 @@
 import { IntentProvider } from "./provider.contract";
-import { IsBoolean, IsOptional, Max, Min } from "class-validator";
+import { IsBoolean, IsEnum, IsOptional, Max, Min } from "class-validator";
 
 /**
  * Retry policy for an intent/model.
@@ -117,6 +117,122 @@ export class RetryPolicy {
 
 
 
+/**
+ * How hard the model should think before it answers.
+ *
+ * Replaces `enable_thinking?: boolean` (removed in 3.11.0). A flag could not express the difference
+ * between a cheap classification and a hard planning step, and it could not be mapped faithfully to
+ * any provider: none of the three takes a boolean. They take a level or a token budget.
+ *
+ * The ladder is **OpenAI's**, verified against the installed SDK rather than assumed
+ * (`openai/resources/shared.d.ts`: `ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high'
+ * | 'xhigh' | 'max' | null`). Mirroring it means no DCDR value has to collapse into another one on
+ * the provider with the most granular control - the failure mode where a contract promises a
+ * distinction the adapter cannot keep.
+ *
+ * For providers that take a budget instead of a level - Anthropic's `thinking.budget_tokens` and
+ * Gemini's `thinkingConfig.thinkingBudget`, both integers - the mapping is
+ * {@link THINKING_LEVEL_TOKEN_BUDGET}, which is deliberately one exported table so a tenant can be
+ * shown what a level will cost them before they are billed for it.
+ *
+ * Two things that follow from the providers' own rules and are handled by the adapters:
+ * - **Reasoning tokens come out of `max_tokens`.** Anthropic states it outright ("counts towards your
+ *   `max_tokens` limit", and `budget_tokens` must be `< max_tokens`). So raising the level without
+ *   raising the budget spends the allowance on thinking and truncates the answer.
+ * - **Sampling and reasoning do not mix.** Reasoning models constrain or reject `temperature`, so
+ *   the adapter drops it rather than asking every caller to know three providers' rules.
+ */
+export enum ThinkingLevel {
+  /** No reasoning pass. The default, and what an absent value means. */
+  NONE = "NONE",
+  MINIMAL = "MINIMAL",
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  XHIGH = "XHIGH",
+  MAX = "MAX",
+}
+
+/**
+ * Token budget each level asks for, on providers that take a budget rather than a level.
+ *
+ * Chosen as a doubling ladder from Anthropic's documented floor: `budget_tokens` "must be >= 1024",
+ * which is why `MINIMAL` is 1024 and not something smaller. A budget is a *ceiling on thinking*, not
+ * a reservation - a model that needs less uses less - so the cost of a generous upper rung is only
+ * paid by a request that genuinely reasons that long.
+ *
+ * These numbers are the contract's answer to "what does HIGH cost", and they are exported for that
+ * reason: the control plane shows them, the adapters apply them, and there is one place to change
+ * them. An adapter must still clamp against the request's own `max_tokens` (see
+ * {@link resolveThinkingTokenBudget}), because the provider rejects a budget that does not leave
+ * room for an answer.
+ */
+export const THINKING_LEVEL_TOKEN_BUDGET: Readonly<Record<ThinkingLevel, number>> = Object.freeze({
+  [ThinkingLevel.NONE]: 0,
+  [ThinkingLevel.MINIMAL]: 1_024,
+  [ThinkingLevel.LOW]: 2_048,
+  [ThinkingLevel.MEDIUM]: 4_096,
+  [ThinkingLevel.HIGH]: 8_192,
+  [ThinkingLevel.XHIGH]: 16_384,
+  [ThinkingLevel.MAX]: 32_768,
+});
+
+/**
+ * The smallest budget a budget-taking provider will accept (Anthropic's documented floor).
+ *
+ * Below this the request is refused, so a clamp that cannot reach it must turn thinking **off**
+ * rather than send a value the provider will reject.
+ */
+export const THINKING_MIN_TOKEN_BUDGET = 1_024;
+
+/**
+ * Fraction of `max_tokens` that thinking may consume when the level's budget does not fit.
+ *
+ * Anthropic requires `budget_tokens < max_tokens`, and a budget equal to the whole allowance leaves
+ * nothing for the answer - which is the failure the backend hit with a 512-token planner: a response
+ * truncated into invalid JSON, reported as a planner error rather than as a budget one. Two thirds
+ * leaves a third for the result, which is the right side to err on: thinking that stops early
+ * degrades quality, an answer that stops early is unparseable.
+ */
+export const THINKING_MAX_BUDGET_FRACTION = 2 / 3;
+
+/**
+ * The budget to send for a level, clamped so the answer still has room.
+ *
+ * @param level Requested level; `NONE` or absent means no thinking.
+ * @param maxTokens The request's own `max_tokens`, when known.
+ * @returns The budget to send, or `null` when thinking should be off (either it was not asked for,
+ *   or the allowance is too small to leave a usable budget above the provider floor).
+ */
+export function resolveThinkingTokenBudget(level: ThinkingLevel | undefined, maxTokens?: number): number | null {
+  if (!level || level === ThinkingLevel.NONE) return null;
+
+  const requested = THINKING_LEVEL_TOKEN_BUDGET[level] ?? 0;
+  if (requested <= 0) return null;
+  if (!maxTokens || maxTokens <= 0) return requested;
+
+  const ceiling = Math.floor(maxTokens * THINKING_MAX_BUDGET_FRACTION);
+  // Too small to think at all: sending a budget under the provider floor is a refused request, and
+  // silently thinking less than asked is better than failing the call outright.
+  if (ceiling < THINKING_MIN_TOKEN_BUDGET) return null;
+  return Math.min(requested, ceiling);
+}
+
+/**
+ * The level a pre-3.11.0 `enable_thinking` flag meant.
+ *
+ * `true` becomes `MEDIUM` rather than `HIGH` because `medium` is literally what the only adapter
+ * that honoured the flag sent (`openai.provider.ts`, hardcoded), so this preserves behaviour exactly
+ * rather than approximately. Exported so the control plane's jsonb migration and the runtime agree
+ * on one answer.
+ *
+ * @param enableThinking The legacy flag.
+ * @returns The equivalent level.
+ */
+export function thinkingLevelFromLegacyFlag(enableThinking: boolean | undefined | null): ThinkingLevel {
+  return enableThinking === true ? ThinkingLevel.MEDIUM : ThinkingLevel.NONE;
+}
+
 export type ResponseFormat = "json_object" | "json_schema" | "text" | "markdown" | "html";
 
 /**
@@ -156,10 +272,18 @@ export class PromptParameters {
     @IsOptional()
     top_k?: number;
     /**
-     * Typical range: 1–4096 (default: 2048)
+     * Upper bound on the completion the provider may generate.
+     *
+     * The ceiling is 200 000 because the bound has to clear the largest output window any supported
+     * model offers, and 8 192 stopped doing that some time ago: current frontier models emit far
+     * more in a single completion, and a reasoning model spends part of the same budget on thinking
+     * tokens before it writes anything. A validation cap below what the provider accepts does not
+     * protect anyone - it just makes a legitimate configuration unpublishable, and the real limits
+     * are the ones that matter: the provider's own per-model maximum (which rejects an oversized
+     * request itself) and the tenant's cost controls.
      */
     @Min(1)
-    @Max(8192)
+    @Max(200_000)
     @IsOptional()
     max_tokens?: number;
     /**
@@ -168,9 +292,17 @@ export class PromptParameters {
     @IsOptional()
     seed?: number;
 
+    /**
+     * How hard the model should think before answering (3.11.0; replaces `enable_thinking`).
+     *
+     * Absent means {@link ThinkingLevel.NONE}. Note that reasoning tokens are drawn from the same
+     * `max_tokens` allowance as the answer, and that asking for thinking causes the adapter to drop
+     * `temperature` - a reasoning model constrains it, and resolving that per caller is how most
+     * callers get it wrong, silently, in the direction of non-determinism.
+     */
     @IsOptional()
-    @IsBoolean()
-    enable_thinking?: boolean;
+    @IsEnum(ThinkingLevel)
+    thinking?: ThinkingLevel;
 
     @IsOptional()
     response_format?: ResponseFormat
