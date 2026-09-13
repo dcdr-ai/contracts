@@ -275,6 +275,10 @@ const report   = await workflows.getWorkflowRunReport(runId);   // all of the ab
 | `REPORTED` | A model, SDK or provider said so. Recorded, not verified. |
 | `NONE` | Black box. |
 
+The runner labels each item where it captures it (3.12.0): calls it made itself — intents, the planner,
+HTTP, MCP — are `ENFORCED`; a citation a planner model included in its decision is `REPORTED`, whatever
+the model claimed. An item that reaches the control plane without a label is read as `REPORTED`.
+
 Step inputs and outputs are **not** served: they are bounded by the tenant's own payload-logging
 policy and can hold anything a state touched. The run `output` is the contract the definition
 declared, and that is what you read.

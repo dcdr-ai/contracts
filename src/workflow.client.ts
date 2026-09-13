@@ -338,6 +338,9 @@ export interface WorkflowRunStep {
 /**
  * One evidence item, with the step that produced it and how far it can be trusted.
  *
+ * `assurance` is required here although optional on {@link WorkflowEvidence}: the control plane
+ * always resolves it, reading an item the runner left unlabelled as `REPORTED`.
+ *
  * `iteration` and `stateId` are widened from the base shape because the server fills them from the
  * *step's* columns rather than from the item's own optional fields: a step that is not an `AGENT`
  * iteration carries `null`, not "absent".

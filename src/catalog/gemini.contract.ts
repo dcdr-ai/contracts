@@ -72,6 +72,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-flash",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       publicForCustomers: true,
       tokenUsageCovered: true,
       publicName: "DCDR Economy",
@@ -132,6 +133,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.8-flash",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 0.75,
@@ -148,6 +150,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.7-flash",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 0.75,
@@ -164,6 +167,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.6-flash",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 0.75,
@@ -180,6 +184,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.5-flash-lite",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 0.3,
@@ -196,6 +201,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-omni-1.1-flash",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 1.5,
         output: 9.0,
@@ -211,6 +217,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.5-transcribe",
       types: [IntentType.CHAT],
+      maxOutputTokens: 32768,
       pricing: pricingGemini({
         input: 2.0,
         output: 12.0,
@@ -226,6 +233,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.5-transcribe-live",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 3.5,
         output: 21.0,
@@ -241,6 +249,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-robotics-er-2-preview",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 2.0,
@@ -257,6 +266,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-robotics-er-2-streaming-preview",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 2.0,
         output: 10.0,
@@ -272,6 +282,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.5-flash",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       publicForCustomers: true,
       tokenUsageCovered: true,
       publicName: "DCDR Smart",
@@ -327,6 +338,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.1-pro-preview-customtools",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 2.0,
         output: 12.0,
@@ -373,6 +385,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.1-pro-preview",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       publicForCustomers: true,
       tokenUsageCovered: true,
       publicName: "DCDR Best",
@@ -432,6 +445,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.1-flash-tts-preview",
       types: [IntentType.CHAT],
+      maxOutputTokens: 16384,
       pricing: pricingGemini({
         input: 1.0,
         output: 20.0,
@@ -448,6 +462,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.1-flash-live-preview",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 0.75,
         output: 4.5,
@@ -473,6 +488,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.1-flash-lite-preview",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 0.25,
         output: 1.5,
@@ -507,6 +523,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.1-flash-lite",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 0.25,
         output: 1.5,
@@ -610,6 +627,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3.5-live-translate-preview",
       types: [IntentType.CHAT],
+      maxOutputTokens: 32768,
       pricing: pricingGemini({
         input: 3.5,
         output: 21.0,
@@ -731,6 +749,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-3-flash-preview",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       publicForCustomers: true,
       tokenUsageCovered: true,
       publicName: "DCDR Fast",
@@ -791,6 +810,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-pro",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 1.25,
@@ -839,6 +859,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-pro-preview-tts",
       types: [IntentType.CHAT],
+      maxOutputTokens: 16384,
       pricing: pricingGemini({
         input: 1.0,
         output: 20.0,
@@ -854,6 +875,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-flash-lite",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       publicForCustomers: true,
       tokenUsageCovered: true,
       publicName: "DCDR Economy",
@@ -929,6 +951,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-flash-native-audio-latest",
       types: [IntentType.CHAT],
+      maxOutputTokens: 8192,
       pricing: pricingGemini({
         input: 0.5,
         output: 2.0,
@@ -953,6 +976,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-flash-native-audio-preview-09-2025",
       types: [IntentType.CHAT],
+      maxOutputTokens: 8192,
       pricing: pricingGemini({
         input: 0.5,
         output: 2.0,
@@ -977,6 +1001,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-flash-native-audio-preview-12-2025",
       types: [IntentType.CHAT],
+      maxOutputTokens: 8192,
       pricing: pricingGemini({
         input: 0.5,
         output: 2.0,
@@ -1001,6 +1026,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-flash-preview-tts",
       types: [IntentType.CHAT],
+      maxOutputTokens: 16384,
       pricing: pricingGemini({
         input: 0.5,
         output: 10.0,
@@ -1016,6 +1042,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-2.5-computer-use-preview-10-2025",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 1.25,
         output: 10.0,
@@ -1112,6 +1139,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-flash-latest",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: {
         ...pricingGemini({
           input: 0.3,
@@ -1160,6 +1188,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-flash-lite-latest",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: {
         ...pricingGemini({
           input: 0.1,
@@ -1206,6 +1235,7 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-pro-latest",
       types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
       pricing: {
         ...pricingGemini({
           input: 1.25,

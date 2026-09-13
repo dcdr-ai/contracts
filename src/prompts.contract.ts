@@ -79,6 +79,33 @@ export class PromptVariable {
   @IsNumber()
   max?: number;
 
+  /**
+   * Presentation only: the section this field is drawn in (v3.12.0).
+   *
+   * Ignored by validation of values, by execution and by every provider adapter: it never changes
+   * what a caller must send or what a model receives. Absent means the default first section.
+   * Sections are ordered by first appearance in the schema, so authors never number them.
+   */
+  @IsOptional()
+  @IsString()
+  group?: string;
+
+  /**
+   * Presentation only: position of this field within its `group` (v3.12.0).
+   *
+   * Sorts within a group, never across groups. Fields without one keep their declared key order.
+   * Like `group`, it has no effect on validation, execution or provider schemas - in particular it
+   * does not reorder structured-output properties.
+   */
+  @IsOptional()
+  @IsNumber()
+  order?: number;
+
+  /**
+   * Builds a prompt variable definition.
+   *
+   * `group` and `order` are appended last so every existing positional call keeps its meaning.
+   */
   constructor(
     type: PromptVariableType,
     required: boolean = false,
@@ -89,6 +116,8 @@ export class PromptVariable {
     values?: string[], // NEW
     min?: number,
     max?: number,
+    group?: string,
+    order?: number,
   ) {
     this.type = type;
     this.required = required;
@@ -99,6 +128,8 @@ export class PromptVariable {
     this.values = values;
     this.min = min;
     this.max = max;
+    this.group = group;
+    this.order = order;
   }
 }
 

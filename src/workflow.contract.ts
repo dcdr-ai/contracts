@@ -9,6 +9,9 @@ import { ExecuteIntentRequest } from "./execution.contract";
 import { IntentContract } from "./intent.contract";
 import { PromptVariable, PromptVariableType } from "./prompts.contract";
 import { Sha256HexDeps, stableJsonStringify } from "./utils.contract";
+// Type-only: the enum is declared beside the client that serves it, and a value import here would
+// close a runtime cycle between the two modules.
+import type { WorkflowEvidenceAssurance } from "./workflow.client";
 
 /**
  * Workflow contract: a declarative state machine composing intents, HTTP calls, choices and
@@ -828,6 +831,17 @@ export interface WorkflowEvidence {
   capturedAt?: string;
   stateId?: string;
   iteration?: number;
+  /**
+   * How far this item can be trusted, stated by whoever captured it (v3.12.0).
+   *
+   * The runner labels at the point of capture, where the distinction is known for free: what it
+   * executed itself (an intent call, an HTTP request, an MCP call, the planner call) is `ENFORCED`;
+   * a citation a planner model put in its decision is `REPORTED`, whatever the model claimed.
+   * Optional on the wire so older runners stay valid, which is why a control plane must read an
+   * **unlabelled item as the weakest level it can defend (`REPORTED`), never as `ENFORCED`**: a
+   * record whose provenance nobody stated is not one the platform witnessed.
+   */
+  assurance?: WorkflowEvidenceAssurance;
 }
 
 /**
@@ -1106,23 +1120,55 @@ export interface WorkflowValidationCaps {
   /** Maximum nesting of `PARALLEL` / `FOREACH` sub-graphs. */
   maxNestingDepth: number;
   maxTransitionsPerRun: number;
+  /**
+   * Maximum `settings.timeoutMs` - the whole-run wall clock, **parked time included**, since a run
+   * waiting on a person is still inside its deadline. Hosts derive it per plan; whatever they pass,
+   * the validator never allows more than {@link WORKFLOW_MAX_TIMEOUT_MS}.
+   */
   maxTimeoutMs: number;
   allowAdvancedStates: boolean;
   /** Maximum `AGENT.maxIterations` a definition may declare. */
   maxAgentIterations: number;
-  /** Maximum `AGENT.maxDurationMs` a definition may declare. */
+  /**
+   * Maximum `AGENT.maxDurationMs` a definition may declare. Parked time counts against that budget (a
+   * `WAIT`, `SUBWORKFLOW` or approval reached as a tool parks the run), so it follows the run bound;
+   * whatever a host passes, the validator never allows more than {@link WORKFLOW_MAX_AGENT_DURATION_MS}.
+   */
   maxAgentDurationMs: number;
 }
+
+/**
+ * Absolute ceiling of `settings.timeoutMs`: 180 days (v3.12.0).
+ *
+ * Applies even when a host passes a larger `caps.maxTimeoutMs`. Human steps are why runs got this
+ * long - an onboarding with several sign-offs spans weeks - and they are also why a ceiling must
+ * exist: a run parked on nobody is a row, a deadline sweep and a task someone owns, and "forever" is
+ * not a deadline any of those can reason about.
+ */
+export const WORKFLOW_MAX_TIMEOUT_MS = 180 * 24 * 60 * 60 * 1000;
+
+/**
+ * Absolute ceiling of `AGENT.maxDurationMs`: 180 days (v3.12.0), the same shape and value as
+ * {@link WORKFLOW_MAX_TIMEOUT_MS}, so a reader who learns one bound knows the other.
+ *
+ * An agent that asks a person something spends its budget parked, exactly like the run around it, and
+ * a tighter agent ceiling than run ceiling only ever punishes the author careful enough to declare one.
+ */
+export const WORKFLOW_MAX_AGENT_DURATION_MS = 180 * 24 * 60 * 60 * 1000;
 
 /** Default caps used when the host passes none. */
 export const DEFAULT_WORKFLOW_VALIDATION_CAPS: WorkflowValidationCaps = {
   maxStates: 100,
   maxNestingDepth: 3,
   maxTransitionsPerRun: 200,
-  maxTimeoutMs: 24 * 60 * 60 * 1000,
+  // 30 days (was 24 hours until v3.12.0). A `WAIT` or approval validates with no ceiling of its own,
+  // so a one-day run cap refused exactly the definitions human tasks exist for, blaming the run
+  // length instead of the sign-off that could not fit in it.
+  maxTimeoutMs: 30 * 24 * 60 * 60 * 1000,
   allowAdvancedStates: true,
   maxAgentIterations: 25,
-  maxAgentDurationMs: 24 * 60 * 60 * 1000,
+  // 30 days (was 24 hours until v3.12.0), matching `maxTimeoutMs`: an agent may park on a human tool.
+  maxAgentDurationMs: 30 * 24 * 60 * 60 * 1000,
 };
 
 /** Minimal intent description the validator needs (a subset of `IntentContract`). */
@@ -2754,8 +2800,9 @@ export function validateWorkflowDefinition(
   if (!isPlainObject(settings)) {
     push("settings", WorkflowValidationIssueCode.SETTINGS_INVALID, "Settings are required.");
   } else {
-    if (!isPositiveInteger(settings.timeoutMs) || settings.timeoutMs > caps.maxTimeoutMs) {
-      push("settings.timeoutMs", WorkflowValidationIssueCode.SETTINGS_INVALID, `timeoutMs must be a positive integer <= ${caps.maxTimeoutMs}.`);
+    const maxTimeoutMs = Math.min(caps.maxTimeoutMs, WORKFLOW_MAX_TIMEOUT_MS);
+    if (!isPositiveInteger(settings.timeoutMs) || settings.timeoutMs > maxTimeoutMs) {
+      push("settings.timeoutMs", WorkflowValidationIssueCode.SETTINGS_INVALID, `timeoutMs must be a positive integer <= ${maxTimeoutMs}.`);
     }
     if (!isPositiveInteger(settings.maxTransitionsPerRun) || settings.maxTransitionsPerRun > caps.maxTransitionsPerRun) {
       push("settings.maxTransitionsPerRun", WorkflowValidationIssueCode.SETTINGS_INVALID, `maxTransitionsPerRun must be a positive integer <= ${caps.maxTransitionsPerRun}.`);
@@ -3531,8 +3578,9 @@ function validateAgentState(
   if (config.maxToolErrors !== undefined && (!Number.isInteger(config.maxToolErrors) || config.maxToolErrors < 0)) {
     push(`${path}.maxToolErrors`, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, "maxToolErrors must be a non-negative integer.");
   }
-  if (config.maxDurationMs !== undefined && (!isPositiveInteger(config.maxDurationMs) || config.maxDurationMs > caps.maxAgentDurationMs)) {
-    push(`${path}.maxDurationMs`, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, `maxDurationMs must be a positive integer <= ${caps.maxAgentDurationMs}.`);
+  const maxAgentDurationMs = Math.min(caps.maxAgentDurationMs, WORKFLOW_MAX_AGENT_DURATION_MS);
+  if (config.maxDurationMs !== undefined && (!isPositiveInteger(config.maxDurationMs) || config.maxDurationMs > maxAgentDurationMs)) {
+    push(`${path}.maxDurationMs`, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, `maxDurationMs must be a positive integer <= ${maxAgentDurationMs}.`);
   }
   if (config.maxEstimatedCost !== undefined && (typeof config.maxEstimatedCost !== "number" || !Number.isFinite(config.maxEstimatedCost) || config.maxEstimatedCost <= 0)) {
     push(`${path}.maxEstimatedCost`, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, "maxEstimatedCost must be a positive number.");

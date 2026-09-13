@@ -9,6 +9,8 @@ import {
   canonicalizeWorkflowDefinition,
   computeWorkflowDefinitionSha256,
   DEFAULT_WORKFLOW_VALIDATION_CAPS,
+  WORKFLOW_MAX_AGENT_DURATION_MS,
+  WORKFLOW_MAX_TIMEOUT_MS,
   evaluateLocalWorkflowState,
   formatWorkflowDefinitionShorthand,
   WORKFLOW_APPROVAL_FORM,
@@ -1096,12 +1098,56 @@ describe("workflow.contract AGENT state", () => {
     expect(selectChoiceNext({ choices: [{ id: "many", condition: { path: "agent.history", op: ConditionOperator.ARRAY_LENGTH_MIN, value1: 1 }, next: "a" }], default: "b" }, withAgent).next).toBe("a");
   });
 
+  it("lets a run last as long as a human step inside it, up to an absolute 180 days (v3.12.0)", () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const timeoutLabel = `settings.timeoutMs:${WorkflowValidationIssueCode.SETTINGS_INVALID}`;
+    const withTimeout = (timeoutMs: number): WorkflowDefinition => baseDefinition({ settings: { timeoutMs, maxTransitionsPerRun: 50 } });
+
+    // A week-long onboarding with sign-offs was refused by the old one-day default, although the
+    // WAIT it contained validated with no ceiling of its own.
+    expect(DEFAULT_WORKFLOW_VALIDATION_CAPS.maxTimeoutMs).toBe(30 * DAY);
+    expect(issueLabels(withTimeout(7 * DAY))).not.toContain(timeoutLabel);
+    expect(issueLabels(withTimeout(30 * DAY))).not.toContain(timeoutLabel);
+    expect(issueLabels(withTimeout(30 * DAY + 1))).toContain(timeoutLabel);
+
+    // A plan may raise it, never past the absolute ceiling, and may still lower it.
+    const caps = (maxTimeoutMs: number) => ({ caps: { ...DEFAULT_WORKFLOW_VALIDATION_CAPS, maxTimeoutMs } });
+    expect(WORKFLOW_MAX_TIMEOUT_MS).toBe(180 * DAY);
+    expect(issueLabels(withTimeout(90 * DAY), caps(180 * DAY))).not.toContain(timeoutLabel);
+    expect(issueLabels(withTimeout(181 * DAY), caps(365 * DAY))).toContain(timeoutLabel);
+    expect(validateWorkflowDefinition(withTimeout(181 * DAY), caps(365 * DAY)).issues.find((i) => i.path === "settings.timeoutMs")?.message).toContain(String(180 * DAY));
+    expect(issueLabels(withTimeout(2 * DAY), caps(DAY))).toContain(timeoutLabel);
+  });
+
+  it("bounds an agent's declared duration the same way as the run: 30 days by default, 180 at most", () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const durationLabel = `states.research.agent.maxDurationMs:${WorkflowValidationIssueCode.STATE_CONFIG_INVALID}`;
+    const withAgentDuration = (maxDurationMs: number): WorkflowDefinition => parseWorkflowDefinitionShorthand({
+      ...agentShorthand,
+      settings: { ...agentShorthand.settings, timeoutMs: 180 * DAY },
+      states: { ...agentShorthand.states, research: { ...agentShorthand.states.research, agent: { ...agentShorthand.states.research.agent, maxDurationMs } } },
+    });
+    const labels = (definition: WorkflowDefinition, maxAgentDurationMs?: number): string[] =>
+      validateWorkflowDefinition(definition, { intents, connections: ["registry"], caps: { ...DEFAULT_WORKFLOW_VALIDATION_CAPS, maxTimeoutMs: 180 * DAY, ...(maxAgentDurationMs ? { maxAgentDurationMs } : {}) } }).issues.map((i) => `${i.path}:${i.code}`);
+
+    // An agent that asks a reviewer and waits a week was refused at one day.
+    expect(labels(withAgentDuration(7 * DAY))).not.toContain(durationLabel);
+    expect(labels(withAgentDuration(30 * DAY))).not.toContain(durationLabel);
+    expect(labels(withAgentDuration(30 * DAY + 1))).toContain(durationLabel);
+
+    expect(WORKFLOW_MAX_AGENT_DURATION_MS).toBe(WORKFLOW_MAX_TIMEOUT_MS);
+    expect(labels(withAgentDuration(90 * DAY), 180 * DAY)).not.toContain(durationLabel);
+    expect(labels(withAgentDuration(181 * DAY), 365 * DAY)).toContain(durationLabel);
+    expect(labels(withAgentDuration(2 * DAY), DAY)).toContain(durationLabel);
+  });
+
   it("declares long-horizon bounds, evidence kinds and WAIT tools", () => {
     expect(WorkflowAgentStopReason.TIMEOUT).toBe("TIMEOUT");
     expect(WorkflowAgentStopReason.CANCELED).toBe("CANCELED");
     expect(Object.values(WorkflowEvidenceKind)).toEqual(["URL", "ARTIFACT", "CALL_LOG", "NOTE"]);
     expect(WORKFLOW_AGENT_TOOL_STATE_TYPES).toContain(WorkflowStateType.WAIT);
-    expect(DEFAULT_WORKFLOW_VALIDATION_CAPS.maxAgentDurationMs).toBe(24 * 60 * 60 * 1000);
+    // 30 days since v3.12.0 (was 24 hours): an agent parks on a WAIT tool like the run around it.
+    expect(DEFAULT_WORKFLOW_VALIDATION_CAPS.maxAgentDurationMs).toBe(30 * 24 * 60 * 60 * 1000);
 
     const longHorizon = parseWorkflowDefinitionShorthand({
       ...agentShorthand,
@@ -1138,7 +1184,7 @@ describe("workflow.contract AGENT state", () => {
         ...agentShorthand.states,
         research: {
           ...agentShorthand.states.research,
-          agent: { ...agentShorthand.states.research.agent, maxDurationMs: 48 * 60 * 60 * 1000, maxEstimatedCost: 0, historyWindow: 0, summarizerIntent: "NOPE" },
+          agent: { ...agentShorthand.states.research.agent, maxDurationMs: 31 * 24 * 60 * 60 * 1000, maxEstimatedCost: 0, historyWindow: 0, summarizerIntent: "NOPE" },
         },
       },
     });

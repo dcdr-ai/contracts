@@ -4,6 +4,43 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260913.4] — 04:16UTC
+
+<!--
+sourceCommit: 8a2c9e770896bd231fa7d90955dab8ba58b3d445
+queuedAtUtc: 
+previousMirroredBuild: 20260912.4 (2026-09-12)
+contractsSubmodule: 4c89ea4ff8eb..86a0cad59023
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **Submodule bumped to `@dcdr/contracts` 3.12.0 — form presentation hints on `PromptVariable` (`group`, `order`).** Fields can be drawn in sections and reordered without nesting them in an `object`, so the payload stays flat. Presentation only: ignored by validation of values, by execution and by provider schemas, and preserved by schema canonicalization. See the contracts changelog for the exact semantics.
+- <kbd>RUNTIME</kbd> **The agent planner never sees presentation hints.** Tool schemas reach the planner model as prompt text, and an `INTENT` tool inherits the tenant's intent `inputSchema` — exactly where a form layout is authored — so `group`/`order` are stripped from the catalog before it is sent. How a field is drawn cannot change what a provider receives. Covered in `tests/workflow-runner/workflow-runner.agent.test.ts`.
+- <kbd>CONTRACTS</kbd> **Workflow runs — and agents inside them — may now last up to 30 days by default and 180 days at most** (was one day), so a flow or an agent waiting on human sign-offs spread over days or weeks can be published. Plans can still set their own limit below the ceiling.
+- <kbd>RUNTIME</kbd> **The workflow runner never arms a timer beyond what Node can wait.** A delay above ~24.8 days is fired by Node almost immediately; with months-long run deadlines, state timeouts and retry backoff derived from the time left in a run are now bounded to that maximum. Covered in `tests/workflow-runner/workflow-runner.host.test.ts`.
+- <kbd>RUNTIME</kbd> **`max_tokens` is bounded by what the model can produce.** A request above a model's declared output ceiling is lowered to it with a warning, instead of being refused by the provider on every call. It happens once in the provider executor, over every spelling the adapters read (`max_tokens`, `max_completion_tokens`, `max_output_tokens`, `maxOutputTokens`, `maxTokens`), before an adapter derives a thinking budget from the same allowance. A model with no declared ceiling is not bounded at all. Ceilings come from contracts 3.12.0; `tools/anthropic-models-sync.cjs` and `tools/gemini-models-sync.cjs` now print the ceiling each vendor reports, which is where they were taken from. Covered by `tests/services/provider.executor.output-ceiling.test.ts`.
+- <kbd>RUNTIME</kbd> **Workflow evidence says how far it can be trusted.** The runner labels every evidence item where it captures it: calls it made itself (intents, the planner, HTTP, MCP) are `ENFORCED`; citations a planner model included in its decision are `REPORTED`, whatever level the model claimed for them. Before this nothing was labelled, and the run report showed model-supplied citations at the same level as actions the platform executed.
+- <kbd>CONTRACTS</kbd> **The Workflows & Agents rows of `TIERS_FEATURE_MATRIX.md` reflect what ships.** Definitions, fixed-graph states, manual/HTTP triggers, the runs timeline, `AGENT`, long-horizon agents, human tasks, evidence and the run report, `PARALLEL`/`FOREACH`/`SUBWORKFLOW`, CRON and event triggers are marked available. MCP was split into tools inside agents (available) and MCP exposure of intents and workflows (still on the roadmap). QC sampling on agent iterations stays on the roadmap: sampling by every Nth call works, but sampling by tool and parking a run on a failed sample do not yet.
+### Fixed
+Security hardening of the runtime (the externally reachable process) and the workflow runner. Entries are deliberately high-level; the internal write-up is `internal_docs/SECURITY_HARDENING_NOTES_2026-09-13.md` and coverage is tracked in `internal_docs/SECURITY_TEST_MATRIX.md`.
+- <kbd>RUNTIME</kbd> **Hardened remote intent input against server-side request forgery.** A remote URL referenced by an input part is now fetched through the same egress guard as the workflow runner's outbound calls (https only, no credentials in URLs, non-routable destinations refused on every resolved address and every redirect hop), and the download is bounded (`DCDR_PROVIDER_INPUT_MAX_BYTES`, default 25 MB). Self-hosted deployments reaching an internal endpoint can opt in with `DCDR_PROVIDER_INPUT_ALLOW_PRIVATE=true`; managed asset URLs are exempt.
+- <kbd>RUNTIME</kbd> **Hardened the shared egress address guard.** Non-routable destinations are now recognised in every address form, and an address that cannot be parsed is refused. Shared by the runtime and the workflow runner's outbound paths.
+- <kbd>RUNTIME</kbd> **Execution cache entries are isolated per tenant.** Cache and lock keys now carry a tenant scope (existing entries miss once after deploy).
+- <kbd>RUNTIME</kbd> **Customer traffic is always logged and counted.** Skipping the execution log is now an internal-only capability.
+- <kbd>RUNTIME</kbd> **Abuse blocking is fleet-wide when Redis is enabled.** A block decided by any replica is honoured by all; behaviour with Redis disabled is unchanged. The OpenAI-compatible gateway now shares the same credential brute-force policy as the rest of the API.
+- <kbd>RUNTIME</kbd> **A full in-memory cache no longer affects request handling.** Cache writes never fail a request, and security entries are never evicted.
+- <kbd>RUNTIME</kbd> **`POST /api/execution/run` cancels upstream work when the response is over** (client disconnect or request timeout), as the streaming endpoint already did.
+- <kbd>RUNTIME</kbd> **Hardened credential handling.** Internal, bypass, rate-limit and metrics tokens are compared in constant time; a production image no longer authenticates with an unset or placeholder internal token (it fails closed and logs that the token must be set; development and test are unchanged); the invalid-session response no longer echoes verification detail.
+- <kbd>RUNTIME</kbd> **Hardened input validation.** Asset paths are validated at the request boundary (traversal and control characters refused; ordinary names unaffected), tenant-authored processing regexes are compiled under the same safety limits as intent conditions, and security log lines are protected against injection.
+- <kbd>RUNTIME</kbd> **Runtime security keys in Redis are namespaced under the runtime's own prefix.**
+- <kbd>RUNTIME</kbd> **Unit suites no longer depend on real DNS** (`jest.dns-stub.cjs`, unit config only; E2E configs keep real resolution).
+### Changed
+- <kbd>RUNTIME</kbd> **The runtime and workflow-runner containers run as a non-root user.** The only writable path (the file-log folder) is created and handed to that user at build time.
+- <kbd>RUNTIME</kbd> **`trust proxy` is configurable via `TRUST_PROXY`** (a hop count, `true`/`false`, or a list of trusted proxy addresses); the default is unchanged. Client identity behind Cloudflare continues to come from the edge-provided header.
+- <kbd>RUNTIME</kbd> **Removed multipart file-upload parsing** (no route consumed it) and the `express-fileupload` dependency. Managed assets are uploaded as base64 JSON through `/api/assets/upload`, unaffected.
+### Added
+- <kbd>RUNTIME</kbd> **Egress guard test coverage for the runtime intent path** (`tests/services/net.guard.test.ts`, `tests/providers/input-output.parts.ssrf.test.ts`): the address classifier's ranges, the URL guard's scheme/credential/host/DNS-resolution rules, and the provider materializer refusing metadata/loopback/private URLs (and redirect hops to them) without opening a socket, while allowing public URLs, asset URLs and the private opt-in. Recorded in `internal_docs/SECURITY_TEST_MATRIX.md`.
+
 ## [20260912.4] — 22:25UTC
 
 <!--

@@ -37,7 +37,16 @@ export enum PromptVariableSchemaIssueCode {
   ASSET_PART_TYPES_EMPTY = "ASSET_PART_TYPES_EMPTY",
   ASSET_PART_TYPES_INVALID = "ASSET_PART_TYPES_INVALID",
   ASSET_PART_TYPES_UNIQUE = "ASSET_PART_TYPES_UNIQUE",
+  /** v3.12.0: `group` is present but not a string. */
+  GROUP_STRING = "GROUP_STRING",
+  /** v3.12.0: `group` is blank after trimming, or longer than `PROMPT_VARIABLE_GROUP_MAX_LENGTH`. */
+  GROUP_LEN = "GROUP_LEN",
+  /** v3.12.0: `order` is present but not a finite number. */
+  ORDER_NUMBER = "ORDER_NUMBER",
 }
+
+/** Longest accepted `PromptVariable.group` label, after trimming. */
+export const PROMPT_VARIABLE_GROUP_MAX_LENGTH = 128;
 
 export interface PromptVariableSchemaIssue {
   path: string;
@@ -79,6 +88,8 @@ interface PromptVariableDefinitionObject {
   values?: unknown;
   min?: unknown;
   max?: unknown;
+  group?: unknown;
+  order?: unknown;
 }
 
 function asPromptVariableDefObject(
@@ -172,6 +183,95 @@ function explainAssetPartTypes(
   }
 
   return { valid: true, normalized };
+}
+
+/**
+ * Validates the presentation hints `group` and `order` of one definition.
+ *
+ * `null` is treated as absent, the same as every other optional field here, so a UI that clears a
+ * hint by sending `null` does not produce an issue.
+ *
+ * @param obj Definition being validated.
+ * @param path Path of the definition, used to build issue paths.
+ * @param push Issue sink.
+ */
+function explainPresentationHints(
+  obj: PromptVariableDefinitionObject,
+  path: string,
+  push: (issue: PromptVariableSchemaIssue) => void,
+): void {
+  if (obj.group !== undefined && obj.group !== null) {
+    if (typeof obj.group !== "string") {
+      push({
+        path: `${path}.group`,
+        code: PromptVariableSchemaIssueCode.GROUP_STRING,
+      });
+    } else {
+      const trimmed = obj.group.trim();
+      if (!trimmed || trimmed.length > PROMPT_VARIABLE_GROUP_MAX_LENGTH) {
+        push({
+          path: `${path}.group`,
+          code: PromptVariableSchemaIssueCode.GROUP_LEN,
+          params: { max: PROMPT_VARIABLE_GROUP_MAX_LENGTH },
+        });
+      }
+    }
+  }
+
+  if (obj.order !== undefined && obj.order !== null && !isFiniteNumber(obj.order)) {
+    push({
+      path: `${path}.order`,
+      code: PromptVariableSchemaIssueCode.ORDER_NUMBER,
+    });
+  }
+}
+
+/**
+ * Returns a copy of a schema record without presentation hints (`group`, `order`), at every depth.
+ *
+ * Use it wherever a schema is handed to a model as text - for instance an agent planner's tool
+ * catalog - so that how a field is drawn can never change what a provider receives. Structured
+ * output adapters do not need it: they build provider schemas from an explicit field list.
+ *
+ * @param schema Schema record; `null`/`undefined` are returned unchanged.
+ * @returns A new record, or the input when it is not an object.
+ */
+export function stripPromptVariablePresentationHints(
+  schema: Record<string, PromptVariable> | null | undefined,
+): Record<string, PromptVariable> | null | undefined {
+  if (!isObjectRecord(schema)) return schema;
+
+  const stripOne = (def: PromptVariable): PromptVariable => {
+    if (!isObjectRecord(def)) return def;
+    const { group: _group, order: _order, ...rest } = def;
+    const out: PromptVariable = { ...rest } as PromptVariable;
+    if (isObjectRecord(rest.properties)) {
+      out.properties = Object.fromEntries(
+        Object.entries(rest.properties).map(([k, v]) => [k, stripOne(v)]),
+      );
+    }
+    return out;
+  };
+
+  return Object.fromEntries(
+    Object.entries(schema).map(([k, v]) => [k, stripOne(v)]),
+  );
+}
+
+/**
+ * Reads the canonical presentation hints of a validated definition.
+ *
+ * @param obj A definition that already passed validation.
+ * @returns Trimmed `group` and finite `order`, each `undefined` when absent.
+ */
+function readPresentationHints(obj: PromptVariableDefinitionObject): {
+  group?: string;
+  order?: number;
+} {
+  return {
+    group: typeof obj.group === "string" ? obj.group.trim() : undefined,
+    order: isFiniteNumber(obj.order) ? obj.order : undefined,
+  };
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -373,6 +473,9 @@ export function validatePromptVariableSchemaRecord(
         });
       }
     }
+
+    // Presentation hints apply to every type, so they are checked before any type branch returns.
+    explainPresentationHints(obj, path, push);
 
     const hasMin = obj.min !== undefined && obj.min !== null;
     const hasMax = obj.max !== undefined && obj.max !== null;
@@ -761,6 +864,9 @@ export function canonicalizePromptVariableSchemaRecord(
       typeof obj.description === "string" ? obj.description : undefined;
     const min = isFiniteNumber(obj.min) ? obj.min : undefined;
     const max = isFiniteNumber(obj.max) ? obj.max : undefined;
+    // Carried on every branch: dropping them here would silently erase them for every consumer that
+    // reads a canonical schema (the registry loader, the structured-output path, the backend).
+    const { group, order } = readPresentationHints(obj);
 
     if (type === PromptVariableType.ENUM) {
       const enumNorm = explainEnumValues(obj.values, "values", () => {
@@ -777,6 +883,8 @@ export function canonicalizePromptVariableSchemaRecord(
         values,
         min,
         max,
+        group,
+        order,
       );
     }
 
@@ -797,6 +905,8 @@ export function canonicalizePromptVariableSchemaRecord(
         undefined,
         min,
         max,
+        group,
+        order,
       );
     }
 
@@ -818,6 +928,8 @@ export function canonicalizePromptVariableSchemaRecord(
         undefined,
         min,
         max,
+        group,
+        order,
       );
     }
 
@@ -854,6 +966,8 @@ export function canonicalizePromptVariableSchemaRecord(
         values,
         min,
         max,
+        group,
+        order,
       );
     }
 
@@ -869,6 +983,8 @@ export function canonicalizePromptVariableSchemaRecord(
       undefined,
       min,
       max,
+      group,
+      order,
     );
   };
 

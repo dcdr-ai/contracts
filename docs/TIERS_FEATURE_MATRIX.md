@@ -154,24 +154,25 @@ Roadmap notes:
 
 ---
 
-## 🧩 Workflows & Agents (3.0.0, 🚧 rolling out)
+## 🧩 Workflows & Agents
 
 Workflows compose published intents, HTTP calls, choices and transforms into a typed, versioned, auditable run; an Agent is a workflow whose body is a bounded `AGENT` loop over a closed tool catalog. Runs execute in the managed workflow runner, never in the self-hosted runtime.
 
-| Feature                                                   | Runtime (self-hosted) | Cloud | Cloud Pro |
-| --------------------------------------------------------- | --------------------: | ----: | --------: |
-| Workflow definitions (typed input/output, versions)       |                    ❌ |    🚧 |        🚧 |
-| Fixed-graph states (`INTENT`, `HTTP`, `CHOICE`, `TRANSFORM`) |                 ❌ |    🚧 |        🚧 |
-| Manual & HTTP triggers (service token)                    |                    ❌ |    🚧 |        🚧 |
-| Runs timeline, per-step cost, call logs by run            |                    ❌ |    🚧 |        🚧 |
-| `AGENT` state (bounded plan-act loop, small bounds)       |                    ❌ |    🚧 |        🚧 |
-| Long-horizon agents (duration/cost budgets, history window) |                  ❌ |    ❌ |        🚧 |
-| Human tasks (`WAIT`), inbox, sign-off                     |                    ❌ |    ❌ |        🚧 |
-| Evidence capture & run report                             |                    ❌ |    ❌ |        🚧 |
-| QC sampling on agent iterations                           |                    ❌ |    ❌ |        🚧 |
-| `PARALLEL` / `FOREACH` / `SUBWORKFLOW`                    |                    ❌ |    ❌ |        🚧 |
-| CRON & event triggers                                     |                    ❌ |    ❌ |        🚧 |
-| MCP tools & MCP exposure                                  |                    ❌ |    ❌ |        🚧 |
+| Feature                                                      | Runtime (self-hosted) | Cloud | Cloud Pro |
+| ------------------------------------------------------------ | --------------------: | ----: | --------: |
+| Workflow definitions (typed input/output, versions)          |                    ❌ |    ✅ |        ✅ |
+| Fixed-graph states (`INTENT`, `HTTP`, `CHOICE`, `TRANSFORM`) |                    ❌ |    ✅ |        ✅ |
+| Manual & HTTP triggers (service token)                       |                    ❌ |    ✅ |        ✅ |
+| Runs timeline, per-step cost, call logs by run               |                    ❌ |    ✅ |        ✅ |
+| `AGENT` state (bounded plan-act loop, small bounds)          |                    ❌ |    ✅ |        ✅ |
+| Long-horizon agents (duration/cost budgets, history window)  |                    ❌ |    ❌ |        ✅ |
+| Human tasks (`WAIT`), inbox, sign-off                        |                    ❌ |    ❌ |        ✅ |
+| Evidence capture & run report                                |                    ❌ |    ❌ |        ✅ |
+| QC sampling on agent iterations                              |                    ❌ |    ❌ |        🚧 |
+| `PARALLEL` / `FOREACH` / `SUBWORKFLOW`                       |                    ❌ |    ❌ |        ✅ |
+| CRON & event triggers                                        |                    ❌ |    ❌ |        ✅ |
+| MCP tools inside agents                                      |                    ❌ |    ❌ |        ✅ |
+| MCP exposure (intents and workflows served as MCP tools)     |                    ❌ |    ❌ |        🚧 |
 
 ---
 

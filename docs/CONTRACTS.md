@@ -281,6 +281,13 @@ Example pattern:
 - `inputSchema.name` as a required string
 - `outputSchema.result` as a required string
 
+Presentation hints (3.12.0):
+
+- `group?: string` — the form section a field is drawn in. Fields without one render in a default first section; sections appear in the order their first field is declared.
+- `order?: number` — position within the group. Fields without one keep their declared key order.
+- Both are **presentation only**: they do not change what a caller must send, what is validated, or what a model receives (structured-output schemas ignore them, and the agent planner's tool catalog strips them). A form can be laid out in sections while the payload stays flat — no nested `object` needed just to group fields.
+- Validation codes: `GROUP_STRING`, `GROUP_LEN` (blank, or longer than `PROMPT_VARIABLE_GROUP_MAX_LENGTH` = 128), `ORDER_NUMBER` (not a finite number). `canonicalizePromptVariableSchemaRecord` keeps both (trimming `group`); `stripPromptVariablePresentationHints` removes them at every depth.
+
 ### Prompts (templates)
 
 The prompt lives in `defaultPrompt` (and optionally `canaryPrompt`).

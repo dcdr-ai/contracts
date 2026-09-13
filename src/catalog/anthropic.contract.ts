@@ -46,6 +46,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-5",
       types: [IntentType.CHAT],
+      maxOutputTokens: 128000,
       tokenUsageCovered: true,
       parameterSupport: ANTHROPIC_NO_SAMPLING_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -81,6 +82,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-4-8",
       types: [IntentType.CHAT],
+      maxOutputTokens: 128000,
       publicForCustomers: true,
       publicName: "DCDR Best",
       badge: "Anthropic",
@@ -138,6 +140,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-4-7",
       types: [IntentType.CHAT],
+      maxOutputTokens: 128000,
       tokenUsageCovered: true,
 
       parameterSupport: {
@@ -180,6 +183,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-4-6",
       types: [IntentType.CHAT],
+      maxOutputTokens: 128000,
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
@@ -212,6 +216,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-4-5-20251101",
       types: [IntentType.CHAT],
+      maxOutputTokens: 64000,
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
@@ -276,6 +281,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-sonnet-4-6",
       types: [IntentType.CHAT],
+      maxOutputTokens: 128000,
       tokenUsageCovered: true,
       pricing: args.pricingPerMillionTokens({
         input: 3.0,
@@ -306,6 +312,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-sonnet-4-5-20250929",
       types: [IntentType.CHAT],
+      maxOutputTokens: 64000,
       pricing: args.pricingPerMillionTokens({
         input: 3.0,
         cachedInput: 0.3,
@@ -334,6 +341,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-sonnet-5",
       types: [IntentType.CHAT],
+      maxOutputTokens: 128000,
       publicForCustomers: true,
       publicName: "DCDR Smart",
       badge: "Anthropic",
@@ -426,6 +434,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-fable-5-1",
       types: [IntentType.CHAT],
+      maxOutputTokens: 128000,
       tokenUsageCovered: true,
       parameterSupport: ANTHROPIC_NO_SAMPLING_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -459,6 +468,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-fable-5",
       types: [IntentType.CHAT],
+      maxOutputTokens: 128000,
       tokenUsageCovered: true,
       pricing: args.pricingPerMillionTokens({
         input: 10.0,
@@ -502,6 +512,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-haiku-4-5-20251001",
       types: [IntentType.CHAT],
+      maxOutputTokens: 64000,
       publicForCustomers: true,
       tokenUsageCovered: true,
       publicName: "DCDR Fast",

@@ -331,9 +331,29 @@ export interface ProviderModelDefinition {
    * - Missing/undefined is treated as false (fail-closed).
    */
   tokenUsageCovered?: boolean;
+  /**
+   * Largest output allowance (`max_tokens` and its provider spellings) this model accepts (v3.12.0).
+   *
+   * The runtime clamps a larger request down to it, with a warning, instead of letting the provider
+   * refuse every call. **Absent means unbounded**: the request passes through untouched. A catalogue
+   * that is silently incomplete must never become a clamp that silently truncates, so this is only
+   * set from evidence for the exact model id (the vendor's own models listing, or a measured call)
+   * and never inferred from a sibling, an alias or the family.
+   */
+  maxOutputTokens?: number;
   pricing?: ProviderModelPricing;
   runtimeSupport?: ProviderModelRuntimeSupportInfo;
   parameterSupport?: ProviderModelParameterSupportInfo;
+}
+
+/** Result of {@link ProviderModelRegistry.clampMaxOutputTokens}. */
+export interface ProviderOutputTokenClampResult {
+  /** Value to send: the request itself, or the model ceiling when the request exceeded it. */
+  value: number;
+  /** True when `value` is lower than what was requested. */
+  clamped: boolean;
+  /** The declared ceiling, when the catalogue has one for this model. */
+  ceiling?: number;
 }
 
 /**
@@ -372,6 +392,8 @@ export interface ProviderModelDefinitionInput {
   publicName?: string;
   badge?: string;
   tokenUsageCovered?: boolean;
+  /** See {@link ProviderModelDefinition.maxOutputTokens}. Must be a positive integer when present. */
+  maxOutputTokens?: number;
   primaryCategory?: DcdrPublicModelCategory;
   categories?: DcdrPublicModelCategory[];
   qualityTier?: number;
@@ -843,6 +865,19 @@ function normalizeProviderModelDefinitions(
         publicForCustomers: def.publicForCustomers === true,
         tokenUsageCovered: def.tokenUsageCovered ?? tokenUsageCoveredOverride,
       };
+
+      // A malformed ceiling would clamp every request to nonsense, so it fails at catalogue load.
+      if (
+        normalized.maxOutputTokens !== undefined &&
+        !(
+          Number.isInteger(normalized.maxOutputTokens) &&
+          normalized.maxOutputTokens > 0
+        )
+      ) {
+        throw new Error(
+          `Provider model catalog: ${provider}/${normalized.id} maxOutputTokens must be a positive integer.`,
+        );
+      }
 
       if (normalized.publicForCustomers) {
         if (normalized.tokenUsageCovered !== true) {
@@ -1521,5 +1556,51 @@ export class ProviderModelRegistry {
       (outputTokens * (tokens.outputUsd ?? 0)) / perToken;
 
     return { amount, currency: pricing.currency };
+  }
+
+  /**
+   * The declared output ceiling of a model, or `null` when the catalogue declares none.
+   *
+   * Looks the id up as given and then lowercased, the same two spellings execution accepts.
+   * `null` means **unbounded**, never "zero".
+   *
+   * @param provider Provider.
+   * @param modelId Model id.
+   * @returns The ceiling, or `null`.
+   */
+  static getMaxOutputTokens(
+    provider: IntentProvider,
+    modelId: string,
+  ): number | null {
+    const id = String(modelId ?? "");
+    const def =
+      ProviderModelRegistry.getModelDefinition(provider, id) ??
+      ProviderModelRegistry.getModelDefinition(provider, id.toLowerCase());
+    return typeof def?.maxOutputTokens === "number" ? def.maxOutputTokens : null;
+  }
+
+  /**
+   * Bounds a requested output allowance by the model's declared ceiling.
+   *
+   * Only ever lowers a value. A model without a declared ceiling, or a request that is not a finite
+   * positive number, passes through unchanged: validating the request is not this helper's job, and
+   * guessing a bound for an uncurated model is exactly the silent truncation it exists to avoid.
+   *
+   * @param provider Provider.
+   * @param modelId Model id.
+   * @param requested The allowance the request carries.
+   * @returns The value to send and whether it was lowered.
+   */
+  static clampMaxOutputTokens(
+    provider: IntentProvider,
+    modelId: string,
+    requested: number,
+  ): ProviderOutputTokenClampResult {
+    const ceiling = ProviderModelRegistry.getMaxOutputTokens(provider, modelId);
+    if (ceiling === null) return { value: requested, clamped: false };
+    if (!Number.isFinite(requested) || requested <= ceiling) {
+      return { value: requested, clamped: false, ceiling };
+    }
+    return { value: ceiling, clamped: true, ceiling };
   }
 }
