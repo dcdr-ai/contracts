@@ -4,6 +4,26 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260914.1] — 01:23UTC
+
+<!--
+sourceCommit: 62ce747064029b3279c0af3f099bd3af051cf487
+queuedAtUtc: 
+previousMirroredBuild: 20260913.4 (2026-09-13)
+contractsSubmodule: 86a0cad59023..8e78bde901a1
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> **Inactive implementations: evaluated freely, never executed.** Eval and dry-run now accept an implementation that is not active yet, so a new implementation can be evaluated before it is put in service (this needs the control plane to include inactive implementations in the registry). Run and stream only ever execute active implementations: forcing an inactive one there is refused with `NO_ELIGIBLE_IMPLEMENTATION` instead of being executed. Eval results also label an inactive target with its real provider and model.
+- <kbd>RUNTIME</kbd> **The workflow runner reads a connection's login from its own field.** Mail, SFTP and database connections now take their user, password or key from the control plane's `credentials` list, and HTTP and MCP connections keep using headers only, so a database login no longer travels as an HTTP header inside the runner. A login still sent inside headers by an older control plane keeps working.
+- <kbd>RUNTIME</kbd> **Answering a human task or an approval resumes the workflow again.** The runner did not recognise an answered task in the form the control plane hands it back, so it asked the same question again: every answer produced another identical waiting step and the run never moved on. Answers to tasks, approvals and tasks inside parallel branches are now recognised whatever state the task was left in, a parallel branch continues where it stopped instead of starting over, and a gated wait no longer asks for approval a second time. Covered in `tests/workflow-runner/workflow-runner.host.test.ts` and `workflow-runner.composite.test.ts`.
+- <kbd>RUNTIME</kbd> **Internal workflows can execute platform intents.** A workflow that belongs to no customer could run its local steps but failed on its first intent. The runtime now accepts a short-lived grant the control plane mints per run and per intent, checks with the control plane that the run is still running before honouring it, and holds it to the same restrictions as a customer token. Until the control plane side is deployed, such grants are refused. Coverage and mechanics: `internal_docs/SECURITY_TEST_MATRIX.md`.
+- <kbd>RUNTIME</kbd> **Breaking configuration: session tokens are verified with keyrings.** `SESSION_SECRET_ACTIVE` / `SESSION_SECRET_PREVIOUS` are no longer read. Set `SESSION_KEYRING` (customer session tokens) and `SESSION_INTERNAL_KEYRING` (internal run grants), each one JSON line `{"activeKeyId":"<id>","keys":{"<id>":"<key>"}}` with keys of at least 32 characters and no key shared between the two. A key can now be rotated without invalidating the tokens it already signed, and tokens must be issued with a key id: tokens issued before this release have to be issued again.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.13.0 adds keyring-signed session tokens** (`kid`, `DcdrSessionKeyring`, `signWithKeyring` / `verifyWithKeyring`) and the internal run grant types, so a control plane and a runtime share one implementation of key selection and rotation.
+- <kbd>RUNTIME</kbd> **`npm run dev:workflow-runner` no longer exits after a run.** The backend tells its fleet to exit after every run, and that instruction overrode a local `WORKFLOW_RUNNER_EXIT_AFTER_RUN=false`, so a development runner stopped after the first run it took. The dev script now passes `--keep-alive` (also `WORKFLOW_RUNNER_KEEP_ALIVE=true`): the process never exits on its own — not after a run, not when the backend asks it to terminate — and only Ctrl+C or a stop signal ends it. Production images pass neither and behave as before.
+- <kbd>RUNTIME</kbd> **A person's task is no longer completed by a dispatch nobody answered.** The workflow runner took any dispatch of a run parked on a human task as its answer, so a run sent back to a runner for another reason completed the task with an empty result, and an undecided approval could be read as a rejection. A human task, an event or an approval now resumes only when the control plane hands its frame back; otherwise the runner parks it again exactly as it was, keeping its original deadline and writing no new timeline row. Each dispatch also logs what it was handed and what it decided.
+- <kbd>CONTRACTS</kbd> **Submodule bumped to `@dcdr/contracts` 3.13.0.** `WorkflowRunnerFrame.resuming` is required to hand back an answer to a human task, an event or an approval, and a `WAIT` that is not a `DELAY` can no longer be published with `delayMs`, a field it ignored.
+
 ## [20260913.4] — 04:16UTC
 
 <!--

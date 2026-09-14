@@ -940,6 +940,24 @@ describe("workflow.contract validation", () => {
       `states.w3.wait.form:${WorkflowValidationIssueCode.STATE_CONFIG_MISSING}`,
     ]));
   });
+
+  it("refuses delayMs on any wait but DELAY, where it would silently do nothing (v3.13.0)", () => {
+    // A HUMAN_TASK carrying `delayMs: 60000` sent two teams looking for a 60-second re-probe that
+    // never existed: the runner reads it for DELAY only.
+    const withWait = (wait: Record<string, unknown>): WorkflowDefinition => baseDefinition({
+      startAt: "w",
+      states: {
+        w: { type: WorkflowStateType.WAIT, next: "done", wait: wait as never },
+        done: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+      },
+    });
+    const delayLabel = `states.w.wait.delayMs:${WorkflowValidationIssueCode.STATE_CONFIG_INVALID}`;
+
+    expect(issueLabels(withWait({ kind: "HUMAN_TASK", delayMs: 60_000, timeoutMs: 600_000, form: {} }))).toContain(delayLabel);
+    expect(issueLabels(withWait({ kind: "EXTERNAL_EVENT", delayMs: 1, eventKey: "k", timeoutMs: 600_000 }))).toContain(delayLabel);
+    expect(issueLabels(withWait({ kind: "HUMAN_TASK", timeoutMs: 600_000, form: {} }))).not.toContain(delayLabel);
+    expect(issueLabels(withWait({ kind: "DELAY", delayMs: 60_000, timeoutMs: 600_000 }))).not.toContain(delayLabel);
+  });
 });
 
 describe("workflow.contract output schema", () => {

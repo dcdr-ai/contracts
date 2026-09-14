@@ -1,5 +1,7 @@
-import { HttpRequestParams } from "./http.contract";
+import { HttpRequestParams, NameValuePair } from "./http.contract";
 import { WorkflowConnectionProtocol, WorkflowConnectionSettings } from "./workflow.connections.contract";
+// Referenced from documentation only.
+import type { WORKFLOW_CONNECTION_SECRET_NAMES } from "./workflow.connections.contract";
 import {
   WorkflowDefinition,
   WorkflowStateError,
@@ -316,8 +318,15 @@ export interface WorkflowRunnerFrame {
    * one that was answered and leave the others on their desks. Usually `resumePayload` says which,
    * but not always: a `DELAY` that elapsed and a form with nothing to fill in both answer with
    * nothing, and an absent payload would be indistinguishable from a task nobody has touched. So the
-   * control plane marks the frame it is handing back. Optional only for a run parked on a single
-   * frame, where there is nothing to tell apart.
+   * control plane marks the frame it is handing back.
+   *
+   * **Required to hand back an answer to a `HUMAN_TASK`, an `EXTERNAL_EVENT` or an approval gate**,
+   * however many frames are parked (v3.13.0): a run is also dispatched by a requeue or by another
+   * frame's answer, so a runner takes such a frame as answered only when it carries `resuming` or a
+   * `resumePayload`, and otherwise parks it again exactly as stored - same `timeoutAt`, no new step.
+   * Until 3.13.0 this read "optional only for a run parked on a single frame", and a runner that
+   * trusted it completed a person's task with `null` on a dispatch nobody had answered. A root frame
+   * parked on a `DELAY` needs none: nobody answers a delay, so its dispatch is its resume.
    */
   resuming?: boolean;
   /** The frame parked on an approval gate rather than a `WAIT`: `resumePayload` is the decision. */
@@ -463,6 +472,15 @@ export function isWorkflowRunnerPayloadAssetRef(value: unknown): value is Workfl
 /** `GET /api/workflows/:runId/connection/:key` response: secrets resolved for this run only. */
 export interface WorkflowRunnerConnectionSecretsResponse extends HttpRequestParams {
   key: string;
+  /**
+   * The login itself, for transports that authenticate with a user rather than with a header (v3.13.0):
+   * `SMTP`, `SFTP` and `DATA`, under the names {@link WORKFLOW_CONNECTION_SECRET_NAMES} publishes.
+   *
+   * `headers` / `query` / `cookies` say *where in an HTTP request* a value travels; a database password is
+   * none of them. A runner reads a login from here first and, only while control planes still merge
+   * logins into `headers`, falls back to `headers`.
+   */
+  credentials?: NameValuePair[];
   /** When the runner must discard the secrets (ISO-8601). */
   expiresAt?: string;
 }

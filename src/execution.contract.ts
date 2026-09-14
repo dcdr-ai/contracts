@@ -660,6 +660,12 @@ export interface ExecuteIntentEvalResultItem {
   implementationId: string;
   provider: IntentProvider;
   model: string;
+  /**
+   * Whether the implementation is in service (v3.13.0). Eval runs inactive implementations too, so a
+   * successful result can belong to one that `run` would refuse; this says which, from the same registry
+   * entry the runtime executed. `false` when the registry does not hold the implementation at all.
+   */
+  active: boolean;
 
   /** Full 1:1 execution result for this implementation. */
   response: ExecuteIntentResponse;

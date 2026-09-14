@@ -23,6 +23,108 @@ export interface DcdrSessionPayload {
    * - `*` grants full access.
    */
   scopes: string[];
+  /**
+   * Id of the keyring key that signed this token (v3.13.0).
+   *
+   * Stamped by {@link DcdrSessionToken.signWithKeyring}. A runtime verifies customer tokens and internal
+   * run grants with {@link DcdrSessionToken.verifyWithKeyring}, which requires it: it selects the one key
+   * to verify with, so a verifier never tries every key in turn.
+   */
+  kid?: string;
+}
+
+/**
+ * Tenant id an internal run grant claims: the platform's own registry (v3.13.0).
+ *
+ * A token claiming it is only honoured when a {@link DcdrSessionKeyring} key signed it; the customer
+ * session secrets can never authorize it. Which tenant a token may claim is decided by who signed it.
+ */
+export const DCDR_INTERNAL_TENANT_CID = "__internal__";
+
+/** Minimum length of a keyring key, so a placeholder or a short secret is refused at load (v3.13.0). */
+export const DCDR_SESSION_KEY_MIN_LENGTH = 32;
+
+/**
+ * A set of HMAC keys identified by id, one of them active (v3.13.0).
+ *
+ * Signing always uses `activeKeyId`. Retired keys stay in `keys` until nothing they signed can still be
+ * presented, which is why this is a ring and not an active/previous pair: a pair survives one rotation.
+ */
+export interface DcdrSessionKeyring {
+  /** Key new tokens are signed with; must be one of `keys`. */
+  activeKeyId: string;
+  /** Every key still accepted, by id. Values are secrets: never log or persist them in plain text. */
+  keys: Record<string, string>;
+}
+
+/**
+ * Answer of the control plane's run-grant check (`GET /api/dcdr/workflow-runs/:runId/grant?intent=`,
+ * v3.13.0).
+ *
+ * The runtime refuses an internal run grant unless every flag holds: expiry is not what revokes a grant,
+ * the state of its run is.
+ */
+export interface WorkflowRunGrantStatusResponse {
+  runId: string;
+  /** `true` only while the run is `RUNNING`; `QUEUED`, `WAITING` and terminal runs are `false`. */
+  active: boolean;
+  /** `true` only for a run with no customer. */
+  internal: boolean;
+  /** `true` when the run's published definition uses the intent asked about. */
+  intentAllowed: boolean;
+  /** Run deadline (ISO-8601), when it has one. */
+  deadlineAt: string | null;
+}
+
+/** Raw JSON shape of a keyring before validation. */
+interface DcdrSessionKeyringJson {
+  activeKeyId?: unknown;
+  keys?: unknown;
+}
+
+/**
+ * Parses and validates a keyring from its JSON form (a system setting or an environment variable).
+ *
+ * Fails loudly on anything a verifier could not use safely: a missing or unknown active key, a key id
+ * outside `[A-Za-z0-9._-]{1,64}`, or a key shorter than {@link DCDR_SESSION_KEY_MIN_LENGTH}. Messages
+ * name ids, never key material.
+ *
+ * @param raw JSON text.
+ * @returns The keyring.
+ * @throws Error `KEYRING_INVALID: ...` when the text is not a usable keyring.
+ */
+export function parseDcdrSessionKeyring(raw: string): DcdrSessionKeyring {
+  let parsed: DcdrSessionKeyringJson;
+  try {
+    parsed = JSON.parse(String(raw ?? "")) as DcdrSessionKeyringJson;
+  } catch {
+    throw new Error("KEYRING_INVALID: not JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("KEYRING_INVALID: not an object");
+  }
+  const keysRaw = parsed.keys;
+  if (!keysRaw || typeof keysRaw !== "object" || Array.isArray(keysRaw)) {
+    throw new Error("KEYRING_INVALID: keys must be an object of id -> key");
+  }
+  const keys: Record<string, string> = {};
+  for (const [id, value] of Object.entries(keysRaw as Record<string, unknown>)) {
+    if (!/^[A-Za-z0-9._-]{1,64}$/.test(id)) {
+      throw new Error(`KEYRING_INVALID: key id '${id.slice(0, 64)}' must match [A-Za-z0-9._-]{1,64}`);
+    }
+    if (typeof value !== "string" || value.length < DCDR_SESSION_KEY_MIN_LENGTH) {
+      throw new Error(`KEYRING_INVALID: key '${id}' must be a string of at least ${DCDR_SESSION_KEY_MIN_LENGTH} characters`);
+    }
+    keys[id] = value;
+  }
+  if (Object.keys(keys).length === 0) {
+    throw new Error("KEYRING_INVALID: no keys");
+  }
+  const activeKeyId = typeof parsed.activeKeyId === "string" ? parsed.activeKeyId : "";
+  if (!activeKeyId || !Object.prototype.hasOwnProperty.call(keys, activeKeyId)) {
+    throw new Error("KEYRING_INVALID: activeKeyId must name one of keys");
+  }
+  return { activeKeyId, keys };
 }
 
 /**
@@ -123,6 +225,60 @@ export class DcdrSessionToken {
     return payload;
   }
 
+  /**
+   * Signs a payload with the keyring's active key and stamps its id as `kid` (v3.13.0).
+   *
+   * @param deps HMAC implementation.
+   * @param payload Claims; any `kid` given is replaced by the active key id.
+   * @param keyring Keyring (see {@link parseDcdrSessionKeyring}).
+   * @returns The token.
+   * @throws Error `KEYRING_ACTIVE_KEY_MISSING` when the active key is not in the ring.
+   */
+  static signWithKeyring(
+    deps: HmacDeps,
+    payload: DcdrSessionPayload,
+    keyring: DcdrSessionKeyring,
+  ): string {
+    const key = keyringKey(keyring, keyring?.activeKeyId);
+    if (key === undefined) throw new Error("KEYRING_ACTIVE_KEY_MISSING");
+    return this.sign(deps, { ...payload, kid: keyring.activeKeyId }, key);
+  }
+
+  /**
+   * Verifies a keyring-signed token with exactly the key its `kid` names (v3.13.0).
+   *
+   * The `kid` is read from the still-unverified payload only to select the key; nothing else in the
+   * payload is trusted before the signature checks, and no other key is tried. A token without a `kid`,
+   * or naming a key the ring does not hold, is refused - a retired key keeps verifying for as long as it
+   * stays in the ring.
+   *
+   * @param deps HMAC implementation.
+   * @param token Token.
+   * @param keyring Keyring holding every key still accepted.
+   * @param opts Clock skew and global revocation, as {@link DcdrSessionToken.verify}.
+   * @returns The verified payload.
+   * @throws Error `TOKEN_KID_MISSING`, `TOKEN_KID_UNKNOWN`, or any error of {@link DcdrSessionToken.verify}.
+   */
+  static verifyWithKeyring(
+    deps: HmacDeps,
+    token: string,
+    keyring: DcdrSessionKeyring,
+    opts?: { clockSkewSeconds?: number; revokeBeforeIat?: number },
+  ): DcdrSessionPayload {
+    let kid: string | undefined;
+    try {
+      kid = this.decodeUnverified(token).kid;
+    } catch {
+      throw new Error("TOKEN_FORMAT_INVALID");
+    }
+    if (typeof kid !== "string" || !kid) throw new Error("TOKEN_KID_MISSING");
+    const key = keyringKey(keyring, kid);
+    if (key === undefined) throw new Error("TOKEN_KID_UNKNOWN");
+    const payload = this.verify(deps, token, key, opts);
+    if (payload.kid !== kid) throw new Error("TOKEN_KID_UNKNOWN");
+    return payload;
+  }
+
   static decodeUnverified(token: string): DcdrSessionPayload {
     const [payloadB64url] = (token ?? "").split(".");
     if (!payloadB64url) throw new Error("TOKEN_FORMAT_INVALID");
@@ -155,7 +311,26 @@ export class DcdrSessionToken {
     ) {
       throw new Error("PAYLOAD_SCOPES_INVALID");
     }
+
+    if (p.kid !== undefined && (typeof p.kid !== "string" || !p.kid)) {
+      throw new Error("PAYLOAD_KID_INVALID");
+    }
   }
+}
+
+/**
+ * Looks a key up by id as an own property only, so an id such as `__proto__` or `toString` can never
+ * resolve to something that is not a key of the ring.
+ *
+ * @param keyring Keyring.
+ * @param id Key id.
+ * @returns The key, or `undefined`.
+ */
+function keyringKey(keyring: DcdrSessionKeyring | undefined, id: string | undefined): string | undefined {
+  if (!keyring || !keyring.keys || typeof id !== "string") return undefined;
+  if (!Object.prototype.hasOwnProperty.call(keyring.keys, id)) return undefined;
+  const key = keyring.keys[id];
+  return typeof key === "string" && key.length > 0 ? key : undefined;
 }
 
 function normalizePayloadTimes(p: DcdrSessionPayload): DcdrSessionPayload {

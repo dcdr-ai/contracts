@@ -668,7 +668,7 @@ export interface WorkflowEndStateConfig {
 /** `WAIT` state configuration. */
 export interface WorkflowWaitStateConfig {
   kind: WorkflowWaitKind;
-  /** `DELAY`: milliseconds to wait. */
+  /** `DELAY`: milliseconds to wait. Refused on any other kind (v3.13.0), where it would do nothing. */
   delayMs?: number;
   /** `EXTERNAL_EVENT`: event key the resume call must carry. */
   eventKey?: string;
@@ -3692,6 +3692,11 @@ function validateWaitState(config: WorkflowWaitStateConfig, path: string, acc: G
   }
   if (config.kind === WorkflowWaitKind.DELAY && !isPositiveInteger(config.delayMs)) {
     push(`${path}.delayMs`, WorkflowValidationIssueCode.STATE_CONFIG_MISSING, "DELAY requires delayMs >= 1.");
+  }
+  // Inert on every other kind, and inert-but-accepted is how a `HUMAN_TASK` came to carry a 60-second
+  // `delayMs` that its author believed re-probed the task (v3.13.0).
+  if (config.kind !== WorkflowWaitKind.DELAY && config.delayMs !== undefined && config.delayMs !== null) {
+    push(`${path}.delayMs`, WorkflowValidationIssueCode.STATE_CONFIG_INVALID, `delayMs only applies to a DELAY wait; a ${config.kind} wait ignores it.`);
   }
   if (config.kind === WorkflowWaitKind.EXTERNAL_EVENT && (typeof config.eventKey !== "string" || !config.eventKey.trim())) {
     push(`${path}.eventKey`, WorkflowValidationIssueCode.STATE_CONFIG_MISSING, "EXTERNAL_EVENT requires eventKey.");
