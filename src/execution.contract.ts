@@ -81,9 +81,20 @@ export interface ExecutionAttemptReport {
   error: ExecutionError | null;
 
   usage?: {
+    /**
+     * Every input token the provider processed, **cached reads and cache writes included** (3.14.0
+     * makes this uniform: OpenAI and Gemini report it so; Anthropic's `input_tokens` is normalised by
+     * adding `cache_read_input_tokens` and `cache_creation_input_tokens`).
+     */
     promptTokens?: number;
     completionTokens?: number;
     totalTokens?: number;
+    /** Subset of `promptTokens` read from the provider's prompt cache, when it reports them (v3.14.0). */
+    cachedPromptTokens?: number;
+    /** Subset of `promptTokens` written to the provider's prompt cache (Anthropic), all TTLs (v3.14.0). */
+    cacheWritePromptTokens?: number;
+    /** Subset of `cacheWritePromptTokens` written with the 1-hour TTL, priced above the 5-minute one (v3.14.0). */
+    cacheWrite1hPromptTokens?: number;
   };
 
   runHash?: string | null;
@@ -151,9 +162,20 @@ export interface ExecutionReport {
 
   /** Aggregate usage if available. */
   usage?: {
+    /**
+     * Every input token the provider processed, **cached reads and cache writes included** (3.14.0
+     * makes this uniform: OpenAI and Gemini report it so; Anthropic's `input_tokens` is normalised by
+     * adding `cache_read_input_tokens` and `cache_creation_input_tokens`).
+     */
     promptTokens?: number;
     completionTokens?: number;
     totalTokens?: number;
+    /** Subset of `promptTokens` read from the provider's prompt cache, when it reports them (v3.14.0). */
+    cachedPromptTokens?: number;
+    /** Subset of `promptTokens` written to the provider's prompt cache (Anthropic), all TTLs (v3.14.0). */
+    cacheWritePromptTokens?: number;
+    /** Subset of `cacheWritePromptTokens` written with the 1-hour TTL, priced above the 5-minute one (v3.14.0). */
+    cacheWrite1hPromptTokens?: number;
   };
 
   /** Safe, evidence-oriented representation of request parts when multimodal input is used. */

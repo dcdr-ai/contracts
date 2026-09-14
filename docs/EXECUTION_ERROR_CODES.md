@@ -37,6 +37,8 @@ Where you see them:
 | `PROVIDER_EMPTY_RESPONSE`    | Provider returned a successful response but with no usable output.                                      |
 | `TIMEOUT`                    | Execution exceeded a timeout or was aborted/cancelled.                                                  |
 | `RATE_LIMIT`                 | Provider rate-limited the request (typically 429).                                                      |
+| `SERVICE_TOKEN_LIMIT_EXCEEDED` | One of the calling service token's limits has no room left in its window (429, `Retry-After`).        |
+| `MODEL_NOT_ALLOWED_FOR_TOKEN` | The calling service token is restricted to a list of models and none of the intent's candidates is on it (403). |
 | `UPSTREAM_5XX`               | Provider/server returned 5xx (transient upstream failure).                                              |
 | `NETWORK`                    | Network/DNS/TCP connection failure talking to provider.                                                 |
 | `PARSE_FAIL`                 | Output could not be parsed into the expected structured format (usually JSON).                          |

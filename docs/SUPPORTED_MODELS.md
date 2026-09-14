@@ -11,7 +11,7 @@ Rules
 - Provider tables summarize only the additional multimodal input/output surfaces that have been explicitly validated so far.
 - Generated from the contracts catalog; do not edit by hand.
 
-Generated: **2026-09-06**
+Generated: **2026-09-14**
 
 > Total officially supported models: **122**
 

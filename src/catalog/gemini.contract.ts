@@ -12,6 +12,7 @@ import type {
 
 const GEMINI_PRICING_URL = "https://ai.google.dev/gemini-api/docs/pricing";
 const GEMINI_PRICING_UPDATED_AT_20260519 = Date.UTC(2026, 4, 19);
+const GEMINI_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
 
 function pricingGeminiPerMillionTokens(args: {
   pricingPerMillionTokens: ProviderCatalogModuleBuildArgs["pricingPerMillionTokens"];
@@ -1325,6 +1326,22 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-embedding-2",
       types: [IntentType.EMBEDDING],
+      // Paid tier, per 1M input tokens by modality; output rate 0 (input-only pricing). The
+      // preview id and `gemini-embedding-001` have no row on the page and stay unpriced.
+      pricing: args.pricingPerMillionTokens({
+        input: 0.2,
+        output: 0,
+        tiers: [
+          { name: "text", condition: "text input", input: 0.2, output: 0 },
+          { name: "image", condition: "image input", input: 0.45, output: 0 },
+          { name: "audio", condition: "audio input", input: 6.5, output: 0 },
+          { name: "video", condition: "video input", input: 12.0, output: 0 },
+        ],
+        sourceUrl: GEMINI_PRICING_URL,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20260914,
+        notes:
+          "Input-only pricing: embeddings produce no billable output tokens, so the output rate is 0 by the vendor's table. Base rate is text input; other modalities as tiers. Snapshot 2026-09-14.",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
         reason: "Gemini embedding adapter not implemented in runtime v1",

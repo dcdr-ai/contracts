@@ -29,11 +29,9 @@ const INHERITED: InheritanceExpectation[] = [
 
 /** Families the vendor prices on a different basis, or does not price at all. */
 const MUST_STAY_UNPRICED = [
-  // Embeddings are billed on input only; the token component cannot express that
-  // without inventing an output rate.
-  "mistral-embed",
+  // Embeddings are billed on input only. The exact ids the vendor lists are priced explicitly
+  // (output rate 0); their dated aliases must not inherit that, since the page has no row for them.
   "mistral-embed-2312",
-  "codestral-embed",
   "codestral-embed-2505",
   // No published price row for these families.
   "mistral-code-latest",

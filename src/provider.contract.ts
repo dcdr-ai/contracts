@@ -133,9 +133,13 @@ export type ProviderExecuteResult = {
 
   cached: boolean;
 
+  /** Same meaning as `ExecutionReport.usage`: `promptTokens` includes cached reads and writes. */
   usage?: {
     promptTokens?: number;
     completionTokens?: number;
     totalTokens?: number;
+    cachedPromptTokens?: number;
+    cacheWritePromptTokens?: number;
+    cacheWrite1hPromptTokens?: number;
   };
 };

@@ -14,6 +14,11 @@ const OPENAI_PRICING_UPDATED_AT_20260327 = Date.UTC(2026, 2, 27);
 const OPENAI_PRICING_UPDATED_AT_20260430 = Date.UTC(2026, 3, 30);
 const OPENAI_PRICING_UPDATED_AT_20260522 = Date.UTC(2026, 4, 22);
 const OPENAI_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
+const OPENAI_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
+
+/** Embeddings bill input tokens only; the output rate is the vendor's zero, not an estimate. */
+const OPENAI_EMBEDDINGS_PRICING_NOTE =
+  "Input-only pricing: embeddings produce no billable output tokens, so the output rate is 0 by the vendor's table. Standard tier, 'Specialized models' row, snapshot 2026-09-14.";
 
 export const OPENAI_PROVIDER_PRICING_FALLBACK_RULES: ProviderPricingFallbackRule[] =
   [
@@ -2626,10 +2631,40 @@ export function buildOpenAIProviderModelDefinitions(
       },
     },
 
-    // Other OpenAI models (pricing varies by endpoint/unit; fill as needed)
-    { id: "text-embedding-3-small", types: [IntentType.EMBEDDING] },
-    { id: "text-embedding-3-large", types: [IntentType.EMBEDDING] },
-    { id: "text-embedding-ada-002", types: [IntentType.EMBEDDING] },
+    // Embeddings: priced from the official page (exact ids), reachable through the /v1 gateway.
+    {
+      id: "text-embedding-3-small",
+      types: [IntentType.EMBEDDING],
+      pricing: args.pricingPerMillionTokens({
+        input: 0.02,
+        output: 0,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20260914,
+        notes: OPENAI_EMBEDDINGS_PRICING_NOTE,
+      }),
+    },
+    {
+      id: "text-embedding-3-large",
+      types: [IntentType.EMBEDDING],
+      pricing: args.pricingPerMillionTokens({
+        input: 0.13,
+        output: 0,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20260914,
+        notes: OPENAI_EMBEDDINGS_PRICING_NOTE,
+      }),
+    },
+    {
+      id: "text-embedding-ada-002",
+      types: [IntentType.EMBEDDING],
+      pricing: args.pricingPerMillionTokens({
+        input: 0.1,
+        output: 0,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20260914,
+        notes: OPENAI_EMBEDDINGS_PRICING_NOTE,
+      }),
+    },
 
     {
       id: "gpt-image-1",

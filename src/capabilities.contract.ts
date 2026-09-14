@@ -46,7 +46,28 @@ export enum CapabilityKey {
 
   /** Internal backend bypass auth mode (backend-to-runtime trusted traffic). */
   AI_SECURITY_INTERNAL_BYPASS = "AI_SECURITY_INTERNAL_BYPASS",
+
+  // ---------------------------------------------------------------------------
+  // Enforcement a runtime build announces (3.14.0). Sent on every runtime -> control plane call in
+  // `DCDR_RUNTIME_CAPABILITIES_HEADER` and listed on `/api/system/version`: the contracts version says
+  // what a build compiled against, these say what it enforces.
+  // ---------------------------------------------------------------------------
+
+  /** Service-token `rules` enforced on `/api/execution/*` and `/v1/*`. */
+  AI_RUNTIME_SERVICE_TOKEN_LIMIT_RULES = "AI_RUNTIME_SERVICE_TOKEN_LIMIT_RULES",
+
+  /** Service-token `allowedModels` enforced on `/api/execution/*` and `/v1/*`. */
+  AI_RUNTIME_SERVICE_TOKEN_ALLOWED_MODELS = "AI_RUNTIME_SERVICE_TOKEN_ALLOWED_MODELS",
+
+  /** Gateway execution logs carry `gateway.dispatched`. */
+  AI_GATEWAY_DISPATCHED_FLAG = "AI_GATEWAY_DISPATCHED_FLAG",
+
+  /** `usage.promptTokens` includes cached reads and writes on every surface; cache counters filled. */
+  AI_USAGE_PROMPT_TOKENS_INCLUSIVE = "AI_USAGE_PROMPT_TOKENS_INCLUSIVE",
 }
+
+/** Header a runtime sends on its calls to the control plane: comma-separated `CapabilityKey` values (3.14.0). */
+export const DCDR_RUNTIME_CAPABILITIES_HEADER = "x-dcdr-capabilities";
 
 /**
  * Extracts required capabilities for a single intent.

@@ -437,6 +437,7 @@ Cloud-managed assets keep tenant-visible storage descriptors and concrete secret
 - [docs/PLATFORM_OVERVIEW.md](docs/PLATFORM_OVERVIEW.md) — Runtime (self-hosted) vs Cloud vs Cloud Pro (what runs where, who owns what).
 - [docs/TIERS_FEATURE_MATRIX.md](docs/TIERS_FEATURE_MATRIX.md) — One-page feature/tier reference.
 - [docs/SUPPORTED_MODELS.md](docs/SUPPORTED_MODELS.md) — Provider model IDs currently marked as runtime-supported.
+- [docs/GATEWAY.md](docs/GATEWAY.md) — The AI Gateway (`/v1`): point OpenAI- and Anthropic-compatible tools (Claude Code, Codex, Cursor, SDKs) at DCDR with a service token; endpoints, models, streaming, limits, errors.
 
 ### Development
 

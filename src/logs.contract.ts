@@ -22,6 +22,10 @@ export enum GatewayLogSurface {
   MODELS = "MODELS",
   RESPONSES = "RESPONSES",
   CHAT_COMPLETIONS = "CHAT_COMPLETIONS",
+  /** Anthropic Messages wire, `POST /v1/messages` (v3.14.0). */
+  MESSAGES = "MESSAGES",
+  /** `POST /v1/embeddings` (v3.14.0). */
+  EMBEDDINGS = "EMBEDDINGS",
 }
 
 /**
@@ -36,12 +40,15 @@ export enum GatewayLogResolutionKind {
  * Safe request summary for OpenAI-compatible gateway logging.
  */
 export interface GatewayLogRequestSummary {
+  /** The client asked for a streamed response. */
   stream?: boolean;
   messageCount?: number;
   inputTextChars?: number;
   inputItemCount?: number;
   metadataKeys?: string[];
   toolCount?: number;
+  /** Embeddings: how many inputs the request carried (v3.14.0). */
+  inputCount?: number;
 }
 
 /**
@@ -54,6 +61,11 @@ export interface GatewayLogResponseSummary {
   toolCallCount?: number;
   refusal?: boolean;
   resultCount?: number;
+  /**
+   * Streamed responses: milliseconds from the gateway receiving the request to the first upstream
+   * chunk written to the client (v3.14.0). Absent when the response was not streamed.
+   */
+  firstChunkMs?: number;
 }
 
 /**
@@ -73,6 +85,15 @@ export interface GatewayExecutionLogDetails {
   providerAllowed?: boolean;
   modelAllowed?: boolean;
   blockedReasonCode?: string;
+  /**
+   * Whether the request passed every admission gate and the upstream call was attempted (3.14.0).
+   *
+   * `false` for refusals before dispatch - token, scope, validation, model resolution, route,
+   * Provider Limits, token limit rules. `true` from the moment the upstream call is attempted: an
+   * upstream error, a transport failure or a client that disconnects mid-stream is still a dispatched
+   * call, and it counted toward calls limits.
+   */
+  dispatched?: boolean;
   requestSummary?: GatewayLogRequestSummary;
   responseSummary?: GatewayLogResponseSummary;
 }

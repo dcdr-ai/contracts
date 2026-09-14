@@ -14,8 +14,9 @@ import {
  *
  * Source of truth: https://platform.claude.com/docs/en/about-claude/pricing
  * ("Base input tokens" -> `input`, "Cache hits and refreshes" -> `cachedInput`,
- * "Output tokens" -> `outputUsd`). Cache *write* rates are deliberately not stored:
- * the pricing components have no field for them.
+ * "5m cache writes" -> `cacheWriteInput`, "1h cache writes" -> `cacheWrite1hInput`,
+ * "Output tokens" -> `outputUsd`). The cache-write columns were added on 2026-09-14 (3.14.0);
+ * the page publishes them as 1.25x and 2x the base input rate for every model.
  */
 interface AnthropicPricingExpectation {
   modelId: string;
@@ -98,6 +99,18 @@ describe("Anthropic catalog pricing snapshot (2026-09-05)", () => {
       expect(tokens?.input).toBe(expected.input);
       expect(tokens?.cachedInput).toBe(expected.cachedInput);
       expect(tokens?.outputUsd).toBe(expected.output);
+    }
+  });
+
+  it("stores the published 5-minute and 1-hour cache-write prices for every model", () => {
+    for (const expected of ANTHROPIC_PRICING_EXPECTATIONS) {
+      const tokens = ProviderModelRegistry.getTokenPricing(
+        IntentProvider.ANTHROPIC,
+        expected.modelId,
+      );
+
+      expect(tokens?.cacheWriteInput).toBeCloseTo(expected.input * 1.25, 10);
+      expect(tokens?.cacheWrite1hInput).toBeCloseTo(expected.input * 2, 10);
     }
   });
 

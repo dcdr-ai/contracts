@@ -12,6 +12,11 @@ import type {
 const MISTRAL_PRICING_URL = "https://mistral.ai/pricing";
 const MISTRAL_MODELS_URL = "https://docs.mistral.ai/getting-started/models/";
 const MISTRAL_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
+const MISTRAL_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
+
+/** Embeddings bill input tokens only; the output rate is the vendor's zero, not an estimate. */
+const MISTRAL_EMBEDDINGS_PRICING_NOTE =
+  "Input-only pricing: embeddings produce no billable output tokens, so the output rate is 0 by the vendor's table. API pricing page row for this exact id, snapshot 2026-09-14.";
 
 /**
  * Pricing inheritance for Mistral's dated and generation aliases (RM-049).
@@ -27,8 +32,11 @@ const MISTRAL_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
  * exists to prevent.
  *
  * Deliberately excluded:
- * - embedding families (`mistral-embed*`, `codestral-embed*`): input-only pricing that the
- *   token component cannot express without inventing an output rate.
+ * - embedding families (`mistral-embed*`, `codestral-embed*`): input-only pricing. The two exact
+ *   ids the vendor lists (`mistral-embed`, `codestral-embed`) are priced explicitly with an
+ *   output rate of 0 - the published fact, not an estimate; the dated aliases stay unpriced
+ *   because inheriting would put an approximate label on a rate that is exact for the base id
+ *   and unpublished for the alias.
  * - `mistral-code-*`, `mistral-vibe-cli-*`, `mistral-tiny-*`: the vendor publishes no price
  *   row for those families, so there is nothing to inherit from.
  */
@@ -335,6 +343,13 @@ export function buildMistralProviderModelDefinitions(
     {
       id: "codestral-embed",
       types: [IntentType.EMBEDDING],
+      pricing: args.pricingPerMillionTokens({
+        input: 0.15,
+        output: 0,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: MISTRAL_PRICING_UPDATED_AT_20260914,
+        notes: MISTRAL_EMBEDDINGS_PRICING_NOTE,
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:
@@ -409,6 +424,13 @@ export function buildMistralProviderModelDefinitions(
     {
       id: "mistral-embed",
       types: [IntentType.EMBEDDING],
+      pricing: args.pricingPerMillionTokens({
+        input: 0.1,
+        output: 0,
+        sourceUrl: MISTRAL_PRICING_URL,
+        updatedAt: MISTRAL_PRICING_UPDATED_AT_20260914,
+        notes: MISTRAL_EMBEDDINGS_PRICING_NOTE,
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:

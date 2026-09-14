@@ -12,6 +12,8 @@ import type {
 const ANTHROPIC_PRICING_URL =
   "https://platform.claude.com/docs/en/about-claude/pricing";
 const ANTHROPIC_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
+/** Cache-write columns added; the other columns re-verified unchanged the same day. */
+const ANTHROPIC_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
 
 export const ANTHROPIC_PROVIDER_PRICING_FALLBACK_RULES: ProviderPricingFallbackRule[] =
   [
@@ -52,9 +54,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
+        cacheWriteInput: 6.25,
+        cacheWrite1hInput: 10.0,
         output: 25.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -110,9 +114,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
+        cacheWriteInput: 6.25,
+        cacheWrite1hInput: 10.0,
         output: 25.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -157,9 +163,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
+        cacheWriteInput: 6.25,
+        cacheWrite1hInput: 10.0,
         output: 25.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -187,9 +195,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
+        cacheWriteInput: 6.25,
+        cacheWrite1hInput: 10.0,
         output: 25.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -220,9 +230,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
         cachedInput: 0.5,
+        cacheWriteInput: 6.25,
+        cacheWrite1hInput: 10.0,
         output: 25.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -252,9 +264,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 15.0,
         cachedInput: 1.5,
+        cacheWriteInput: 18.75,
+        cacheWrite1hInput: 30.0,
         output: 75.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -286,9 +300,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 3.0,
         cachedInput: 0.3,
+        cacheWriteInput: 3.75,
+        cacheWrite1hInput: 6.0,
         output: 15.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -316,9 +332,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 3.0,
         cachedInput: 0.3,
+        cacheWriteInput: 3.75,
+        cacheWrite1hInput: 6.0,
         output: 15.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -361,9 +379,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 2.0,
         cachedInput: 0.2,
+        cacheWriteInput: 2.5,
+        cacheWrite1hInput: 4.0,
         output: 10.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
         notes:
           "Anthropic pricing page snapshot 2026-09-05. The previously scheduled 2026-09-01 increase to 3.00/15.00 was cancelled by Anthropic; 2.00/10.00 is now the standard rate, so the old 'standard' tier was removed rather than promoted.",
       }),
@@ -405,9 +425,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 1.0,
         cachedInput: 0.1,
+        cacheWriteInput: 1.25,
+        cacheWrite1hInput: 2.0,
         output: 5.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -440,9 +462,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 10.0,
         cachedInput: 0.25,
+        cacheWriteInput: 12.5,
+        cacheWrite1hInput: 20.0,
         output: 50.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
         notes:
           "Anthropic pricing page snapshot 2026-09-05. Cache hits are priced at 0.025x base input on Fable 5.1 (all other models use the standard 0.1x multiplier).",
       }),
@@ -473,9 +497,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 10.0,
         cachedInput: 1.0,
+        cacheWriteInput: 12.5,
+        cacheWrite1hInput: 20.0,
         output: 50.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
         notes:
           "Anthropic pricing page snapshot 2026-09-05. Cache hits use the standard 0.1x input multiplier on Fable 5 (Fable 5.1 uses 0.025x instead).",
       }),
@@ -532,9 +558,11 @@ export function buildAnthropicProviderModelDefinitions(
       pricing: args.pricingPerMillionTokens({
         input: 1.0,
         cachedInput: 0.1,
+        cacheWriteInput: 1.25,
+        cacheWrite1hInput: 2.0,
         output: 5.0,
         sourceUrl: ANTHROPIC_PRICING_URL,
-        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260905,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20260914,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,

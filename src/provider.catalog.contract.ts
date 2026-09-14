@@ -69,9 +69,18 @@ export type ProviderPricingComponent =
       kind: "tokens";
       unit: "per_million_tokens";
       input: number;
+      /**
+       * USD per million output tokens. `0` is a published rate, not a gap: a model that produces no
+       * billable output (embeddings) is priced on input only, and the vendor's page says so.
+       */
       outputUsd: number;
+      /** USD per million prompt tokens read from cache ("cache hits"). */
       cachedInput?: number;
       cachedOutput?: number;
+      /** USD per million prompt tokens written to cache with the default (5-minute) TTL (3.14.0). */
+      cacheWriteInput?: number;
+      /** USD per million prompt tokens written to cache with the 1-hour TTL (3.14.0). */
+      cacheWrite1hInput?: number;
       /** Optional tiered pricing (e.g. different rates by modality or prompt size). */
       tiers?: Array<{
         name: string;
@@ -442,6 +451,8 @@ export interface ProviderCatalogModuleBuildArgs {
     output: number;
     cachedInput?: number;
     cachedOutput?: number;
+    cacheWriteInput?: number;
+    cacheWrite1hInput?: number;
     tiers?: Array<{
       name: string;
       condition?: string;
@@ -1094,6 +1105,8 @@ function pricingPerMillionTokens(args: {
   output: number;
   cachedInput?: number;
   cachedOutput?: number;
+  cacheWriteInput?: number;
+  cacheWrite1hInput?: number;
   tiers?: Array<{
     name: string;
     condition?: string;
@@ -1121,6 +1134,8 @@ function pricingPerMillionTokens(args: {
         outputUsd: args.output,
         cachedInput: args.cachedInput,
         cachedOutput: args.cachedOutput,
+        cacheWriteInput: args.cacheWriteInput,
+        cacheWrite1hInput: args.cacheWrite1hInput,
         tiers: args.tiers,
       },
     ],

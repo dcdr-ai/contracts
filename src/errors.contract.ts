@@ -16,6 +16,10 @@ export enum ExecutionErrorCode {
   MODEL_UNSUPPORTED = "MODEL_UNSUPPORTED",
   PAYMENT_REQUIRED = "PAYMENT_REQUIRED",
   PROVIDER_LIMIT_EXCEEDED = "PROVIDER_LIMIT_EXCEEDED",
+  /** A service token's limit rule has no room left (3.14.0). */
+  SERVICE_TOKEN_LIMIT_EXCEEDED = "SERVICE_TOKEN_LIMIT_EXCEEDED",
+  /** The service token's `allowedModels` does not include any candidate model (3.14.0). */
+  MODEL_NOT_ALLOWED_FOR_TOKEN = "MODEL_NOT_ALLOWED_FOR_TOKEN",
   INVALID_CREDENTIALS = "INVALID_CREDENTIALS",
   NO_CONFIG = "NO_CONFIG",
   NO_ACTIVE_MODEL = "NO_ACTIVE_MODEL",
