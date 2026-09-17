@@ -3363,9 +3363,16 @@ function validateIntentState(config: WorkflowIntentStateConfig, path: string, ar
     }
   }
   for (const [key, variable] of Object.entries(schema)) {
-    if (variable?.required && !varKeys.includes(key)) {
-      push(`${path}.vars.${key}`, WorkflowValidationIssueCode.INTENT_VAR_MISSING, `Intent '${config.intent}' requires variable '${key}'.`);
+    if (!variable?.required || varKeys.includes(key)) continue;
+    // An asset variable is fulfilled by an input part, never by `vars` (the runtime refuses it there),
+    // so a required one asks for `inputParts` rather than for a mapping under `vars`.
+    if (variable.type === PromptVariableType.ASSET) {
+      if (config.inputParts === undefined) {
+        push(`${path}.inputParts`, WorkflowValidationIssueCode.INTENT_VAR_MISSING, `Intent '${config.intent}' requires asset variable '${key}' through inputParts.`);
+      }
+      continue;
     }
+    push(`${path}.vars.${key}`, WorkflowValidationIssueCode.INTENT_VAR_MISSING, `Intent '${config.intent}' requires variable '${key}'.`);
   }
   const hasAssetVar = Object.values(schema).some((v) => v?.type === PromptVariableType.ASSET);
   if (config.inputParts !== undefined && !hasAssetVar) {

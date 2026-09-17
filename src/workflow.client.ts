@@ -625,11 +625,19 @@ export class DcdrWorkflowError extends Error {
 /**
  * Narrows an unknown thrown value to a {@link DcdrWorkflowError}.
  *
+ * @remarks
+ * By shape as well as by `instanceof` since 3.15.0: two copies of `@dcdr/contracts` in one dependency
+ * tree have two distinct classes, and `instanceof` then fails on an error that is one in every way
+ * that matters.
+ *
  * @param value Thrown value.
  * @returns `true` when it carries a {@link DcdrWorkflowErrorCode}.
  */
 export function isDcdrWorkflowError(value: unknown): value is DcdrWorkflowError {
-  return value instanceof DcdrWorkflowError;
+  if (value instanceof DcdrWorkflowError) return true;
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as { name?: unknown; code?: unknown };
+  return candidate.name === "DcdrWorkflowError" && (Object.values(DcdrWorkflowErrorCode) as string[]).includes(String(candidate.code));
 }
 
 /**

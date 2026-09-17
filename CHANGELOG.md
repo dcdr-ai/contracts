@@ -4,6 +4,24 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260917.4] — 20:43UTC
+
+<!--
+sourceCommit: e3befa4605e0f347b1be030430fb226e641cfded
+queuedAtUtc: 
+previousMirroredBuild: 20260914.2 (2026-09-14)
+contractsSubmodule: 3a7e77d10d1e..95ef4b3ea7bf
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.15.0 - the runtime client throws a typed error.** A failed `DcdrRuntimeClient` call was a plain `Error` with its status, its cause and the runtime's own error code readable only by parsing the message, while the workflow client has thrown a typed error since 3.10.0. Every failure - HTTP, transport, timeout, misconfiguration - is now a `DcdrRuntimeError` carrying `code` (the transport-level reason, the same vocabulary as the workflow client) and `executionCode` (the runtime's `ExecutionErrorCode`), plus `status`, `method`, `path`, `details`, `bodyPreview` and `retryAfterSeconds`, so an application can tell a spent service-token quota from a provider's own rate limit without reading text. Messages are unchanged and every error is still an `Error`, so existing handling keeps working; `isDcdrRuntimeError` / `isDcdrWorkflowError` now recognise an error by shape as well as by `instanceof`, which `instanceof` alone got wrong when a dependency tree held two copies of the package. 3.15.0 also carries the validator fix announced as 3.14.1, a number that was never published; nothing changes on the wire.
+- <kbd>RUNTIME</kbd> **Startup registry summaries identify each implementation's provider and model.**
+### Fixed
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.15.0 - workflows can call intents with a required file input.** Workflow validation asked for a required file (asset) variable among the prompt variables, where the runtime never accepts it, so such a workflow could not be both published and executed. The file is now expected as an input part, where it belongs.
+### Added
+- <kbd>RUNTIME</kbd> **The workflow runner says why it cannot reach the backend, and reports its real version.** A failed poll now logs the underlying network error (unresolved host, refused connection, TLS failure) instead of a bare `fetch failed`. The runner image reports its build number and `@dcdr/contracts` version instead of `dev` and `unknown`, so version roll-outs can tell runners apart. Instance names (start-up banners, runner id, Redis client key, registry invalidation node id, metrics host label) keep the Swarm slot and drop the node's domain, e.g. `workflow.<node>.<slot>`. The runner accepts the self-signed certificates of the internal `equivalo`, `dcdr`, `dcdr-runtime` and `localhost` hosts for its backend, payload-asset and intent calls, as the runtime already does; connection traffic keeps verifying certificates.
+- <kbd>RUNTIME</kbd> **Deploy pipelines read their Portainer webhook from the variable group.** The runtime pipeline uses `PORTAINER_WEBHOOK_URL_RUNTIME` and the workflow-runner pipeline `PORTAINER_WEBHOOK_URL_WORKFLOW`, both from `dcdr_vars`; the workflow-runner pipeline no longer takes the webhook as a parameter, and a missing webhook now fails the deploy job instead of skipping it.
+
 ## [20260914.2] — 18:39UTC
 
 <!--

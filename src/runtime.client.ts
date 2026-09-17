@@ -22,6 +22,7 @@ import {
   DcdrAssetUploadResponse,
 } from "./asset.contract";
 import { DcdrEntitlementsContract } from "./entitlements.contract";
+import { ExecutionErrorCode, isExecutionErrorCode } from "./errors.contract";
 
 /**
  * Options for `DcdrRuntimeClient.executeIntentStream`.
@@ -334,6 +335,137 @@ interface RequestTextArgs {
 }
 
 /**
+ * Why a call through {@link DcdrRuntimeClient} failed, as far as the transport can tell.
+ *
+ * Deliberately the same vocabulary as `DcdrWorkflowErrorCode`, so an application that talks to both
+ * halves of DCDR branches on one set of names. It answers "can I retry, is it my token, is it them",
+ * which is a different question from **why the execution itself failed**: that is
+ * {@link DcdrRuntimeError.executionCode}, the runtime's own {@link ExecutionErrorCode}, and the one
+ * worth showing a person.
+ *
+ * @public
+ */
+export enum DcdrRuntimeErrorCode {
+  /** No token, an invalid one, or one without the scope this call needs. */
+  UNAUTHORIZED = "UNAUTHORIZED",
+  /** Authenticated, but not allowed to do this. */
+  FORBIDDEN = "FORBIDDEN",
+  /** No such intent, asset or route - or none this token may see. */
+  NOT_FOUND = "NOT_FOUND",
+  /** The request was refused as malformed; `details` carries what the runtime said. */
+  VALIDATION = "VALIDATION",
+  /** The tenant's plan does not cover this call. */
+  PAYMENT_REQUIRED = "PAYMENT_REQUIRED",
+  /** A provider, tenant or service-token limit refused the call; retry later. */
+  RATE_LIMITED = "RATE_LIMITED",
+  /** The runtime, or a provider behind it, failed. */
+  SERVER_ERROR = "SERVER_ERROR",
+  /** The client's own timeout fired before a response arrived. */
+  TIMEOUT = "TIMEOUT",
+  /** The caller's `AbortSignal` fired. */
+  CANCELLED = "CANCELLED",
+  /** The transport failed before a response arrived. */
+  NETWORK = "NETWORK",
+  /** A response the client could not read as the documented shape. */
+  UNEXPECTED_RESPONSE = "UNEXPECTED_RESPONSE",
+  /** The client is misconfigured (no base URL, no `fetch`, two auth modes at once). */
+  CONFIGURATION = "CONFIGURATION",
+}
+
+/**
+ * Narrows a string to a known {@link DcdrRuntimeErrorCode}.
+ *
+ * @param value Candidate.
+ * @returns Whether it is one of the codes.
+ */
+export function isDcdrRuntimeErrorCode(
+  value: unknown,
+): value is DcdrRuntimeErrorCode {
+  return (Object.values(DcdrRuntimeErrorCode) as string[]).includes(
+    String(value),
+  );
+}
+
+/**
+ * A failed {@link DcdrRuntimeClient} call, with everything known about it in fields instead of in
+ * the message.
+ *
+ * @remarks
+ * The message is unchanged from the plain `Error` this replaced in 3.15.0, so anything already
+ * matching on it keeps working; the fields are what new code should read.
+ *
+ * @public
+ */
+export class DcdrRuntimeError extends Error {
+  /** Stable transport-level failure code. */
+  readonly code: DcdrRuntimeErrorCode;
+  /**
+   * The runtime's own error code, recovered from the response body, or `null` when the body carried
+   * none (a proxy's HTML, a 404 from outside the runtime, a client-side failure).
+   */
+  readonly executionCode: ExecutionErrorCode | null;
+  /** HTTP status, or `null` for a client-side failure (timeout, abort, transport, config). */
+  readonly status: number | null;
+  /** HTTP method, or `null` when the failure happened before a request (config). */
+  readonly method: string | null;
+  /** Request path, or `null` when the failure happened before a request (config). */
+  readonly path: string | null;
+  /** The error payload the runtime sent, parsed, when it sent JSON. */
+  readonly details: unknown;
+  /** Bounded preview of the response body. */
+  readonly bodyPreview: string | null;
+  /** `Retry-After` in seconds, when the runtime sent one. */
+  readonly retryAfterSeconds: number | null;
+
+  /**
+   * @param args Everything known about the failure where it was detected.
+   */
+  constructor(args: {
+    code: DcdrRuntimeErrorCode;
+    message: string;
+    method?: string | null;
+    path?: string | null;
+    status?: number | null;
+    executionCode?: ExecutionErrorCode | null;
+    details?: unknown;
+    bodyPreview?: string | null;
+    retryAfterSeconds?: number | null;
+    cause?: unknown;
+  }) {
+    super(args.message, args.cause === undefined ? undefined : { cause: args.cause });
+    this.name = "DcdrRuntimeError";
+    this.code = args.code;
+    this.executionCode = args.executionCode ?? null;
+    this.status = args.status ?? null;
+    this.method = args.method ?? null;
+    this.path = args.path ?? null;
+    this.details = args.details ?? null;
+    this.bodyPreview = args.bodyPreview ?? null;
+    this.retryAfterSeconds = args.retryAfterSeconds ?? null;
+  }
+}
+
+/**
+ * Narrows an unknown thrown value to a {@link DcdrRuntimeError}.
+ *
+ * @remarks
+ * By shape as well as by `instanceof`, on purpose: two copies of `@dcdr/contracts` in one dependency
+ * tree have two distinct classes, and `instanceof` then fails on an error that is one in every way
+ * that matters.
+ *
+ * @param value Thrown value.
+ * @returns Whether it is a runtime client error.
+ */
+export function isDcdrRuntimeError(value: unknown): value is DcdrRuntimeError {
+  if (value instanceof DcdrRuntimeError) return true;
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as { name?: unknown; code?: unknown };
+  return (
+    candidate.name === "DcdrRuntimeError" && isDcdrRuntimeErrorCode(candidate.code)
+  );
+}
+
+/**
  * HTTP client for interacting with the DCDR Runtime REST API.
  *
  * @remarks
@@ -410,9 +542,11 @@ export class DcdrRuntimeClient {
     const resolvedBaseUrl = cfg?.baseUrl ?? "https://runtime.dcdr.ai";
     const resolvedBaseUrlTrimmed = String(resolvedBaseUrl).trim();
     if (!resolvedBaseUrlTrimmed) {
-      throw new Error(
-        "DcdrRuntimeClient requires baseUrl (or omit it to use https://runtime.dcdr.ai)",
-      );
+      throw new DcdrRuntimeError({
+        code: DcdrRuntimeErrorCode.CONFIGURATION,
+        message:
+          "DcdrRuntimeClient requires baseUrl (or omit it to use https://runtime.dcdr.ai)",
+      });
     }
 
     this.baseUrl = resolvedBaseUrlTrimmed.replace(/\/$/, "");
@@ -433,17 +567,21 @@ export class DcdrRuntimeClient {
       cfg.fetchFn ??
       (globalThis.fetch ? globalThis.fetch.bind(globalThis) : undefined);
     if (!f) {
-      throw new Error(
-        "DcdrRuntimeClient requires a fetch implementation (global fetch missing)",
-      );
+      throw new DcdrRuntimeError({
+        code: DcdrRuntimeErrorCode.CONFIGURATION,
+        message:
+          "DcdrRuntimeClient requires a fetch implementation (global fetch missing)",
+      });
     }
     this.fetchFn = f;
 
     // Basic config validation: do not silently pick an auth mode.
     if (this.bearerToken && this.apiToken) {
-      throw new Error(
-        "DcdrRuntimeClient config should not set both bearerToken and apiToken",
-      );
+      throw new DcdrRuntimeError({
+        code: DcdrRuntimeErrorCode.CONFIGURATION,
+        message:
+          "DcdrRuntimeClient config should not set both bearerToken and apiToken",
+      });
     }
   }
 
@@ -557,7 +695,11 @@ export class DcdrRuntimeClient {
       typeof opts?.timeoutMs === "number" && opts.timeoutMs > 0
         ? opts.timeoutMs
         : this.timeoutMs;
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
 
     const onAbort = () => controller.abort();
     if (opts?.signal) {
@@ -566,32 +708,58 @@ export class DcdrRuntimeClient {
     }
 
     try {
-      const resp = await this.fetchFn(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(request ?? {}),
-        signal: controller.signal,
-      });
+      let resp: Response;
+      try {
+        resp = await this.fetchFn(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(request ?? {}),
+          signal: controller.signal,
+        });
+      } catch (e) {
+        throw buildTransportError({
+          error: e,
+          method: "POST",
+          path: "/api/execution/stream/:intent",
+          timeoutMs,
+          timedOut,
+          cancelled: Boolean(opts?.signal?.aborted),
+        });
+      }
 
       if (!resp.ok) {
         const text = await resp.text();
-        const preview = buildBodyPreview(text);
-        throw new Error(
-          `DcdrRuntimeClient request failed: POST /api/execution/stream/:intent status=${resp.status} body=${preview}`,
-        );
+        throw buildRuntimeHttpError({
+          method: "POST",
+          path: "/api/execution/stream/:intent",
+          status: resp.status,
+          text,
+          headers: resp.headers,
+        });
       }
 
       const ct = resp.headers.get("content-type") ?? "";
       if (!/text\/event-stream/i.test(ct)) {
         const text = await resp.text();
         const preview = buildBodyPreview(text);
-        throw new Error(
-          `DcdrRuntimeClient expected text/event-stream but got content-type='${ct}' body=${preview}`,
-        );
+        throw new DcdrRuntimeError({
+          code: DcdrRuntimeErrorCode.UNEXPECTED_RESPONSE,
+          message: `DcdrRuntimeClient expected text/event-stream but got content-type='${ct}' body=${preview}`,
+          method: "POST",
+          path: "/api/execution/stream/:intent",
+          status: resp.status,
+          bodyPreview: preview,
+        });
       }
 
       if (!resp.body) {
-        throw new Error("DcdrRuntimeClient streaming response body is missing");
+        throw new DcdrRuntimeError({
+          code: DcdrRuntimeErrorCode.UNEXPECTED_RESPONSE,
+          message: "DcdrRuntimeClient streaming response body is missing",
+          method: "POST",
+          path: "/api/execution/stream/:intent",
+          status: resp.status,
+        });
       }
 
       for await (const evt of this.parseSseStream(resp.body)) {
@@ -908,15 +1076,31 @@ export class DcdrRuntimeClient {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), args.timeoutMs);
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, args.timeoutMs);
 
     try {
-      const resp = await this.fetchFn(url, {
-        method: args.method,
-        headers,
-        body: args.body ? JSON.stringify(args.body) : undefined,
-        signal: controller.signal,
-      });
+      let resp: Response;
+      try {
+        resp = await this.fetchFn(url, {
+          method: args.method,
+          headers,
+          body: args.body ? JSON.stringify(args.body) : undefined,
+          signal: controller.signal,
+        });
+      } catch (e) {
+        throw buildTransportError({
+          error: e,
+          method: args.method,
+          path: args.path,
+          timeoutMs: args.timeoutMs,
+          timedOut,
+          cancelled: false,
+        });
+      }
 
       const text = await resp.text();
       const isJson = /application\/json/i.test(
@@ -924,10 +1108,13 @@ export class DcdrRuntimeClient {
       );
 
       if (!resp.ok) {
-        const preview = buildBodyPreview(text);
-        throw new Error(
-          `DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${resp.status} body=${preview}`,
-        );
+        throw buildRuntimeHttpError({
+          method: args.method,
+          path: args.path,
+          status: resp.status,
+          text,
+          headers: resp.headers,
+        });
       }
 
       if (!text) {
@@ -936,9 +1123,14 @@ export class DcdrRuntimeClient {
       }
 
       if (!isJson) {
-        throw new Error(
-          `DcdrRuntimeClient expected JSON but got content-type='${resp.headers.get("content-type") ?? ""}'`,
-        );
+        throw new DcdrRuntimeError({
+          code: DcdrRuntimeErrorCode.UNEXPECTED_RESPONSE,
+          message: `DcdrRuntimeClient expected JSON but got content-type='${resp.headers.get("content-type") ?? ""}'`,
+          method: args.method,
+          path: args.path,
+          status: resp.status,
+          bodyPreview: buildBodyPreview(text),
+        });
       }
 
       return JSON.parse(text) as T;
@@ -981,22 +1173,41 @@ export class DcdrRuntimeClient {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), args.timeoutMs);
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, args.timeoutMs);
 
     try {
-      const resp = await this.fetchFn(url, {
-        method: args.method,
-        headers,
-        signal: controller.signal,
-      });
+      let resp: Response;
+      try {
+        resp = await this.fetchFn(url, {
+          method: args.method,
+          headers,
+          signal: controller.signal,
+        });
+      } catch (e) {
+        throw buildTransportError({
+          error: e,
+          method: args.method,
+          path: args.path,
+          timeoutMs: args.timeoutMs,
+          timedOut,
+          cancelled: false,
+        });
+      }
 
       const text = await resp.text();
 
       if (!resp.ok) {
-        const preview = buildBodyPreview(text);
-        throw new Error(
-          `DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${resp.status} body=${preview}`,
-        );
+        throw buildRuntimeHttpError({
+          method: args.method,
+          path: args.path,
+          status: resp.status,
+          text,
+          headers: resp.headers,
+        });
       }
 
       return text;
@@ -1025,6 +1236,170 @@ export class DcdrRuntimeClient {
  * @param text Full response body text.
  * @returns Preview string capped to {@link ERROR_BODY_PREVIEW_MAX_CHARS}.
  */
+/**
+ * Reads a JSON error body, if that is what came back.
+ *
+ * @param text Raw response body.
+ * @returns The parsed object, or `null` when it is not one.
+ */
+function parseErrorBody(text: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(String(text ?? ""));
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Digs the runtime's own error code out of an error body.
+ *
+ * @remarks
+ * Three shapes are in the wild and all three are the runtime's: the execution envelope
+ * (`{ status: "ERROR", error: { code, message } }`), a flat `{ code, error }` from the guards that
+ * refuse a call before it runs, and `{ error: "CODE" }`.
+ *
+ * @param body Parsed error body.
+ * @returns The code, or `null` when the body carried none the contracts know.
+ */
+function extractExecutionErrorCode(
+  body: Record<string, unknown> | null,
+): ExecutionErrorCode | null {
+  if (!body) return null;
+  const nested = body["error"];
+  const candidates: unknown[] = [
+    body["code"],
+    typeof nested === "object" && nested !== null
+      ? (nested as Record<string, unknown>)["code"]
+      : undefined,
+    nested,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && isExecutionErrorCode(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Maps a failed response to the client vocabulary.
+ *
+ * @remarks
+ * The runtime's own code wins over the status where it is more precise: a `429` is a provider limit
+ * or a service-token limit, and `SERVICE_TOKEN_LIMIT_EXCEEDED` says which without the caller
+ * guessing. Otherwise the status decides.
+ *
+ * @param status HTTP status.
+ * @param executionCode The runtime's code, when the body carried one.
+ * @returns The transport-level code.
+ */
+function mapRuntimeErrorCode(
+  status: number,
+  executionCode: ExecutionErrorCode | null,
+): DcdrRuntimeErrorCode {
+  switch (executionCode) {
+    case ExecutionErrorCode.RATE_LIMIT:
+    case ExecutionErrorCode.PROVIDER_LIMIT_EXCEEDED:
+    case ExecutionErrorCode.SERVICE_TOKEN_LIMIT_EXCEEDED:
+      return DcdrRuntimeErrorCode.RATE_LIMITED;
+    case ExecutionErrorCode.PAYMENT_REQUIRED:
+      return DcdrRuntimeErrorCode.PAYMENT_REQUIRED;
+    case ExecutionErrorCode.TIMEOUT:
+      return DcdrRuntimeErrorCode.TIMEOUT;
+    default:
+      break;
+  }
+
+  if (status === 401) return DcdrRuntimeErrorCode.UNAUTHORIZED;
+  if (status === 402) return DcdrRuntimeErrorCode.PAYMENT_REQUIRED;
+  if (status === 403) return DcdrRuntimeErrorCode.FORBIDDEN;
+  if (status === 404) return DcdrRuntimeErrorCode.NOT_FOUND;
+  if (status === 408 || status === 504) return DcdrRuntimeErrorCode.TIMEOUT;
+  if (status === 400 || status === 422) return DcdrRuntimeErrorCode.VALIDATION;
+  if (status === 429) return DcdrRuntimeErrorCode.RATE_LIMITED;
+  if (status >= 500) return DcdrRuntimeErrorCode.SERVER_ERROR;
+  return DcdrRuntimeErrorCode.UNEXPECTED_RESPONSE;
+}
+
+/**
+ * Builds the typed error of a non-2xx answer.
+ *
+ * @remarks
+ * The message is the one this client has always produced, character for character, because callers
+ * were left no other way to read a failure and some of them parse it.
+ *
+ * @param args Method, path, status, raw body and response headers.
+ * @returns The error to throw.
+ */
+function buildRuntimeHttpError(args: {
+  method: string;
+  path: string;
+  status: number;
+  text: string;
+  headers?: Headers;
+}): DcdrRuntimeError {
+  const body = parseErrorBody(args.text);
+  const executionCode = extractExecutionErrorCode(body);
+  const retryAfter = Number(args.headers?.get("retry-after") ?? "");
+
+  return new DcdrRuntimeError({
+    code: mapRuntimeErrorCode(args.status, executionCode),
+    message: `DcdrRuntimeClient request failed: ${args.method} ${args.path} status=${args.status} body=${buildBodyPreview(args.text)}`,
+    method: args.method,
+    path: args.path,
+    status: args.status,
+    executionCode,
+    details: body,
+    bodyPreview: buildBodyPreview(args.text),
+    retryAfterSeconds: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+  });
+}
+
+/**
+ * Tells apart the three ways a `fetch` can reject: our timeout, the caller's abort, or the network.
+ *
+ * @param args What was being attempted and what the transport threw.
+ * @returns The error to throw, carrying the original as `cause`.
+ */
+function buildTransportError(args: {
+  error: unknown;
+  method: string;
+  path: string;
+  timeoutMs: number;
+  timedOut: boolean;
+  cancelled: boolean;
+}): DcdrRuntimeError {
+  if (args.timedOut) {
+    return new DcdrRuntimeError({
+      code: DcdrRuntimeErrorCode.TIMEOUT,
+      message: `DcdrRuntimeClient request timed out after ${args.timeoutMs}ms: ${args.method} ${args.path}`,
+      method: args.method,
+      path: args.path,
+      cause: args.error,
+    });
+  }
+  if (args.cancelled) {
+    return new DcdrRuntimeError({
+      code: DcdrRuntimeErrorCode.CANCELLED,
+      message: `DcdrRuntimeClient request was cancelled by the caller: ${args.method} ${args.path}`,
+      method: args.method,
+      path: args.path,
+      cause: args.error,
+    });
+  }
+  const detail = args.error instanceof Error ? args.error.message : String(args.error);
+  return new DcdrRuntimeError({
+    code: DcdrRuntimeErrorCode.NETWORK,
+    message: `DcdrRuntimeClient request failed before a response: ${args.method} ${args.path} (${detail})`,
+    method: args.method,
+    path: args.path,
+    cause: args.error,
+  });
+}
+
 function buildBodyPreview(text: string): string {
   const t = String(text ?? "");
   return t.length > ERROR_BODY_PREVIEW_MAX_CHARS

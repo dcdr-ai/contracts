@@ -840,6 +840,35 @@ describe("workflow.contract validation", () => {
     expect(issueLabels(def).some((l) => l.includes("INTENT_UNKNOWN") || l.includes("CONNECTION_UNKNOWN"))).toBe(false);
   });
 
+  it("fulfils a required asset variable through inputParts, not vars (3.15.0)", () => {
+    const intents: WorkflowValidationIntent[] = [
+      {
+        intent: "READ_DOC",
+        inputSchema: { doc: { type: PromptVariableType.ASSET, required: true }, locale: { type: PromptVariableType.STRING, required: true } },
+      },
+    ];
+    const call = (inputParts?: ReturnType<typeof parseWorkflowValueShorthand>) =>
+      baseDefinition({
+        startAt: "call",
+        states: {
+          call: {
+            type: WorkflowStateType.INTENT,
+            next: "done",
+            intent: { intent: "READ_DOC", vars: { locale: { kind: WorkflowValueKind.LITERAL, literal: "es" } }, ...(inputParts ? { inputParts } : {}) },
+          },
+          done: { type: WorkflowStateType.END, end: { outcome: WorkflowEndOutcome.SUCCEED } },
+        },
+      });
+
+    // Before the fix this was INTENT_VAR_MISSING at vars.doc, which no definition could satisfy.
+    const withParts = call(parseWorkflowValueShorthand([{ variableName: "doc", type: "document", source: { kind: "ASSET", asset: { $ref: "input.doc" } } }]));
+    expect(issueLabels(withParts, { intents })).toEqual([]);
+
+    const withoutParts = issueLabels(call(), { intents });
+    expect(withoutParts).toContain(`states.call.intent.inputParts:${WorkflowValidationIssueCode.INTENT_VAR_MISSING}`);
+    expect(withoutParts).not.toContain(`states.call.intent.vars.doc:${WorkflowValidationIssueCode.INTENT_VAR_MISSING}`);
+  });
+
   it("validates nested sub-graphs, item scope and nesting caps", () => {
     const def = baseDefinition({
       startAt: "each",

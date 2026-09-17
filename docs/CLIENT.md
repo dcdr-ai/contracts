@@ -30,10 +30,62 @@ What “auth required” means:
 - **Internal/dev mode (Runtime (self-hosted))**: set `apiToken` (sends `token: <token>`)
   - Note: `/api/execution/*` endpoints require a session. For dev/testing you can set `sessionBypassToken` (sends `x-session-bypass`) when the runtime is configured with `SESSION_BYPASS_TOKEN`.
 
-Common error patterns (all methods):
+## Errors
 
-- Network/timeout errors: thrown as `Error` by the client.
-- HTTP errors (non-2xx): thrown as `Error` with method/path/status and a body preview.
+Every failure — HTTP, transport, timeout, misconfiguration — is a `DcdrRuntimeError` (since 3.15.0),
+an `Error` subclass carrying **two** codes. `code` is why the call failed as far as the transport can
+tell, and `executionCode` is the runtime's own [`ExecutionErrorCode`](EXECUTION_ERROR_CODES.md), read
+out of the response body: that second one is what to show a person. Branch on the codes, never on the
+message:
+
+```ts
+try {
+  await client.executeIntent("SUPPORT_TICKET_CLASSIFY", { vars });
+} catch (e) {
+  if (!isDcdrRuntimeError(e)) throw e;
+
+  switch (e.executionCode) {
+    case ExecutionErrorCode.SERVICE_TOKEN_LIMIT_EXCEEDED:
+      return tellTheUserTheQuotaIsSpent();        // e.retryAfterSeconds, when the runtime sent one
+    case ExecutionErrorCode.MODEL_NOT_ALLOWED_FOR_TOKEN:
+      return askAnAdminToWidenTheAllowlist();
+    default:
+      break;
+  }
+
+  if (e.code === DcdrRuntimeErrorCode.TIMEOUT || e.code === DcdrRuntimeErrorCode.NETWORK) return retryLater();
+  throw e;
+}
+```
+
+| `code` | Cause |
+| --- | --- |
+| `UNAUTHORIZED` | No token, an invalid one, or one without the scope this call needs. |
+| `FORBIDDEN` | Authenticated, but not allowed to do this. |
+| `NOT_FOUND` | No such intent, asset or route — or none this token may see. |
+| `VALIDATION` | The request was refused as malformed; `details` carries what the runtime said. |
+| `PAYMENT_REQUIRED` | The tenant's plan does not cover this call. |
+| `RATE_LIMITED` | A provider, tenant or service-token limit refused it; retry later. |
+| `SERVER_ERROR` | The runtime, or a provider behind it, failed. |
+| `TIMEOUT` | The client's own timeout fired before a response arrived. |
+| `CANCELLED` | Your `AbortSignal` fired. |
+| `NETWORK` | The transport failed before a response arrived; the original is on `cause`. |
+| `UNEXPECTED_RESPONSE` | A response the client could not read as the documented shape. |
+| `CONFIGURATION` | The client is misconfigured (no base URL, no `fetch`, two auth modes at once). |
+
+Also on the error: `status`, `method`, `path`, `details` (the parsed error body), `bodyPreview` and
+`retryAfterSeconds`. `executionCode` is `null` when the body carried none the contracts know — a
+proxy's HTML, a 404 from outside the runtime, or any client-side failure.
+
+Use `isDcdrRuntimeError(e)` rather than `e instanceof DcdrRuntimeError`: it also recognises an error
+thrown by a second copy of `@dcdr/contracts` in the same dependency tree, where `instanceof` fails
+although the error is one in every way that matters.
+
+**Upgrading from 3.14.0 or earlier.** The messages are unchanged character for character, so code
+matching on them keeps working, as does `catch (e) { if (e instanceof Error) ... }`. Two differences
+are worth knowing: `err.name` is now `"DcdrRuntimeError"`, and a timeout or a dead socket arrives as a
+`DcdrRuntimeError` with the transport's own error on `cause`, where before the transport's error
+(often an `AbortError`) propagated as it was.
 
 Runtime error codes
 

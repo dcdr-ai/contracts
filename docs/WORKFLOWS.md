@@ -201,7 +201,7 @@ Truthiness (`IF`/`AND`/`OR`/`NOT`): `false`, `null`, `0`, `""`, empty arrays and
 - **nesting**: composites may nest to `caps.maxNestingDepth` (default **3**); an `AGENT` inside a `PARALLEL`/`FOREACH` is refused (`NESTED_AGENT_NOT_ALLOWED`);
 - **output contract**: `output` / `END.output` mappings checked against `outputSchema`, and a declared schema must be covered by a mapping;
 - **capabilities**: a `TOOL` state's `capability` must be in the package's own catalogue and implemented by the runner (`CAPABILITY_UNKNOWN`, `CAPABILITY_NOT_IMPLEMENTED`), and its `args` are checked against that capability's declared arguments (`CAPABILITY_ARG_UNKNOWN`, `CAPABILITY_ARG_MISSING`) — the catalogue ships with the contract, so this needs no context;
-- **cross-checks when context is given**: intent exists, `vars` ⊆ `inputSchema`, required vars mapped, `inputParts` only for intents with asset variables, connection exists, forbidden credential headers, `SUBWORKFLOW` target published with its `input` mapping checked against the child's `inputSchema` (a workflow cannot call itself).
+- **cross-checks when context is given**: intent exists, `vars` ⊆ `inputSchema`, required vars mapped (a required `asset` variable through `inputParts`, never `vars`), `inputParts` only for intents with asset variables, connection exists, forbidden credential headers, `SUBWORKFLOW` target published with its `input` mapping checked against the child's `inputSchema` (a workflow cannot call itself).
 
 Run it before publishing, always — the validator is the contract's own opinion of a definition and every host applies the same rules.
 

@@ -63,6 +63,23 @@ describe("@dcdr/contracts exports", () => {
     expect(isExecutionErrorCode(unknown)).toBe(false);
   });
 
+  it("exports both clients' error types from the root barrel (3.15.0)", () => {
+    // An application catching a failure of either half reaches its type through the barrel alone.
+    expect(contracts.DcdrRuntimeErrorCode.RATE_LIMITED).toBe("RATE_LIMITED");
+    expect(contracts.DcdrWorkflowErrorCode.RATE_LIMITED).toBe("RATE_LIMITED");
+
+    const runtimeError = new contracts.DcdrRuntimeError({ code: contracts.DcdrRuntimeErrorCode.TIMEOUT, message: "too slow" });
+    expect(runtimeError).toBeInstanceOf(Error);
+    expect(contracts.isDcdrRuntimeError(runtimeError)).toBe(true);
+    expect(contracts.isDcdrRuntimeErrorCode("TIMEOUT")).toBe(true);
+    expect(contracts.isDcdrRuntimeErrorCode("NOT_A_CODE")).toBe(false);
+
+    const workflowError = new contracts.DcdrWorkflowError({ code: contracts.DcdrWorkflowErrorCode.TIMEOUT, message: "too slow", method: "POST", path: "/x" });
+    expect(contracts.isDcdrWorkflowError(workflowError)).toBe(true);
+    expect(contracts.isDcdrRuntimeError(workflowError)).toBe(false);
+    expect(contracts.isDcdrWorkflowError(runtimeError)).toBe(false);
+  });
+
   it("exports the shared condition contract from the root barrel", () => {
     expect(ConditionLogicOp.AND).toBe("AND");
     expect(ConditionOperator.EQUALS).toBe("EQUALS");
