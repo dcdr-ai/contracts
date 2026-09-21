@@ -15,6 +15,7 @@ Two things it deliberately is *not*: it never says **where** a run executes (alw
   "schemaVersion": 1,
   "key": "SUPPORT_TRIAGE",              // ^[A-Z][A-Z0-9_-]*$ (same rule as intents)
   "name": "Support ticket triage",
+  "tags": ["support", "triage"],       // optional labels; not hashed, ignored by the runner
   "inputSchema": { "ticket": { "type": "object", "required": true }, "customerId": { "type": "string", "required": true } },
   "outputSchema": { "category": { "type": "string", "required": true }, "reply": { "type": "string" } },
   "output": { "category": { "$ref": "states.classify.output.category" }, "reply": { "$ref": "states.respond.output.reply", "default": null } },
@@ -29,6 +30,7 @@ Two things it deliberately is *not*: it never says **where** a run executes (alw
 - `constants` are definition-level scalars exposed to references as `constants.*` (SLA hours, team names, thresholds).
 - `settings.maxTransitionsPerRun` is the loop guard and it counts **the whole run**, summed across every scope — see [Limits](#limits-and-what-they-actually-bound). `settings.onError` is the default error policy for states that declare none (`FAIL_RUN` when omitted; `GOTO` a cleanup state is the usual choice).
 - `states` is a map; every state names its successor(s). Editor layout goes in `display` and is excluded from the hash.
+- `tags` (since 3.16.0) are descriptive labels that travel with the definition on export and import: at most `WORKFLOW_MAX_TAGS` (10) non-empty strings. The runner ignores them and they are excluded from the hash, so re-tagging a published version does not make it a different version.
 
 ---
 
@@ -228,7 +230,7 @@ A wide fan-out spends the transition budget quickly: a `FOREACH` of 200 items at
 - `resolveWorkflowValue(node, ctx)`, `resolveWorkflowValueRecord(record, ctx)`, `renderWorkflowTemplate(text, ctx)`, `resolveWorkflowRef(path, ctx)`.
 - `evaluateLocalWorkflowState(state, ctx)` for `CHOICE` / `TRANSFORM` / `END`; `isHostExecutedWorkflowState(type)` for the rest.
 - `resolveWorkflowTransition(definition, stateId, outcome, ctx)` → `{ kind: CONTINUE | END | ERROR_HANDLED | FAIL, next?, snapshot, endOutcome?, runOutput?, error?, caseId? }`.
-- `computeWorkflowDefinitionSha256(definition, { sha256Hex })` over the canonical form (`display` stripped, keys sorted); `canonicalizeWorkflowDefinition` / `canonicalWorkflowDefinitionJson`.
+- `computeWorkflowDefinitionSha256(definition, { sha256Hex })` over the canonical form (`display` and root `tags` stripped, keys sorted); `canonicalizeWorkflowDefinition` / `canonicalWorkflowDefinitionJson`.
 - `listWorkflowIntents`, `listWorkflowConnections`, `listWorkflowMcpConnections`, `listWorkflowSubworkflows`, `workflowUsesAdvancedStates`, `workflowCanPark` (whether a definition contains anything that stops a run — a `WAIT`, an approval gate, at any depth), `inferWorkflowStateOutputSchema`, `validateWorkflowValueAgainstSchema`, `toWorkflowValidationIntents`.
 
 A complete example definition with replay cases lives in `tests/fixtures/workflows/support_ticket_triage.golden.json`.

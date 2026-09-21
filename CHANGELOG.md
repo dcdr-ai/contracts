@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260921.1] — 19:51UTC
+
+<!--
+sourceCommit: 3983bddde65f26b4fcd62eb5b8b08a9243d91c18
+queuedAtUtc: 
+previousMirroredBuild: 20260917.4 (2026-09-17)
+contractsSubmodule: 95ef4b3ea7bf..6268ad28688c
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> **Built on `@dcdr/contracts` 3.16.0: tags are carried and never acted on.** Registries whose implementations or credentials carry `tags` load as before, and the workflow runner accepts definitions with `tags`. Neither one reads them: candidate selection, execution, caching and credential resolution behave exactly as they do without tags. Changing an implementation's tags does not invalidate cached results, because the run hash is built from the implementation's semantic hash, which excludes them. The registry's own sha256 does change when tags change, since the document is different.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.16.0 - tags travel with workflows, implementations and credentials.** Workflow definitions, implementations and credentials accept an optional `tags` list, so labels are kept when they are exported and imported. Tags are descriptive only and never change how anything runs; re-tagging a workflow does not change its definition hash, so a published version can be re-tagged. Workflow validation reports malformed tags or more than 10 of them.
+
 ## [20260917.4] — 20:43UTC
 
 <!--

@@ -38,4 +38,11 @@ export interface CredentialsContract {
   readonly headers?: HttpRequestParams["headers"];
   readonly query?: HttpRequestParams["query"];
   readonly cookies?: HttpRequestParams["cookies"];
+
+  /**
+   * Descriptive labels (v3.16.0), carried so an exported registry keeps them.
+   *
+   * Metadata only: never read when resolving or injecting the credential.
+   */
+  tags?: string[];
 }

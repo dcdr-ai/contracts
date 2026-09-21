@@ -1079,6 +1079,16 @@ export interface WorkflowDefinition {
   name: string;
   description?: string;
   /**
+   * Descriptive labels (v3.16.0), so a definition exported from one tenant or environment arrives
+   * with the labels it had.
+   *
+   * Metadata only: the runner ignores them and they are **excluded from the canonical form**, like
+   * `display`, so re-tagging never changes `computeWorkflowDefinitionSha256` and a published
+   * (immutable) version can still be re-tagged. When present, `validateWorkflowDefinition` requires
+   * an array of at most {@link WORKFLOW_MAX_TAGS} non-empty strings.
+   */
+  tags?: string[];
+  /**
    * Typed run input; `ASSET` variables allowed.
    *
    * Named to match `outputSchema`, because the two are the same kind of thing and calling one
@@ -1146,6 +1156,14 @@ export interface WorkflowValidationCaps {
  * not a deadline any of those can reason about.
  */
 export const WORKFLOW_MAX_TIMEOUT_MS = 180 * 24 * 60 * 60 * 1000;
+
+/**
+ * Maximum number of entries in `WorkflowDefinition.tags` (v3.16.0).
+ *
+ * Matches the control plane's own cap per element, so a definition the editor produced always
+ * validates and one assembled by hand cannot carry more than the editor could show.
+ */
+export const WORKFLOW_MAX_TAGS = 10;
 
 /**
  * Absolute ceiling of `AGENT.maxDurationMs`: 180 days (v3.12.0), the same shape and value as
@@ -2706,13 +2724,18 @@ export function forEachWorkflowState(
 }
 
 /**
- * Returns a deep copy of the definition without any `display` block, in canonical key order.
+ * Returns a deep copy of the definition without any `display` block or root `tags`, in canonical
+ * key order.
  *
  * Notes
- * - This is the hashed representation: moving nodes in the editor never creates a new version.
+ * - This is the hashed representation: moving nodes in the editor or re-tagging never creates a
+ *   new version.
+ * - `tags` is removed at the root only. A `tags` key deeper down is part of a state's config or of
+ *   a literal value (an HTTP body, a transform output) and changes what the workflow does.
  */
 export function canonicalizeWorkflowDefinition(definition: WorkflowDefinition): WorkflowDefinition {
   const stripped = stripDisplay(definition) as WorkflowDefinition;
+  if (isPlainObject(stripped)) delete stripped.tags;
   return JSON.parse(stableJsonStringify(stripped)) as WorkflowDefinition;
 }
 
@@ -2794,6 +2817,20 @@ export function validateWorkflowDefinition(
   }
   if (typeof definition.name !== "string" || !definition.name.trim()) {
     push("name", WorkflowValidationIssueCode.DEFINITION_INVALID, "Workflow name is required.");
+  }
+  if (definition.tags !== undefined) {
+    if (!Array.isArray(definition.tags)) {
+      push("tags", WorkflowValidationIssueCode.DEFINITION_INVALID, "tags must be an array of strings.");
+    } else {
+      if (definition.tags.length > WORKFLOW_MAX_TAGS) {
+        push("tags", WorkflowValidationIssueCode.LIMIT_EXCEEDED, `Workflow has ${definition.tags.length} tags; the maximum is ${WORKFLOW_MAX_TAGS}.`);
+      }
+      definition.tags.forEach((tag: unknown, index: number) => {
+        if (typeof tag !== "string" || !tag.trim()) {
+          push(`tags[${index}]`, WorkflowValidationIssueCode.DEFINITION_INVALID, "Each tag must be a non-empty string.");
+        }
+      });
+    }
   }
 
   const settings = definition.settings;

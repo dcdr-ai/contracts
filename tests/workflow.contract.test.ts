@@ -11,6 +11,7 @@ import {
   DEFAULT_WORKFLOW_VALIDATION_CAPS,
   WORKFLOW_MAX_AGENT_DURATION_MS,
   WORKFLOW_MAX_TIMEOUT_MS,
+  WORKFLOW_MAX_TAGS,
   evaluateLocalWorkflowState,
   formatWorkflowDefinitionShorthand,
   WORKFLOW_APPROVAL_FORM,
@@ -1311,6 +1312,37 @@ describe("workflow.contract hashing and listings", () => {
     expect(hashA).toMatch(/^[0-9a-f]{64}$/);
     const c: WorkflowDefinition = { ...a, name: "Other" };
     expect(computeWorkflowDefinitionSha256(c, sha256Deps)).not.toBe(hashA);
+  });
+
+  it("excludes root tags from the canonical form and the sha256, but keeps nested tags", () => {
+    const a = baseDefinition();
+    const tagged: WorkflowDefinition = { ...a, tags: ["support", "priority"] };
+    expect(canonicalizeWorkflowDefinition(tagged)).toEqual(canonicalizeWorkflowDefinition(a));
+    expect(computeWorkflowDefinitionSha256(tagged, sha256Deps)).toBe(computeWorkflowDefinitionSha256(a, sha256Deps));
+    expect(computeWorkflowDefinitionSha256({ ...a, tags: ["other"] }, sha256Deps)).toBe(computeWorkflowDefinitionSha256(a, sha256Deps));
+    // Canonicalizing does not mutate the caller's definition.
+    expect(tagged.tags).toEqual(["support", "priority"]);
+
+    // A `tags` key below the root is behaviour (a literal the workflow emits), so it stays hashed.
+    const nestedA: WorkflowDefinition = { ...a, constants: { tags: "a" } };
+    const nestedB: WorkflowDefinition = { ...a, constants: { tags: "b" } };
+    expect(computeWorkflowDefinitionSha256(nestedA, sha256Deps)).not.toBe(computeWorkflowDefinitionSha256(nestedB, sha256Deps));
+  });
+
+  it("validates tags as at most WORKFLOW_MAX_TAGS non-empty strings, as issues rather than throws", () => {
+    const a = baseDefinition();
+    expect(validateWorkflowDefinition({ ...a, tags: [] }).valid).toBe(true);
+    expect(validateWorkflowDefinition({ ...a, tags: ["support", "billing"] }).valid).toBe(true);
+    const tenTags = Array.from({ length: WORKFLOW_MAX_TAGS }, (_, i) => `t${i}`);
+    expect(validateWorkflowDefinition({ ...a, tags: tenTags }).valid).toBe(true);
+
+    expect(issueLabels({ ...a, tags: [...tenTags, "extra"] })).toEqual([`tags:${WorkflowValidationIssueCode.LIMIT_EXCEEDED}`]);
+    expect(issueLabels({ ...a, tags: "support" as unknown as string[] })).toEqual([`tags:${WorkflowValidationIssueCode.DEFINITION_INVALID}`]);
+    expect(issueLabels({ ...a, tags: ["ok", "", "  ", 7 as unknown as string] })).toEqual([
+      `tags[1]:${WorkflowValidationIssueCode.DEFINITION_INVALID}`,
+      `tags[2]:${WorkflowValidationIssueCode.DEFINITION_INVALID}`,
+      `tags[3]:${WorkflowValidationIssueCode.DEFINITION_INVALID}`,
+    ]);
   });
 
   it("lists intents and connections and infers output schemas", () => {

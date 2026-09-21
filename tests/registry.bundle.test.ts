@@ -1,6 +1,7 @@
 import { DcdrRegistry } from "../src/control.contract";
 import { IntentContract, IntentType } from "../src/intent.contract";
 import { ImplementationContract } from "../src/implementations.contract";
+import { CredentialsContract } from "../src/credentials.contract";
 import { IntentProvider } from "../src/provider.contract";
 import { PromptTemplate } from "../src/prompts.contract";
 import { RetryPolicy } from "../src/policies.contract";
@@ -132,5 +133,23 @@ describe("DcdrRegistry bundle", () => {
     expect(parsed.intents[0]?.processors?.[0]?.rules?.[0]?.kind).toBe(
       ProcessingRuleKind.TRIM,
     );
+  });
+
+  it("carries tags on intents, prompts, implementations and credentials through a JSON round-trip (v3.16.0)", () => {
+    const intent = makeMinimalIntentContract();
+    intent.tags = ["support"];
+    intent.defaultPrompt.tags = ["strict_json"];
+    intent.implementations[0].tags = ["primary", "eu"];
+    const credential: CredentialsContract = { id: "cred-1", name: "OpenAI prod", tags: ["prod"] };
+    const registry: DcdrRegistry = { sha256: "registry-sha256", intents: [intent], credentials: [credential] };
+
+    const parsed = JSON.parse(JSON.stringify(registry)) as DcdrRegistry;
+
+    expect(parsed.intents[0]?.tags).toEqual(["support"]);
+    expect(parsed.intents[0]?.defaultPrompt.tags).toEqual(["strict_json"]);
+    expect(parsed.intents[0]?.implementations[0]?.tags).toEqual(["primary", "eu"]);
+    expect(parsed.credentials?.[0]?.tags).toEqual(["prod"]);
+    // Optional: a registry without tags is exactly what it was.
+    expect(makeMinimalImplementation(IntentProvider.RULES).tags).toBeUndefined();
   });
 });

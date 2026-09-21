@@ -98,6 +98,7 @@ describe("@dcdr/contracts exports", () => {
     expect(parseWorkflowValueShorthand({ $ref: "input.a" })).toEqual({ kind: WorkflowValueKind.REF, ref: "input.a" });
     expect(typeof validateWorkflowDefinition).toBe("function");
     expect(typeof contracts.computeWorkflowDefinitionSha256).toBe("function");
+    expect(contracts.WORKFLOW_MAX_TAGS).toBe(10);
   });
 
   it("exports the workflow runner protocol from the root barrel", () => {

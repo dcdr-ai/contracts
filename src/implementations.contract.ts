@@ -156,4 +156,12 @@ export interface ImplementationContract {
    * - Shared shape from `./conditions.contract` (leaf or AND/OR/NOT group).
    */
   condition?: ConditionLeaf | ConditionGroup<ConditionLeaf>;
+
+  /**
+   * Descriptive labels (v3.16.0), carried so an exported registry keeps them.
+   *
+   * Metadata only: never read by candidate selection, execution or caching, and not an input of
+   * `semanticHash` / `runHash` - a re-tag must not invalidate cached results.
+   */
+  tags?: string[];
 }
