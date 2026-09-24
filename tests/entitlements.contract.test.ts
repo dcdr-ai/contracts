@@ -109,6 +109,32 @@ describe("DcdrEntitlementsContract", () => {
     );
   });
 
+  it("carries the knowledge limits and usage in the business snapshot (3.17.0, null = unlimited)", () => {
+    const ent: DcdrEntitlementsContract = {
+      cid: "e835c0cd-2c9c-4d37-8e40-6f988ca15b5d",
+      limits: { maxCallsPerMonth: null },
+      usageBaseline: { periodKey: "2026-09", callsThisMonth: 0 },
+      businessLimits: {
+        maxKnowledgeCollections: 5,
+        maxKnowledgeDocumentsPerCollection: null,
+        maxKnowledgePagesPerMonth: 2000,
+      },
+      businessUsage: { knowledgeCollections: 2, knowledgePagesThisMonth: 1500 },
+    };
+
+    const roundTrip = JSON.parse(
+      JSON.stringify(ent),
+    ) as DcdrEntitlementsContract;
+
+    expect(roundTrip.businessLimits?.maxKnowledgeCollections).toBe(5);
+    expect(roundTrip.businessLimits?.maxKnowledgeDocumentsPerCollection).toBeNull();
+    expect(roundTrip.businessLimits?.maxKnowledgePagesPerMonth).toBe(2000);
+    expect(roundTrip.businessUsage?.knowledgeCollections).toBe(2);
+    expect(roundTrip.businessUsage?.knowledgePagesThisMonth).toBe(1500);
+    // Knowledge is bounded in the control plane, never among the limits the runtime enforces.
+    expect(Object.keys(roundTrip.limits)).toEqual(["maxCallsPerMonth"]);
+  });
+
   it("omits providerLimits without breaking existing consumers (fail-open, backward compatible)", () => {
     const ent: DcdrEntitlementsContract = {
       cid: "e835c0cd-2c9c-4d37-8e40-6f988ca15b5d",

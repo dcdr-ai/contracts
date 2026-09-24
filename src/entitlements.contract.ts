@@ -65,6 +65,24 @@ export interface DcdrBusinessLimitsContract {
   maxCredentials?: number;
   maxExecutionWindows?: number;
   maxWebhooks?: number;
+
+  /**
+   * Knowledge limits (since 3.17.0). Enforced by the control plane where collections are created and
+   * documents are ingested; the runtime never ingests, so it does not read them.
+   *
+   * Absent or `null` = unlimited.
+   */
+  maxKnowledgeCollections?: number | null;
+
+  /** Documents one knowledge collection may hold. Absent or `null` = unlimited. */
+  maxKnowledgeDocumentsPerCollection?: number | null;
+
+  /**
+   * Pages the tenant may ingest per billing month, the same UTC calendar month as
+   * `DcdrEntitlementUsageBaseline.periodKey`. This is the limit that bounds cost: extraction and
+   * embedding are paid per page, not per document. Absent or `null` = unlimited.
+   */
+  maxKnowledgePagesPerMonth?: number | null;
 }
 
 /**
@@ -79,6 +97,15 @@ export interface DcdrBusinessUsageContract {
   credentials?: number;
   executionWindows?: number;
   webhooks?: number;
+
+  /** Knowledge collections that exist (since 3.17.0). Pairs with `maxKnowledgeCollections`. */
+  knowledgeCollections?: number;
+
+  /**
+   * Pages ingested in the current billing month (since 3.17.0). Pairs with
+   * `maxKnowledgePagesPerMonth`.
+   */
+  knowledgePagesThisMonth?: number;
 }
 
 /**

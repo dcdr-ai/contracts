@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260924.1] — 23:56UTC
+
+<!--
+sourceCommit: fda1a37fbddd2801339678315132e01bd6980a08
+queuedAtUtc: 
+previousMirroredBuild: 20260921.1 (2026-09-21)
+contractsSubmodule: 6268ad28688c..6e5146e550b0
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.17.0 - knowledge limits.** A plan can now carry how many knowledge collections a workspace may create, how many documents each may hold and how many pages may be ingested per month, and the usage snapshot reports collections and pages used this month. Unset means unlimited. They are enforced by the control plane; nothing changes in how the runtime executes.
+
 ## [20260921.1] — 19:51UTC
 
 <!--
