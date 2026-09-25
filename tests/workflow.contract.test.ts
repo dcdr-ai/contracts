@@ -1498,36 +1498,43 @@ describe("workflow.contract capability catalog and the TOOL state", () => {
   it("flags a catalog capability no runner executes yet", () => {
     // A capability is published ahead of its adapter so an editor can show what is coming; the
     // validator then refuses to let a tenant wire up something that will not run.
-    //
-    // Every entry in the catalogue happens to have an adapter today, so this branch has no real
-    // example to point at - and it is exactly the branch that matters on the day the next capability
-    // is published. The implemented list is therefore narrowed for the length of this assertion and
-    // put back, rather than the case being deleted for want of a subject.
-    const implemented = WORKFLOW_IMPLEMENTED_CAPABILITIES as string[];
-    const withdrawn = implemented.splice(implemented.indexOf("mail.send"), 1);
-    try {
-      const issues = codes(
-        definitionWith({ capability: "mail.send", connection: "smtp_main", args: { to: literal("a@b.c"), subject: literal("s"), body: literal("b") } }),
-        ["smtp_main"],
-      );
-      expect(issues).toEqual(["CAPABILITY_NOT_IMPLEMENTED"]);
-    } finally {
-      implemented.push(...withdrawn);
-    }
+    expect(codes(definitionWith({ capability: "document.extract", args: { url: literal("https://example.com/a.pdf") } }))).toEqual(["CAPABILITY_NOT_IMPLEMENTED"]);
+    expect(codes(definitionWith({ capability: "embeddings.embed", args: { input: literal("hello") } }))).toEqual(["CAPABILITY_NOT_IMPLEMENTED"]);
   });
 
-  it("publishes nothing a runner cannot execute today", () => {
-    // The other half of the same rule, and the one that is true right now: an editor offering a
-    // capability the runner has no adapter for is a tenant building a workflow that fails on its
-    // first run, with nothing in the editor having warned them.
+  it("publishes ahead of a runner only the capabilities that name a configured service", () => {
+    // The other half of the same rule: an editor offering a capability the runner has no adapter for
+    // is a tenant building a workflow that fails on its first run. The two exceptions are published
+    // because their ids are how a control plane configures its parser and embedder (3.18.0); the
+    // validator above keeps them out of workflows until an adapter lands. Anything else here is a slip.
     const unimplemented = WORKFLOW_CAPABILITIES.filter((capability) => !WORKFLOW_IMPLEMENTED_CAPABILITIES.includes(capability.id)).map((capability) => capability.id);
-    expect(unimplemented).toEqual([]);
+    expect(unimplemented).toEqual(["document.extract", "embeddings.embed"]);
+  });
+
+  it("publishes document.extract and embeddings.embed with their 1.0.0 schemas", () => {
+    // These shapes are frozen by publication; a change is a new capability `version`, not an edit.
+    const extract = findWorkflowCapability("document.extract");
+    expect(extract?.version).toBe("1.0.0");
+    expect(extract?.broker).toBe(WorkflowCapabilityBroker.PLATFORM);
+    expect(Object.keys(extract?.inputSchema ?? {})).toEqual(["url", "contentBase64", "fileName", "ocrLanguages", "maxChars"]);
+    expect(Object.values(extract?.inputSchema ?? {}).some((variable) => variable.required === true)).toBe(false);
+    expect(Object.keys(extract?.outputSchema ?? {})).toEqual(["text", "truncated", "pageCount", "blockCount", "status"]);
+    expect(extract?.outputSchema.status.values).toEqual(["SUCCESS", "PARTIAL_SUCCESS"]);
+
+    const embed = findWorkflowCapability("embeddings.embed");
+    expect(embed?.version).toBe("1.0.0");
+    expect(embed?.broker).toBe(WorkflowCapabilityBroker.PLATFORM);
+    expect(embed?.inputSchema.input.required).toBe(true);
+    expect(embed?.inputSchema.input.itemsType).toBe(PromptVariableType.STRING);
+    expect(Object.keys(embed?.outputSchema ?? {})).toEqual(["embeddings", "model", "dimensions"]);
+    expect(Object.keys(embed?.outputSchema.embeddings.properties ?? {})).toEqual(["index", "vector"]);
+    expect(embed?.outputSchema.embeddings.properties?.vector.itemsType).toBe(PromptVariableType.FLOAT);
   });
 
   it("only demands an endpoint for a capability that calls a platform service", () => {
     // `PLATFORM` says whose credentials are spent, not that there is something to point at.
     const services = WORKFLOW_CAPABILITIES.filter((capability) => capability.requiresEndpoint).map((capability) => capability.id);
-    expect(services).toEqual(["web.search"]);
+    expect(services).toEqual(["web.search", "document.extract", "embeddings.embed"]);
     expect(findWorkflowCapability("web.fetch")?.requiresEndpoint).toBeUndefined();
   });
 

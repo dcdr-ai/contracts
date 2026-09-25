@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260925.1] — 18:24UTC
+
+<!--
+sourceCommit: b34393ae9c847e0f05dead596b4b19378046b4ea
+queuedAtUtc: 
+previousMirroredBuild: 20260924.1 (2026-09-24)
+contractsSubmodule: 6e5146e550b0..db2c8eb8a8c5
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.18.0 - document extraction and embeddings join the capability catalog.** `document.extract` (a document in, its readable text and page and block counts out) and `embeddings.embed` (texts in, one vector per text out) are published with their 1.0.0 schemas, so a deployment can point its control plane at its own document parser and embedder under a stable name. Workflows cannot use them yet: they are listed as not implemented, and a `TOOL` state naming either is refused at validation until the workflow runner executes them.
+
 ## [20260924.1] — 23:56UTC
 
 <!--

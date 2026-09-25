@@ -229,6 +229,52 @@ export const WORKFLOW_CAPABILITIES: readonly WorkflowCapability[] = [
       stderr: new PromptVariable(PromptVariableType.STRING, true, "Standard error, bounded the same way."),
     },
   },
+  {
+    // Published ahead of its adapter (not in `WORKFLOW_IMPLEMENTED_CAPABILITIES`): the id is already how
+    // a control plane configures its document parser, and that is worth being a contract now.
+    // The output is text plus counts on purpose, never the parser's own document model: a 15-page
+    // PDF produces megabytes of it, and whatever a runner returns lands in a workflow variable.
+    id: "document.extract",
+    version: "1.0.0",
+    description: "Converts a document into readable text. Takes a URL or base64 bytes; reads PDF, DOCX, PPTX, XLSX, HTML and images, with OCR for pages that have no text layer.",
+    broker: WorkflowCapabilityBroker.PLATFORM,
+    requiresEndpoint: true,
+    inputSchema: {
+      url: new PromptVariable(PromptVariableType.STRING, false, "Absolute URL the parser fetches itself. Give either this or `contentBase64`."),
+      contentBase64: new PromptVariable(PromptVariableType.STRING, false, "The document bytes, base64-encoded, when there is no URL."),
+      fileName: new PromptVariable(PromptVariableType.STRING, false, "File name, used to pick a parser when neither the URL nor the bytes say what the document is."),
+      ocrLanguages: new PromptVariable(PromptVariableType.ARRAY, false, "Languages to run OCR with, e.g. `es`, `en`.", PromptVariableType.STRING),
+      maxChars: new PromptVariable(PromptVariableType.INTEGER, false, "Stop after this many characters of text.", undefined, undefined, undefined, undefined, 500),
+    },
+    outputSchema: {
+      text: new PromptVariable(PromptVariableType.STRING, true, "Readable text of the document, in reading order."),
+      truncated: new PromptVariable(PromptVariableType.BOOLEAN, true, "Whether the text was cut at `maxChars` or at the runner's own ceiling."),
+      pageCount: new PromptVariable(PromptVariableType.INTEGER, false, "Pages in the document, for paginated formats."),
+      blockCount: new PromptVariable(PromptVariableType.INTEGER, true, "Structural blocks (paragraphs, headings, tables, figures) the parser found."),
+      status: new PromptVariable(PromptVariableType.ENUM, true, "`SUCCESS`, or `PARTIAL_SUCCESS` when some pages could not be converted. A conversion that produced nothing fails the call instead.", undefined, undefined, undefined, ["SUCCESS", "PARTIAL_SUCCESS"]),
+    },
+  },
+  {
+    // Published ahead of its adapter, like `document.extract`: the id is how a deployment points its
+    // control plane at its own embedder. A raw vector has no use inside a workflow until something can
+    // compare it, so no runner executes this yet.
+    id: "embeddings.embed",
+    version: "1.0.0",
+    description: "Turns texts into embedding vectors with the deployment's embedding model.",
+    broker: WorkflowCapabilityBroker.PLATFORM,
+    requiresEndpoint: true,
+    inputSchema: {
+      input: new PromptVariable(PromptVariableType.ARRAY, true, "Texts to embed, in order.", PromptVariableType.STRING),
+    },
+    outputSchema: {
+      embeddings: new PromptVariable(PromptVariableType.ARRAY, true, "One entry per input text, in input order.", PromptVariableType.OBJECT, {
+        index: new PromptVariable(PromptVariableType.INTEGER, true, "Position of the input text this vector belongs to."),
+        vector: new PromptVariable(PromptVariableType.ARRAY, true, "The embedding.", PromptVariableType.FLOAT),
+      }),
+      model: new PromptVariable(PromptVariableType.STRING, true, "Model that produced the vectors. Vectors from different models cannot be compared."),
+      dimensions: new PromptVariable(PromptVariableType.INTEGER, true, "Length of every vector."),
+    },
+  },
 ];
 
 /**
@@ -236,6 +282,9 @@ export const WORKFLOW_CAPABILITIES: readonly WorkflowCapability[] = [
  *
  * Same idea as `WORKFLOW_CONNECTION_IMPLEMENTED_PROTOCOLS`: an editor may show the rest so a tenant
  * can see what is coming, but it must not let them wire up something that will not run.
+ *
+ * `document.extract` and `embeddings.embed` are catalogued and deliberately absent here: they name
+ * services a control plane configures, and no runner adapter executes them yet.
  */
 export const WORKFLOW_IMPLEMENTED_CAPABILITIES: readonly string[] = [
   "web.search",
