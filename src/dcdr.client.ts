@@ -205,7 +205,14 @@ export class DcdrClient {
     return this.runtime.executeIntent(intent, request);
   }
 
-  /** @see DcdrRuntimeClient.executeIntentStream */
+  /**
+   * Streams an intent over SSE: `meta`, zero or more `delta`, then `final` (or `error`).
+   *
+   * For a structured intent (`meta.data.structured`), each delta is decoded text of one string field
+   * with its `path`; every delta names its `attempt`. Act on `final`; deltas are for display.
+   *
+   * @see DcdrRuntimeClient.executeIntentStream
+   */
   executeIntentStream(
     intent: string,
     request: ExecuteIntentRequest,

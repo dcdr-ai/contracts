@@ -541,17 +541,47 @@ export interface ExecutionStreamMetaEventData {
 
   /** ISO timestamp for when the stream started (gateway wall-clock). */
   startedAt: string;
+
+  /**
+   * Whether the execution asks the provider for structured output (`response_format`
+   * `json_object` / `json_schema`), so the `final` result is an object validated against the
+   * intent's output schema.
+   *
+   * When `true`, deltas never carry raw JSON: each one carries decoded string content and the
+   * `path` of the field it belongs to. Absent when the runtime answered before choosing an
+   * implementation (a validation or selection error). Since 3.19.0.
+   */
+  structured?: boolean;
 }
 
 /**
  * A text delta emitted during streaming generation.
  *
  * Notes
- * - v1 focuses on text deltas only.
+ * - Without `path`, `text` is the model's output text as generated (text-mode executions).
+ * - With `path`, the execution is structured: `text` is the next piece of the **decoded** value
+ *   of the JSON string field at `path` - escapes resolved, never JSON punctuation. Only string
+ *   fields stream; numbers, booleans and `null` arrive with `final`.
  * - Providers that do not support native streaming may emit zero delta events.
+ * - The `final` result is the only one to act on: partial text is for display.
  */
 export interface ExecutionStreamDeltaEventData {
   text: string;
+
+  /**
+   * Field the text belongs to, for structured executions. Dotted object keys and bracketed array
+   * indexes from the root of the result (`answer`, `citations[0].quote`); a key that is not a plain
+   * identifier is written as a quoted bracket (`["my.key"]`). Since 3.19.0.
+   */
+  path?: string;
+
+  /**
+   * 1-based number of the execution attempt that produced this delta (the same number as
+   * `ExecutionAttemptReport.attempt` in the final report). A structured execution may still retry, repair or fall back after
+   * streaming: when a delta arrives with a higher `attempt`, discard what earlier attempts painted.
+   * A text-mode execution never changes attempt once it has streamed. Since 3.19.0.
+   */
+  attempt?: number;
 }
 
 /**

@@ -4,6 +4,21 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20260927.1] — 14:35UTC
+
+<!--
+sourceCommit: a5d85901e4b07949eefa650ea5ee745247e67acf
+queuedAtUtc: 
+previousMirroredBuild: 20260925.1 (2026-09-25)
+contractsSubmodule: db2c8eb8a8c5..8f5cd3c89289
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> **Structured intents stream their answer as readable text.** Streaming an intent with structured output used to send no progress at all on OpenAI, Grok, Anthropic and Gemini - the answer arrived in one piece at the end. It now streams on every chat provider, and each piece is the decoded text of one field of the answer together with the field's name (`answer`, `citations[0].quote`), never fragments of JSON, so an application can show the answer as it is written without parsing anything. The first event says whether the execution is structured. The final result is validated exactly as before, and a structured execution can still be repaired or retried after it has started streaming; every piece says which attempt it belongs to, so text from a discarded attempt can be cleared. The CLI's `stream` command labels each field and prints the validated result at the end. Models served through the OpenAI Responses API still answer in one piece.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.19.0 - structured streaming fields.** Optional `path` and `attempt` on stream deltas and `structured` on the stream's `meta` event. Additive; see the contracts changelog and `docs/STREAMING_EXECUTION_SSE.md`.
+### Fixed
+- <kbd>RUNTIME</kbd> **A structured intent streamed on Mistral returns a validated result.** Its final result was the model's raw JSON text, never checked against the intent's output schema; it is now parsed and validated like a non-streamed call, with the same errors when it does not match.
+
 ## [20260925.1] — 18:24UTC
 
 <!--

@@ -954,4 +954,31 @@ describe("DcdrRuntimeClient", () => {
       ExecutionStreamEventType.FINAL,
     ]);
   });
+
+  it("hands structured streaming fields (meta.structured, delta path/attempt) to the caller (3.19.0)", async () => {
+    const sse = [
+      `event: ${ExecutionStreamEventType.META}\n`,
+      `data: {"gatewayRequestId":"g1","intent":"MY_INTENT","startedAt":"2026-09-27T00:00:00Z","structured":true}\n\n`,
+      `event: ${ExecutionStreamEventType.DELTA}\n`,
+      `data: {"text":"The \\"trans","path":"answer","attempt":2}\n\n`,
+      `event: ${ExecutionStreamEventType.FINAL}\n`,
+      `data: {"response":{"status":"OK","input":[],"output":{"answer":"The \\"trans\\""},"report":{"attempts":[],"timing":{"startedAt":"","endedAt":"","latencyMs":0},"sessionId":"","appId":"","gatewayRequestId":"","intent":"MY_INTENT","prompt":{"id":"","version":"","sha256":""},"finalImplementation":{"provider":"RULES","model":"","implementationId":"","latencyMs":0}}}}\n\n`,
+    ].join("");
+
+    const client = new DcdrRuntimeClient({
+      baseUrl: "https://example.invalid",
+      apiToken: "API",
+      fetchFn: jest.fn(async () => makeMockStreamResponse({ ok: true, status: 200, sseText: sse })),
+    });
+
+    let structured: boolean | undefined;
+    const deltas: Array<{ text: string; path?: string; attempt?: number }> = [];
+    for await (const evt of client.executeIntentStream("MY_INTENT", { vars: {} })) {
+      if (evt.type === ExecutionStreamEventType.META) structured = evt.data.structured;
+      if (evt.type === ExecutionStreamEventType.DELTA) deltas.push(evt.data);
+    }
+
+    expect(structured).toBe(true);
+    expect(deltas).toEqual([{ text: 'The "trans', path: "answer", attempt: 2 }]);
+  });
 });

@@ -653,8 +653,11 @@ export class DcdrRuntimeClient {
    *
    * Notes
    * - The streaming endpoint is additive; `executeIntent()` remains the stable JSON path.
-   * - v1 streams a minimal envelope (`meta` then `final`). Providers without native streaming
-   *   may yield zero `delta` events.
+   * - Yields `meta`, zero or more `delta`, then `final` (or `error`). Providers without native
+   *   streaming may yield zero `delta` events.
+   * - Structured intents (3.19.0): `meta.data.structured` is `true` and each delta carries decoded
+   *   text of one string field plus its `path`; every delta names its `attempt`, and a higher
+   *   `attempt` means earlier text is discarded. Event payloads are passed through as received.
    *
    * @param intent Intent name.
    * @param request Execute request payload.

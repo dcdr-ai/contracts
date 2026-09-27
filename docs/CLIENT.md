@@ -113,6 +113,7 @@ See: [EXECUTION_ERROR_CODES.md](EXECUTION_ERROR_CODES.md)
 - Endpoint: `POST /api/execution/stream/:intent`
 - Transport: Server-Sent Events (SSE), `Content-Type: text/event-stream`
 - Output: a stream of events (`meta`, optional `delta`, then `final`)
+- Structured intents (since 3.19.0): `meta.structured` is `true` and each `delta` carries decoded field text with its `path`; every `delta` names its `attempt`
 
 See: [STREAMING_EXECUTION_SSE.md](STREAMING_EXECUTION_SSE.md)
 

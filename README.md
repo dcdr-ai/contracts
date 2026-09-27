@@ -446,7 +446,7 @@ Cloud-managed assets keep tenant-visible storage descriptors and concrete secret
 - [docs/WORKFLOW_CLIENT.md](docs/WORKFLOW_CLIENT.md) — Full `DcdrWorkflowClient` reference (run a workflow and wait, author/publish versions, human tasks, evidence, errors).
 - [docs/EXECUTION_ERROR_CODES.md](docs/EXECUTION_ERROR_CODES.md) — Stable runtime execution error codes and their meanings.
 - [docs/CLI.md](docs/CLI.md) — CLI usage patterns (healthcheck, run, demo, dry-run).
-- [docs/STREAMING_EXECUTION_SSE.md](docs/STREAMING_EXECUTION_SSE.md) — Streaming intent execution over SSE (`/api/execution/stream/:intent`).
+- [docs/STREAMING_EXECUTION_SSE.md](docs/STREAMING_EXECUTION_SSE.md) — Streaming intent execution over SSE (`/api/execution/stream/:intent`); structured intents stream decoded field text with its `path`.
 - [docs/RUNTIME_ADVANCED_CONFIG.md](docs/RUNTIME_ADVANCED_CONFIG.md) — Runtime (self-hosted) env vars (SSL/HTTPS, networking, auth, logs, metrics).
 
 ### Integrations

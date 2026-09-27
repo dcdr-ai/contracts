@@ -22,7 +22,8 @@ npm run dcdr -- health --base-url http://localhost:8000 --api-token dev-token
 # Execute an intent
 npm run dcdr -- run HELLO_WORLD --base-url http://localhost:8000 --api-token dev-token --vars-json '{"name":"Ada"}'
 
-# Stream an intent (SSE)
+# Stream an intent (SSE). A structured intent prints each field as `path: text` while it streams,
+# marks a retry that replaced earlier text, and prints the validated result at the end.
 npm run dcdr -- stream HELLO_WORLD --base-url http://localhost:8000 --api-token dev-token --vars-json '{"name":"Ada"}'
 
 # Demo
