@@ -1,6 +1,6 @@
 # Workflow client (`DcdrWorkflowClient`)
 
-> Status: contracts 3.9.0. Workflows are a DCDR Cloud / Cloud Pro capability.
+> Status: since contracts 3.9.0 (multi-task runs and `frameId` since 3.10.0); current for 3.20.0. Workflows are a DCDR Cloud / Cloud Pro capability.
 
 The typed client for the **tenant workflow API**: find out what you may run, run it, follow the run,
 read what it did, and answer it when it stops to ask a person something.
@@ -35,18 +35,19 @@ Runnable versions of everything below: [`examples/workflow-client/`](../examples
 Worth reading twice, because getting it wrong produces a `401` that looks like a credential problem
 and is not.
 
-| | `DcdrRuntimeClient` | `DcdrWorkflowClient` |
-| --- | --- | --- |
-| Endpoints | `/api/execution/*`, `/api/assets/*` | `/api/dcdr/workflows/*` |
-| Served by | the **runtime** gateway (`runtime.dcdr.ai`, or your container) | the **control plane** (`dcdr.ai`) |
-| Unit of work | one intent execution | a workflow: many states, seconds or days |
-| Credential | `DcdrSessionToken` bearer, or a runtime API token | a managed **service token** |
+| | `DcdrRuntimeClient` | `DcdrWorkflowClient` | `DcdrKnowledgeClient` (3.20.0) |
+| --- | --- | --- | --- |
+| Endpoints | `/api/execution/*`, `/api/assets/*` | `/api/dcdr/workflows/*` | `/api/dcdr/knowledge/*` |
+| Served by | the **runtime** gateway (`runtime.dcdr.ai`, or your container) | the **control plane** (`dcdr.ai`) | the **control plane** (`dcdr.ai`) |
+| Unit of work | one intent execution | a workflow: many states, seconds or days | a search, or an answer grounded in your documents |
+| Credential | `DcdrSessionToken` bearer, or a runtime API token | a managed **service token** | a managed **service token** |
 
 A workflow run *does* execute intents on the runtime — the workflow runner calls it for every
 `INTENT` state — but your code never makes that call. You talk to the control plane; it schedules,
 governs and records.
 
-[`DcdrClient`](#one-client-for-both) composes the two when a single token reaches both.
+[`DcdrClient`](#one-client-for-all-three) composes them when a single token reaches all of them. Knowledge
+has its own guide: [KNOWLEDGE.md](KNOWLEDGE.md).
 
 ### Scopes
 
@@ -381,7 +382,7 @@ revoked or merely lacks the scope. Saying which would tell a caller whether a to
 
 ---
 
-## One client for both
+## One client for all three
 
 ```ts
 import { DcdrClient } from "@dcdr/contracts";
@@ -390,16 +391,21 @@ const dcdr = new DcdrClient({ bearerToken: process.env.DCDR_TOKEN });
 
 await dcdr.executeIntent("CLASSIFY", { vars: { text } });       // runtime
 await dcdr.runWorkflowAndWait("SUPPORT_TRIAGE", { input });     // control plane
+await dcdr.answerFromKnowledge({ collections: ["product-sheets"], question });  // control plane, 3.20.0
 
 dcdr.runtime;    // the DcdrRuntimeClient, if you want it raw
 dcdr.workflows;  // the DcdrWorkflowClient
+dcdr.knowledge;  // the DcdrKnowledgeClient (3.20.0)
 ```
 
-Each half is built on first use, so an integration that only runs workflows never needs a runtime
-URL. Method names are identical to the underlying clients with no aliases, so moving a call between
+Each of the three clients is built on first use, so an integration that only runs workflows never
+needs a runtime URL. The knowledge methods (`listKnowledgeCollections`, `getKnowledgeCollection`,
+`listKnowledgeDocuments`, `getKnowledgeDocument`, `searchKnowledge`, `answerFromKnowledge`,
+`answerFromKnowledgeStream`) sit on `DcdrClient` next to the workflow ones and use the same
+`controlUrl`; their token needs the `knowledge:*` scopes described in [KNOWLEDGE.md](KNOWLEDGE.md). Method names are identical to the underlying clients with no aliases, so moving a call between
 the wrapper and a bare client is a rename of the receiver and nothing else.
 
-Per-half overrides when the two need different settings:
+Per-client overrides when they need different settings:
 
 ```ts
 const dcdr = new DcdrClient({
@@ -477,5 +483,6 @@ Full command list: [CLI.md](CLI.md).
 
 - [WORKFLOWS.md](WORKFLOWS.md) — the definition format, the value DSL and the validator.
 - [CLIENT.md](CLIENT.md) — `DcdrRuntimeClient`, for executing intents directly.
+- [KNOWLEDGE.md](KNOWLEDGE.md) — `DcdrKnowledgeClient`: search and answer from your knowledge collections, and the `knowledge.search` capability.
 - [`examples/workflow-client/`](../examples/workflow-client/README.md) — runnable scripts.
 - [TIERS_FEATURE_MATRIX.md](TIERS_FEATURE_MATRIX.md) — which tier has workflows.

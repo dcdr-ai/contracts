@@ -57,6 +57,8 @@ export interface WorkflowCapability {
    * endpoint at all. The descriptor is still required for both - that is how the control plane
    * grants the capability to a run - but only a capability that declares this needs a `baseUrl`
    * inside it, and a runner that demanded one anyway would refuse a perfectly valid grant.
+   * `knowledge.search` is a platform service that still declares `false`: the runner calls its own
+   * control plane for it, so the descriptor carries only the run's credential.
    */
   requiresEndpoint?: boolean;
   /** Arguments the tenant form (or the planner) must produce. */
@@ -275,6 +277,41 @@ export const WORKFLOW_CAPABILITIES: readonly WorkflowCapability[] = [
       dimensions: new PromptVariable(PromptVariableType.INTEGER, true, "Length of every vector."),
     },
   },
+  {
+    // 3.20.0. The same route a client app calls (`POST /api/dcdr/knowledge/search`), so scopes, usage
+    // and limits are one thing. Output is passages only: a following `INTENT` state answers with the
+    // tenant's own prompt and schema. The control plane grants it per run with a short-lived session
+    // carrying `knowledge:run` and the collections the definition names.
+    // No endpoint, like `web.fetch`: the runner always calls its own control plane (the backend it
+    // polls for runs), so the descriptor carries the grant and the session only and a `baseUrl` in it
+    // is ignored. That keeps the session inside the deployment whatever the descriptor says.
+    id: "knowledge.search",
+    version: "1.0.0",
+    description: "Searches the tenant's knowledge collections and returns the best-matching passages, each with its document, position, score and locator, ready to ground an answer.",
+    broker: WorkflowCapabilityBroker.PLATFORM,
+    requiresEndpoint: false,
+    inputSchema: {
+      collections: new PromptVariable(PromptVariableType.ARRAY, true, "Keys of the knowledge collections to search (1-10).", PromptVariableType.STRING),
+      query: new PromptVariable(PromptVariableType.STRING, true, "What to look for, as a person would ask it."),
+      topK: new PromptVariable(PromptVariableType.INTEGER, false, "How many passages to return; the search mode's default when absent.", undefined, undefined, undefined, undefined, 1),
+      modeKey: new PromptVariable(PromptVariableType.STRING, false, "Search mode of the collection; its default mode when absent."),
+    },
+    outputSchema: {
+      passages: new PromptVariable(PromptVariableType.ARRAY, true, "Matching passages, best first; empty when nothing matched.", PromptVariableType.OBJECT, {
+        chunkId: new PromptVariable(PromptVariableType.STRING, true, "Id of the passage; what an answer cites."),
+        documentId: new PromptVariable(PromptVariableType.STRING, true, "Document the passage belongs to."),
+        documentTitle: new PromptVariable(PromptVariableType.STRING, true, "Title of that document."),
+        collectionId: new PromptVariable(PromptVariableType.STRING, true, "Collection the document belongs to."),
+        ordinal: new PromptVariable(PromptVariableType.INTEGER, true, "Position of the passage inside its document."),
+        text: new PromptVariable(PromptVariableType.STRING, true, "The passage as it matched."),
+        locator: new PromptVariable(PromptVariableType.OBJECT, false, "Where the passage sits: `page`, `section` (heading trail) and character offsets, when known."),
+        score: new PromptVariable(PromptVariableType.FLOAT, true, "Fused relevance score; comparable within one result only."),
+        lexicalRank: new PromptVariable(PromptVariableType.INTEGER, false, "Rank in the keyword arm, when that arm returned it."),
+        semanticRank: new PromptVariable(PromptVariableType.INTEGER, false, "Rank in the semantic arm, when that arm returned it."),
+        context: new PromptVariable(PromptVariableType.OBJECT, false, "The passage with its neighbours (`text`, `fromOrdinal`, `toOrdinal`), when context was added."),
+      }),
+    },
+  },
 ];
 
 /**
@@ -296,6 +333,7 @@ export const WORKFLOW_IMPLEMENTED_CAPABILITIES: readonly string[] = [
   "file.get",
   "file.list",
   "ssh.exec",
+  "knowledge.search",
 ];
 
 /**

@@ -27,6 +27,26 @@ import {
   DcdrRuntimeHealthcheckResponse,
   DcdrRuntimeVersionResponse,
 } from "./runtime.client";
+import {
+  DcdrKnowledgeAnswerStreamFinalEvent,
+  DcdrKnowledgeClient,
+  DcdrKnowledgeClientConfig,
+  DcdrKnowledgeError,
+  DcdrKnowledgeRequestOptions,
+} from "./knowledge.client";
+import {
+  DcdrKnowledgeAnswerRequest,
+  DcdrKnowledgeAnswerResponse,
+  DcdrKnowledgeCollectionDetail,
+  DcdrKnowledgeCollectionSummary,
+  DcdrKnowledgeDocumentDetail,
+  DcdrKnowledgeDocumentSummary,
+  DcdrKnowledgeErrorCode,
+  DcdrKnowledgeSearchRequest,
+  DcdrKnowledgeSearchResponse,
+  ListKnowledgeCollectionsQuery,
+  ListKnowledgeDocumentsQuery,
+} from "./knowledge.contract";
 import { WorkflowDefinition } from "./workflow.contract";
 import {
   DcdrWorkflowClient,
@@ -52,13 +72,14 @@ import {
 } from "./workflow.client";
 
 /**
- * One client over both DCDR surfaces: intent execution on the runtime, workflows on the control
- * plane.
+ * One client over the three DCDR clients: intent execution on the runtime ({@link DcdrRuntimeClient}),
+ * workflows ({@link DcdrWorkflowClient}) and knowledge ({@link DcdrKnowledgeClient}, since 3.20.0) on
+ * the control plane.
  *
- * The two are genuinely different services - different origins, different credentials - which is why
- * {@link DcdrRuntimeClient} and {@link DcdrWorkflowClient} exist and stay usable on their own. What
- * this adds is the common case: a single bearer token that reaches both, and one object whose
- * methods read the way the platform reads.
+ * The runtime and the control plane are genuinely different services - different origins, different
+ * credentials - which is why each client exists and stays usable on its own. What this adds is the
+ * common case: a single bearer token that reaches all of them, and one object whose methods read the
+ * way the platform reads.
  *
  * ```ts
  * const dcdr = new DcdrClient({ bearerToken: process.env.DCDR_TOKEN });
@@ -66,14 +87,18 @@ import {
  * await dcdr.executeIntent("CLASSIFY", { vars: { text } });        // runtime
  * await dcdr.runWorkflowAndWait("SUPPORT_TRIAGE", { input });      // control plane
  *
+ * await dcdr.answerFromKnowledge({ collections: ["product-sheets"], question }); // control plane
+ *
  * dcdr.runtime;    // the DcdrRuntimeClient, if you want it raw
  * dcdr.workflows;  // the DcdrWorkflowClient
+ * dcdr.knowledge;  // the DcdrKnowledgeClient (3.20.0)
  * ```
  *
  * ## Construction is lazy, on purpose
- * Each half is built on first use. An integration that only runs workflows never needs a runtime URL,
- * and one that only executes intents never needs a workflow scope; building both eagerly would make
- * a missing credential fail at construction for a surface the caller was never going to touch.
+ * Each client is built on first use. An integration that only runs workflows never needs a runtime
+ * URL, and one that only executes intents never needs a workflow or knowledge scope; building all of
+ * them eagerly would make a missing credential fail at construction for a surface the caller was
+ * never going to touch.
  *
  * ## Method names
  * Identical to the underlying clients, with no aliases: `executeIntent` here is `executeIntent`
@@ -123,6 +148,9 @@ export interface DcdrClientConfig {
 
   /** Overrides for the workflow half, merged over the shared fields. */
   workflows?: Partial<DcdrWorkflowClientConfig>;
+
+  /** Overrides for the knowledge half, merged over the shared fields. Since 3.20.0. */
+  knowledge?: Partial<DcdrKnowledgeClientConfig>;
 }
 
 /**
@@ -134,6 +162,7 @@ export class DcdrClient {
   private readonly config: DcdrClientConfig;
   private runtimeClient?: DcdrRuntimeClient;
   private workflowClient?: DcdrWorkflowClient;
+  private knowledgeClient?: DcdrKnowledgeClient;
 
   /**
    * Creates a composite client. Neither half is built until it is used.
@@ -196,6 +225,37 @@ export class DcdrClient {
       });
     }
     return this.workflowClient;
+  }
+
+  /**
+   * The knowledge half, built on first access. It talks to the control plane, like the workflow half.
+   *
+   * @returns The knowledge client.
+   * @throws {@link DcdrKnowledgeError} `CONFIGURATION` when no bearer token was configured.
+   * @since 3.20.0
+   */
+  get knowledge(): DcdrKnowledgeClient {
+    if (!this.knowledgeClient) {
+      const overrides = this.config.knowledge ?? {};
+      const bearerToken = overrides.bearerToken ?? this.config.bearerToken ?? "";
+      if (!String(bearerToken).trim()) {
+        throw new DcdrKnowledgeError({
+          code: DcdrKnowledgeErrorCode.CONFIGURATION,
+          message: "DcdrClient needs a bearerToken (shared, or under `knowledge`) before the knowledge API can be used.",
+          method: "-",
+          path: "-",
+        });
+      }
+      this.knowledgeClient = new DcdrKnowledgeClient({
+        baseUrl: overrides.baseUrl ?? this.config.controlUrl ?? DCDR_DEFAULT_CONTROL_URL,
+        bearerToken,
+        timeoutMs: overrides.timeoutMs ?? this.config.timeoutMs,
+        answerTimeoutMs: overrides.answerTimeoutMs,
+        extraHeaders: overrides.extraHeaders ?? this.config.extraHeaders,
+        fetchFn: overrides.fetchFn ?? this.config.fetchFn,
+      });
+    }
+    return this.knowledgeClient;
   }
 
   // ------------------------------------------------------------------ runtime
@@ -360,5 +420,52 @@ export class DcdrClient {
   /** @see DcdrWorkflowClient.listWorkflowTasks */
   async listWorkflowTasks(query?: ListWorkflowTasksQuery): Promise<WorkflowPage<WorkflowTask>> {
     return this.workflows.listWorkflowTasks(query);
+  }
+
+  // ------------------------------------------------------------------ knowledge
+
+  /** @see DcdrKnowledgeClient.listKnowledgeCollections */
+  async listKnowledgeCollections(query?: ListKnowledgeCollectionsQuery): Promise<WorkflowPage<DcdrKnowledgeCollectionSummary>> {
+    return this.knowledge.listKnowledgeCollections(query);
+  }
+
+  /** @see DcdrKnowledgeClient.getKnowledgeCollection */
+  async getKnowledgeCollection(idOrKey: string): Promise<DcdrKnowledgeCollectionDetail> {
+    return this.knowledge.getKnowledgeCollection(idOrKey);
+  }
+
+  /** @see DcdrKnowledgeClient.listKnowledgeDocuments */
+  async listKnowledgeDocuments(idOrKey: string, query?: ListKnowledgeDocumentsQuery): Promise<WorkflowPage<DcdrKnowledgeDocumentSummary>> {
+    return this.knowledge.listKnowledgeDocuments(idOrKey, query);
+  }
+
+  /** @see DcdrKnowledgeClient.getKnowledgeDocument */
+  async getKnowledgeDocument(idOrKey: string, documentId: string): Promise<DcdrKnowledgeDocumentDetail> {
+    return this.knowledge.getKnowledgeDocument(idOrKey, documentId);
+  }
+
+  /** @see DcdrKnowledgeClient.searchKnowledge */
+  async searchKnowledge(request: DcdrKnowledgeSearchRequest, options?: DcdrKnowledgeRequestOptions): Promise<DcdrKnowledgeSearchResponse> {
+    return this.knowledge.searchKnowledge(request, options);
+  }
+
+  /** @see DcdrKnowledgeClient.answerFromKnowledge */
+  async answerFromKnowledge(request: DcdrKnowledgeAnswerRequest, options?: DcdrKnowledgeRequestOptions): Promise<DcdrKnowledgeAnswerResponse> {
+    return this.knowledge.answerFromKnowledge(request, options);
+  }
+
+  /**
+   * Streams a grounded answer over SSE: `meta`, zero or more `delta`, then `final` (or `error`).
+   *
+   * `final` is authoritative: a refusal may arrive after deltas have streamed, and then the painted
+   * text must be discarded (`final.data.response.refusal !== null`, `text === ""`).
+   *
+   * @see DcdrKnowledgeClient.answerFromKnowledgeStream
+   */
+  answerFromKnowledgeStream(
+    request: DcdrKnowledgeAnswerRequest,
+    options?: DcdrKnowledgeRequestOptions,
+  ): AsyncGenerator<ExecutionStreamMetaEvent | ExecutionStreamDeltaEvent | DcdrKnowledgeAnswerStreamFinalEvent | ExecutionStreamErrorEvent, void, void> {
+    return this.knowledge.answerFromKnowledgeStream(request, options);
   }
 }

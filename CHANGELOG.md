@@ -4,6 +4,30 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261022.2] — 00:48UTC
+
+<!--
+sourceCommit: bd8b3ffe11a42cdea98b96e3140e5aaf86419234
+queuedAtUtc: 
+previousMirroredBuild: 20260927.1 (2026-09-27)
+contractsSubmodule: 8f5cd3c89289..fe88d77665b8
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.20.0 - knowledge for client apps.** `DcdrClient` can now list and read your knowledge collections and documents, search them and ask for an answer grounded in them, streamed or not, with the new `knowledge:read` / `knowledge:run` scopes plus a per-collection grant (`knowledge:collection:<key>` or `knowledge:collections:*`); a helper states the access rule. A refusal ("this is not in your documents") is a normal answer, not an error; in a streamed answer the final event decides, even after text has streamed. The `knowledge.search` workflow capability joins the catalog. Additive; see `docs/KNOWLEDGE.md`. The client, CLI, workflow, contracts, platform, tiers and examples guides now cover it too, and the workflow guide gains a table of every capability in the catalog. Knowledge calls are bounded by the workspace's weekly assistant quota (a refusal for lack of passages does not use it), not by service-token limit rules, and failures come back as typed errors with the control plane's own codes. The package README is rewritten around `DcdrClient`: intents, streaming, workflows, knowledge, assets, the AI Gateway, scopes and errors.
+- <kbd>RUNTIME</kbd> **Knowledge from the CLI: `kn-*` commands.** `kn-collections`, `kn-collection <idOrKey>`, `kn-documents <idOrKey>`, `kn-document <idOrKey> <documentId>`, `kn-search` and `kn-answer` reach the knowledge API with the same `--control-url` / `--service-token` as the workflow commands. `kn-answer --stream` prints the answer as it is written and lets the final event decide: when the answer is refused after text has streamed, the CLI says the text is discarded and prints the refusal. `kn-answer` exits with code 1 on a refusal, and malformed `--top-k`, `--context-window`, `--status` or more than 10 `--collections` are refused before anything is sent.
+- <kbd>RUNTIME</kbd> **The workflow runner executes `knowledge.search`.** A `TOOL` state can search the tenant's knowledge collections and hand the passages to a following `INTENT` state. The runner calls the same control-plane search a client app calls, always on the backend it already polls for runs and never at an address taken from the run, so the short-lived session the control plane grants the run stays inside the deployment; arguments are checked before the call, a refused or failed search fails the state with the control plane's own error code in its message, and each call counts as a platform capability call.
+- <kbd>RUNTIME</kbd> **The runtime and the workflow runner are released together by default.** The runtime release pipeline now also builds, publishes and deploys the workflow runner image from the same commit (`DEPLOY_WORKFLOW_RUNNER`, on by default), with the runner deployed only after the runtime. The runner keeps its own pipeline for releasing it alone; both use the same job template.
+### Fixed
+- <kbd>RUNTIME</kbd> **The contracts mirror to GitHub authenticates reliably.** The mirror job now sends its token in a request header scoped to the step instead of inside the repository URL, and checks before pushing that the token can write to the mirror repository, failing with the reason when it cannot.
+- <kbd>RUNTIME</kbd> **The release pipelines push their images on the hardened build agents.** The runtime and workflow-runner pipelines pushed with the `Docker@2` push task, which after pushing runs a generic `docker inspect` to publish image metadata; on agents that reach Docker only through a socket proxy without container access that call is refused (`403 Forbidden`) and the step failed after the image was already pushed. Both now push the same two tags (dated and `latest`) with a plain `docker push`, using the existing `Docker@2` login. Images and tags are unchanged.
+- <kbd>RUNTIME</kbd> **Current OpenAI models stream.** Models served through OpenAI's Responses API - the `gpt-5` family and the `o` series - answered a streamed intent in one piece at the end, with or without structured output. They now stream like every other provider, structured answers included.
+### Changed
+- <kbd>RUNTIME</kbd> **Release pipelines run the test suite on four Jest workers.** Jest sized its pool from the build machine's cores rather than its memory, and on the shared build agent the workers were being stopped for lack of memory.
+- <kbd>RUNTIME</kbd> **The knowledge CLI tests run in seconds.** The `kn-*` commands moved out of the CLI entrypoint into their own module so their tests run in-process instead of starting the CLI once per case; the commands, their output and their exit codes are unchanged.
+- <kbd>RUNTIME</kbd> **Release pipelines allow 10 minutes for the build jobs.** The runtime and workflow runner "Build & Push Docker Image" jobs were capped at 7 minutes, which the typecheck, build and full test suite with coverage no longer fit in.
+- <kbd>CONTRACTS</kbd> **`src/contracts` points at the 3.20.0 merge commit of `dcdr-contracts` (PR 2624).** Same contents as the commit the knowledge PR referenced; no code, type or documentation change.
+
 ## [20260927.1] — 14:35UTC
 
 <!--

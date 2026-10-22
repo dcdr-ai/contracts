@@ -12,6 +12,8 @@ Quick map (method → HTTP surface):
 | ---------------------------------------------------- | ------------------------------------------- | --------------------------- | ---------------------------------------- |
 | `healthcheck()`                                      | `GET /api/system/healthcheck`               | none by default             | Load balancers / basic diagnostics       |
 | `metrics()`                                          | `GET /api/system/metrics`                   | none by default             | Prometheus scraping                      |
+| `version()`                                          | `GET /api/system/version`                   | none by default             | Build number, git sha, uptime            |
+| `authCheck()`                                        | `GET /api/auth/check`                       | required                    | Verify a token without executing         |
 | `executeIntent(intent, request)`                     | `POST /api/execution/run/:intent`           | required                    | Normal intent execution                  |
 | `executeIntentStream(intent, request)`               | `POST /api/execution/stream/:intent`        | required                    | Streaming execution (SSE)                |
 | `demo(intent, request)`                              | `POST /api/execution/demo/:intent`          | required (except demo mode) | Demo-specific intent execution           |
@@ -25,10 +27,49 @@ Quick map (method → HTTP surface):
 
 What “auth required” means:
 
-- **Customer mode (Cloud and Cloud Pro)**: set `bearerToken` (sends `Authorization: Bearer <DcdrSessionToken>`)
-  - You create/get the token in the DCDR Cloud UI.
+- **Customer mode (Cloud and Cloud Pro)**: set `bearerToken` (sends `Authorization: Bearer <token>`)
+  - The token is a `DcdrSessionToken` or a managed **service token**, both created in the DCDR Cloud UI.
+  - A service token is limited by its scopes: `execute:*` (or individual intents) to execute, `assets:read` / `assets:write` / `assets:delete` for managed assets. The same token, with `workflows:*` or `knowledge:*` scopes, also reaches the control plane: `DcdrClient` uses one token for both (see [Workflows and knowledge](#workflows-and-knowledge-control-plane)).
 - **Internal/dev mode (Runtime (self-hosted))**: set `apiToken` (sends `token: <token>`)
   - Note: `/api/execution/*` endpoints require a session. For dev/testing you can set `sessionBypassToken` (sends `x-session-bypass`) when the runtime is configured with `SESSION_BYPASS_TOKEN`.
+
+## Workflows and knowledge (control plane)
+
+Workflows and knowledge are not served by the runtime but by the **control plane** (`https://dcdr.ai`),
+with a managed **service token**. `DcdrClient` composes all three clients, so one object covers
+intents, workflows and knowledge; each client is built on first use.
+
+```ts
+import { DcdrClient } from "@dcdr/contracts";
+
+const dcdr = new DcdrClient({ bearerToken: process.env.DCDR_SERVICE_TOKEN });
+
+await dcdr.executeIntent("CLASSIFY", { vars: { text } });                                // runtime
+await dcdr.runWorkflowAndWait("SUPPORT_TRIAGE", { input });                              // control plane
+const { passages } = await dcdr.searchKnowledge({ collections: ["product-sheets"], query }); // control plane
+```
+
+| Client | Methods | Scopes | Reference |
+| --- | --- | --- | --- |
+| `DcdrWorkflowClient` (`dcdr.workflows`) | `listWorkflows`, `getWorkflow`, `runWorkflow`, `runWorkflowAndWait`, `listWorkflowRuns`, `resumeWorkflowRun`, … | `workflows:read`, `workflows:run` | [WORKFLOW_CLIENT.md](WORKFLOW_CLIENT.md) |
+| `DcdrKnowledgeClient` (`dcdr.knowledge`, 3.20.0) | see below | `knowledge:read`, `knowledge:run`, **plus** a collection grant | [KNOWLEDGE.md](KNOWLEDGE.md) |
+
+Knowledge methods (read-only; collections and documents are managed in the DCDR web UI):
+
+| Method | HTTP | Scope | When to use |
+| --- | --- | --- | --- |
+| `listKnowledgeCollections({ limit?, cursor? })` | `GET /api/dcdr/knowledge/collections` | `knowledge:read` | Collections this token is granted |
+| `getKnowledgeCollection(idOrKey)` | `GET /api/dcdr/knowledge/collections/:idOrKey` | `knowledge:read` | Index status, document counts, search modes |
+| `listKnowledgeDocuments(idOrKey, { status?, limit?, cursor? })` | `GET …/collections/:idOrKey/documents` | `knowledge:read` | Document metadata (never content) |
+| `getKnowledgeDocument(idOrKey, documentId)` | `GET …/collections/:idOrKey/documents/:documentId` | `knowledge:read` | One document's metadata |
+| `searchKnowledge(request, options?)` | `POST /api/dcdr/knowledge/search` | `knowledge:run` | Passages that match, nothing generated |
+| `answerFromKnowledge(request, options?)` | `POST /api/dcdr/knowledge/answer` | `knowledge:run` | A grounded answer with citations, or a refusal |
+| `answerFromKnowledgeStream(request, options?)` | `POST /api/dcdr/knowledge/answer/stream` (SSE) | `knowledge:run` | The same, streamed; `final` is authoritative |
+
+Every knowledge scope needs a collection grant as well: `knowledge:collections:*` or
+`knowledge:collection:<key>`. A refusal (`NO_PASSAGES`, `NOT_IN_CORPUS`, …) is a normal response, not
+an error; failures throw `DcdrKnowledgeError`. The CLI equivalents are the `kn-*` commands
+([CLI.md](CLI.md)).
 
 ## Errors
 
@@ -100,6 +141,16 @@ See: [EXECUTION_ERROR_CODES.md](EXECUTION_ERROR_CODES.md)
 
 - Returns raw Prometheus text (same output as `curl /api/system/metrics`).
 - See: [PROMETHEUS_METRICS.md](PROMETHEUS_METRICS.md)
+
+### `version()`
+
+- Endpoint: `GET /api/system/version`
+- Returns `DcdrRuntimeVersionResponse`: build number and date and git sha; Node version and uptime only in Runtime (self-hosted). The runtime may add fields; ignore the ones you do not know.
+
+### `authCheck()`
+
+- Endpoint: `GET /api/auth/check`
+- Runs the same authentication as an execution call without executing an intent: the cheapest way to tell whether a token is accepted. Returns `DcdrRuntimeAuthCheckResponse` (`valid`, `authMode`, and the session for customer tokens).
 
 ### `executeIntent(intent, request)`
 
@@ -201,8 +252,9 @@ const request = {
   inputParts: [inputPart],
 };
 
-// Note: runtime contracts already model this shape, but the current execution path
-// still gates multimodal inputParts until adapter support is enabled end-to-end.
+// Multimodal inputParts run in Cloud and Cloud Pro; Runtime (self-hosted, --registry) refuses
+// them with UNSUPPORTED_OPERATION. Which models accept which inputs (image, document) over
+// INLINE / URL / ASSET is listed in SUPPORTED_MODELS.md.
 // When the intent declares PromptVariableType.ASSET slots, bind each inputPart through
 // inputParts[].variableName and keep the actual asset out of vars.
 ```

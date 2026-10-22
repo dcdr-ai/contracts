@@ -170,6 +170,9 @@ export const DEFAULT_WORKFLOW_TOOL_RATING_MATRIX_V1: WorkflowToolRatingMatrix = 
     { capability: "web.fetch" },
     { capability: "chat.post" },
     { capability: "file.list" },
+    // Bounded by the control plane, which caps `topK` and meters the search against the tenant's own
+    // knowledge limits; a second ceiling here would be a second thing to keep in step.
+    { capability: "knowledge.search" },
   ],
 };
 

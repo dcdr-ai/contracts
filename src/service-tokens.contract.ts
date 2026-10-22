@@ -59,8 +59,59 @@ export enum DcdrServiceTokenScope {
    * running one is bounded by what a person published.
    */
   WORKFLOWS_WRITE = "workflows:write",
+  /**
+   * List and read knowledge collections and their documents (`GET /api/dcdr/knowledge/collections*`).
+   *
+   * Effective only together with a collection grant: see {@link hasDcdrKnowledgeAccess}. Since 3.20.0.
+   */
+  KNOWLEDGE_READ = "knowledge:read",
+  /**
+   * Search knowledge collections and answer from them (`POST /api/dcdr/knowledge/search`, `/answer`,
+   * `/answer/stream`).
+   *
+   * Separate from {@link KNOWLEDGE_READ} because it spends: every call embeds the query and an answer
+   * also runs a model, and both count against the tenant's knowledge limits. Effective only together
+   * with a collection grant. Since 3.20.0.
+   */
+  KNOWLEDGE_RUN = "knowledge:run",
+  /**
+   * Create collections and upload documents through the API.
+   *
+   * **Reserved: no endpoint serves it yet.** Collections are configured in the DCDR web UI. It is
+   * published now because a scope that appears later under a different name is a scope every stored
+   * token has to be re-issued for. Since 3.20.0.
+   */
+  KNOWLEDGE_WRITE = "knowledge:write",
+  /**
+   * Grants every knowledge collection of the tenant, present and future.
+   *
+   * A **target**, not an action: it grants nothing on its own and is combined with
+   * {@link KNOWLEDGE_READ} / {@link KNOWLEDGE_RUN}. A single collection is granted with
+   * {@link knowledgeCollectionScope} (`knowledge:collection:<key>`). Since 3.20.0.
+   */
+  KNOWLEDGE_COLLECTIONS_ALL = "knowledge:collections:*",
   /** Everything. */
   FULL_ACCESS = "*",
+}
+
+/** Prefix of a per-collection knowledge grant: `knowledge:collection:<key>`. Since 3.20.0. */
+export const DCDR_KNOWLEDGE_COLLECTION_SCOPE_PREFIX = "knowledge:collection:";
+
+/** What {@link grantedDcdrKnowledgeCollections} returns when every collection is granted. Since 3.20.0. */
+export const DCDR_KNOWLEDGE_ALL_COLLECTIONS = "ALL";
+
+/**
+ * The action half of a knowledge access check. Since 3.20.0.
+ *
+ * The values are the plain words so a caller may pass `"read"` / `"run"` / `"write"` directly.
+ */
+export enum DcdrKnowledgeAccessAction {
+  /** List and read collections and documents: needs {@link DcdrServiceTokenScope.KNOWLEDGE_READ}. */
+  READ = "read",
+  /** Search and answer: needs {@link DcdrServiceTokenScope.KNOWLEDGE_RUN}. */
+  RUN = "run",
+  /** Reserved: needs {@link DcdrServiceTokenScope.KNOWLEDGE_WRITE}; no endpoint serves it yet. */
+  WRITE = "write",
 }
 
 /**
@@ -76,6 +127,87 @@ export enum DcdrServiceTokenScope {
 export function hasDcdrServiceTokenScope(scopes: readonly string[] | undefined | null, required: DcdrServiceTokenScope | string): boolean {
   if (!Array.isArray(scopes) || !scopes.length) return false;
   return scopes.includes(DcdrServiceTokenScope.FULL_ACCESS) || scopes.includes(String(required));
+}
+
+/** Action scope each knowledge action needs. */
+const KNOWLEDGE_ACTION_SCOPES: Record<DcdrKnowledgeAccessAction, DcdrServiceTokenScope> = {
+  [DcdrKnowledgeAccessAction.READ]: DcdrServiceTokenScope.KNOWLEDGE_READ,
+  [DcdrKnowledgeAccessAction.RUN]: DcdrServiceTokenScope.KNOWLEDGE_RUN,
+  [DcdrKnowledgeAccessAction.WRITE]: DcdrServiceTokenScope.KNOWLEDGE_WRITE,
+};
+
+/**
+ * The scope that grants one knowledge collection: `knowledge:collection:<key>`.
+ *
+ * Built from the collection **key**, never its id: the key is write-once and tenant-unique, so a grant
+ * written today still names the same collection tomorrow, in every environment the key exists in. The
+ * key is used as it is (trimmed, case and hyphens kept) because scopes compare exactly.
+ *
+ * @param collectionKey Collection key, e.g. `product-sheets`.
+ * @returns The scope string.
+ * @throws Error When the key is blank: `knowledge:collection:` would be a grant that names nothing.
+ * @since 3.20.0
+ */
+export function knowledgeCollectionScope(collectionKey: string): string {
+  const key = String(collectionKey ?? "").trim();
+  if (!key) throw new Error("knowledgeCollectionScope requires a non-empty collection key");
+  return `${DCDR_KNOWLEDGE_COLLECTION_SCOPE_PREFIX}${key}`;
+}
+
+/**
+ * Whether a token may perform a knowledge action on one collection.
+ *
+ * The rule, in one place so the control plane, the runner and any client apply it identically:
+ * **action scope AND collection grant**. The action scope is `knowledge:read`, `knowledge:run` or
+ * `knowledge:write`; the grant is `knowledge:collections:*` or `knowledge:collection:<key>`. Either one
+ * alone grants nothing - a token with `knowledge:run` and no grant sees no collection at all. `*`
+ * satisfies both halves. Scopes are compared exactly, never by prefix.
+ *
+ * @param scopes Scopes carried by the token.
+ * @param action `"read"`, `"run"` or `"write"`.
+ * @param collectionKey Key of the collection being reached. A blank key is never granted.
+ * @returns `true` when the token may perform the action on that collection.
+ * @since 3.20.0
+ */
+export function hasDcdrKnowledgeAccess(
+  scopes: readonly string[] | undefined | null,
+  action: DcdrKnowledgeAccessAction | "read" | "run" | "write",
+  collectionKey: string,
+): boolean {
+  if (!Array.isArray(scopes) || !scopes.length) return false;
+  const key = String(collectionKey ?? "").trim();
+  if (!key) return false;
+  if (scopes.includes(DcdrServiceTokenScope.FULL_ACCESS)) return true;
+
+  const actionScope = KNOWLEDGE_ACTION_SCOPES[String(action) as DcdrKnowledgeAccessAction];
+  if (!actionScope || !scopes.includes(actionScope)) return false;
+  return scopes.includes(DcdrServiceTokenScope.KNOWLEDGE_COLLECTIONS_ALL) || scopes.includes(knowledgeCollectionScope(key));
+}
+
+/**
+ * Which knowledge collections a token's grants name, for filtering a listing.
+ *
+ * Answers the **target** half only; whether the token may read or run is
+ * {@link hasDcdrKnowledgeAccess}'s question. `*` and `knowledge:collections:*` both mean every
+ * collection; `knowledge:collection:*` is not a wildcard (it would be a collection whose key is `*`).
+ *
+ * @param scopes Scopes carried by the token.
+ * @returns {@link DCDR_KNOWLEDGE_ALL_COLLECTIONS} (`"ALL"`), or the granted keys in the order they
+ * appear, without duplicates - empty when nothing is granted.
+ * @since 3.20.0
+ */
+export function grantedDcdrKnowledgeCollections(scopes: readonly string[] | undefined | null): "ALL" | string[] {
+  if (!Array.isArray(scopes) || !scopes.length) return [];
+  if (scopes.includes(DcdrServiceTokenScope.FULL_ACCESS) || scopes.includes(DcdrServiceTokenScope.KNOWLEDGE_COLLECTIONS_ALL)) {
+    return DCDR_KNOWLEDGE_ALL_COLLECTIONS;
+  }
+  const keys: string[] = [];
+  for (const scope of scopes) {
+    if (typeof scope !== "string" || !scope.startsWith(DCDR_KNOWLEDGE_COLLECTION_SCOPE_PREFIX)) continue;
+    const key = scope.slice(DCDR_KNOWLEDGE_COLLECTION_SCOPE_PREFIX.length).trim();
+    if (key && !keys.includes(key)) keys.push(key);
+  }
+  return keys;
 }
 
 export enum DcdrServiceTokenLimitType {

@@ -28,5 +28,7 @@ export * from "./src/workflow.capabilities.contract";
 export * from "./src/workflow.contract";
 export * from "./src/workflow.runner.contract";
 export * from "./src/workflow.client";
+export * from "./src/knowledge.contract";
+export * from "./src/knowledge.client";
 export * from "./src/dcdr.client";
 export * from "./src/prompt-variable-schema.contract";

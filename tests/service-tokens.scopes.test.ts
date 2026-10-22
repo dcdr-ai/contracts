@@ -25,6 +25,10 @@ describe("DcdrServiceTokenScope", () => {
     expect(DcdrServiceTokenScope.WORKFLOWS_READ).toBe("workflows:read");
     expect(DcdrServiceTokenScope.WORKFLOWS_RUN).toBe("workflows:run");
     expect(DcdrServiceTokenScope.WORKFLOWS_WRITE).toBe("workflows:write");
+    expect(DcdrServiceTokenScope.KNOWLEDGE_READ).toBe("knowledge:read");
+    expect(DcdrServiceTokenScope.KNOWLEDGE_RUN).toBe("knowledge:run");
+    expect(DcdrServiceTokenScope.KNOWLEDGE_WRITE).toBe("knowledge:write");
+    expect(DcdrServiceTokenScope.KNOWLEDGE_COLLECTIONS_ALL).toBe("knowledge:collections:*");
     expect(DcdrServiceTokenScope.FULL_ACCESS).toBe("*");
   });
 

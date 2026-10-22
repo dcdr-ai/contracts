@@ -5,7 +5,7 @@ This document summarizes what you get with DCDR depending on how you operate it.
 DCDR has two parts:
 
 - ⚙️ **DCDR Runtime** (Docker): the execution engine that runs intents
-- 🧠 **DCDR Cloud (dcdr.ai)**: managed configuration (versioning, rollouts, credentials, logs, quality workflows)
+- 🧠 **DCDR Cloud (dcdr.ai)**: managed configuration (versioning, rollouts, credentials, logs, quality workflows), plus workflows & agents, knowledge collections and the AI Gateway
 
 ---
 
@@ -102,8 +102,11 @@ Roadmap notes:
 | OpenAI-compatible chat providers |                    ✅ |    ✅ |        ✅ |
 | Anthropic (chat)                 |                    ✅ |    ✅ |        ✅ |
 | Gemini (chat)                    |                    ✅ |    ✅ |        ✅ |
-| Vision models                    |                    🚧 |    🚧 |        🚧 |
-| Embedding models                 |                    🚧 |    🚧 |        🚧 |
+| Image and document input (`inputParts`, validated models, see [SUPPORTED_MODELS.md](SUPPORTED_MODELS.md)) | ❌ | ✅ | ✅ |
+| Embedding models (AI Gateway `/v1/embeddings`) |                    ❌ |    ✅ |        ✅ |
+| AI Gateway (OpenAI- and Anthropic-compatible `/v1`, service token, see [GATEWAY.md](GATEWAY.md)) | ❌ | ✅ | ✅ |
+
+Runtime (self-hosted) refuses `inputParts` in `--registry` mode, and the gateway needs the DCDR control plane to issue and check its tokens.
 
 ---
 
@@ -161,7 +164,8 @@ Workflows compose published intents, HTTP calls, choices and transforms into a t
 | Feature                                                      | Runtime (self-hosted) | Cloud | Cloud Pro |
 | ------------------------------------------------------------ | --------------------: | ----: | --------: |
 | Workflow definitions (typed input/output, versions)          |                    ❌ |    ✅ |        ✅ |
-| Fixed-graph states (`INTENT`, `HTTP`, `CHOICE`, `TRANSFORM`) |                    ❌ |    ✅ |        ✅ |
+| Fixed-graph states (`INTENT`, `HTTP`, `TOOL`, `CHOICE`, `TRANSFORM`) |                    ❌ |    ✅ |        ✅ |
+| Tool capabilities in `TOOL` states (web, knowledge search, chat, database, mail, files, SSH; see [WORKFLOWS.md](WORKFLOWS.md#capability-catalogue-tool-states)) | ❌ | ✅ | ✅ |
 | Manual & HTTP triggers (service token)                       |                    ❌ |    ✅ |        ✅ |
 | Runs timeline, per-step cost, call logs by run               |                    ❌ |    ✅ |        ✅ |
 | `AGENT` state (bounded plan-act loop, small bounds)          |                    ❌ |    ✅ |        ✅ |
@@ -173,6 +177,21 @@ Workflows compose published intents, HTTP calls, choices and transforms into a t
 | CRON & event triggers                                        |                    ❌ |    ❌ |        ✅ |
 | MCP tools inside agents                                      |                    ❌ |    ❌ |        ✅ |
 | MCP exposure (intents and workflows served as MCP tools)     |                    ❌ |    ❌ |        🚧 |
+
+---
+
+## 📚 Knowledge
+
+Knowledge collections hold your documents, indexed for search, and answer questions grounded in them with citations. Collections are created and documents uploaded in the DCDR web UI; your application reads, searches and asks through the control plane with a service token ([KNOWLEDGE.md](KNOWLEDGE.md)). Never served by the self-hosted runtime.
+
+| Feature                                                              | Runtime (self-hosted) | Cloud | Cloud Pro |
+| -------------------------------------------------------------------- | --------------------: | ----: | --------: |
+| Collections, document ingestion and indexing (UI)                    |                    ❌ |    ✅ |        ✅ |
+| Knowledge API for client apps (list, read, search, answer)           |                    ❌ |    ✅ |        ✅ |
+| Streamed grounded answers (refusals as results)                      |                    ❌ |    ✅ |        ✅ |
+| Per-collection token grants (`knowledge:collection:<key>`)           |                    ❌ |    ✅ |        ✅ |
+
+Searches and answers count against your plan's knowledge limits. The `knowledge.search` workflow capability follows the workflow tiers above.
 
 ---
 

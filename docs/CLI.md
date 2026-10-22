@@ -1,12 +1,15 @@
 # CLI (`dcdr`)
 
-The runtime repository includes a small CLI called `dcdr`.
+`dcdr` is a small command-line client maintained alongside the DCDR runtime. It is **not yet published**
+as a package or a standalone binary, so it is available only to those with access to the runtime
+repository.
 
-Where it lives:
+Every command is a thin wrapper over a method of the `@dcdr/contracts` clients, so anything on this
+page can be done from your own code: intents with `DcdrRuntimeClient` ([CLIENT.md](CLIENT.md)),
+workflows with `DcdrWorkflowClient` ([WORKFLOW_CLIENT.md](WORKFLOW_CLIENT.md)) and knowledge with
+`DcdrKnowledgeClient` ([KNOWLEDGE.md](KNOWLEDGE.md)), or all three through `DcdrClient`.
 
-- It ships with the runtime repository source (it is not a standalone published binary yet).
-
-Run it from the `dcdr-runtime` repository root:
+With access to the runtime repository, run it from its root:
 
 ```bash
 npm ci
@@ -34,7 +37,7 @@ npm run dcdr -- dry-run HELLO_WORLD --base-url http://localhost:8000 --api-token
 
 # Eval (cloud-only): run an intent across implementations
 # Note: this endpoint is disabled in freeware runtime mode (--registry) and may return 403.
-npm run dcdr -- eval HELLO_WORLD --base-url https://runtime.dcdr.ai --bearer-token <TOKEN> --vars-json '{"name":"Ada"}'
+npm run dcdr -- eval HELLO_WORLD --base-url https://runtime.dcdr.ai --bearer <TOKEN> --vars-json '{"name":"Ada"}'
 
 # Circuit breaker status
 npm run dcdr -- circuit-breaker openai --base-url http://localhost:8000 --api-token dev-token
@@ -42,53 +45,6 @@ npm run dcdr -- circuit-breaker openai --base-url http://localhost:8000 --api-to
 # Circuit breaker reset (internal-only)
 npm run dcdr -- circuit-breaker-reset openai --base-url http://localhost:8000 --api-token dev-token
 ```
-
-## Workflow commands (`wf-*`)
-
-Workflow commands talk to the **control plane** (`https://dcdr.ai`), not to a runtime gateway, so
-they take `--control-url` and their own credentials. Everywhere a workflow is named you may pass its
-**id or its key**; a non-UUID is looked up by key.
-
-```bash
-# List workflows
-npm run dcdr -- wf-list --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN
-
-# Run one and wait for the result (exit code 1 when the run did not succeed)
-npm run dcdr -- wf-run SUPPORT_TRIAGE --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN   --input-json '{"ticketId":"T-4821"}' --wait
-
-# Start it and return immediately
-npm run dcdr -- wf-run SUPPORT_TRIAGE --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN   --input-file ./input.json
-
-# Follow a run that is already going
-npm run dcdr -- wf-run-get <runId> --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN --wait
-
-# Validate a definition file against the tenant (intents, connections, caps)
-npm run dcdr -- wf-validate SUPPORT_TRIAGE --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN   --definition-file ./workflow.json
-
-# Publish a draft version
-npm run dcdr -- wf-publish SUPPORT_TRIAGE --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN   --version-id <versionId> --notes "v1" --reason "Initial rollout"
-
-# Human work: inbox, then answer an approval gate
-npm run dcdr -- wf-inbox --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN --scope MINE
-npm run dcdr -- wf-resume <runId> --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN   --payload-json '{"approved":true,"comment":"ok"}' [--frame-id <frameId>]
-
-# What a run did
-npm run dcdr -- wf-report <runId> --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN --json
-npm run dcdr -- wf-evidence <runId> --control-url https://dcdr.ai --session-token $DCDR_SESSION_TOKEN --json
-
-# Machine caller: a service token with `workflows:run`, no user session
-npm run dcdr -- wf-trigger SUPPORT_TRIAGE --control-url https://dcdr.ai --service-token $DCDR_SERVICE_TOKEN   --input-json '{"ticketId":"T-4821"}' --idempotency-key T-4821 --wait-ms 30000
-```
-
-Full list: `wf-list`, `wf-get`, `wf-versions`, `wf-version`, `wf-validate`, `wf-publish`,
-`wf-rollback`, `wf-run`, `wf-runs`, `wf-run-get`, `wf-cancel`, `wf-resume`, `wf-steps`,
-`wf-evidence`, `wf-report`, `wf-inbox`, `wf-trigger`, `wf-connections`, `wf-connection-test`.
-
-Waiting options (`--wait`): `--poll-ms`, `--poll-max-ms`, `--wait-timeout-ms`, and
-`--wait-through-human-tasks` to keep polling a run that parked on a human decision instead of
-returning when it does.
-
-Client reference: [WORKFLOW_CLIENT.md](WORKFLOW_CLIENT.md).
 
 ## Workflow commands (`wf-*`)
 
@@ -136,6 +92,52 @@ returning when it does. `--wait-ms` is different: it asks the *server* to hold t
 at two minutes.
 
 Client reference: [WORKFLOW_CLIENT.md](WORKFLOW_CLIENT.md).
+
+## Knowledge commands (`kn-*`)
+
+Since contracts 3.20.0. Like the workflow commands, these talk to the **control plane**
+(`--control-url`) with a **service token** (`--service-token`). The API is read-only: collections and
+documents are managed in the DCDR web UI. The token needs an action scope **and** a collection grant:
+
+- `knowledge:read` to list and read, `knowledge:run` to search and answer;
+- `knowledge:collections:*` for every collection, or `knowledge:collection:<key>` for one.
+
+Collections are named by **key or id** (a UUID is read as an id).
+
+```bash
+# What may this token see?
+npm run dcdr -- kn-collections --control-url https://dcdr.ai --service-token $SVC
+
+# One collection (index status, search modes), then its documents (metadata only)
+npm run dcdr -- kn-collection product-sheets --control-url https://dcdr.ai --service-token $SVC
+npm run dcdr -- kn-documents product-sheets --control-url https://dcdr.ai --service-token $SVC --status READY --limit 20
+npm run dcdr -- kn-document product-sheets <documentId> --control-url https://dcdr.ai --service-token $SVC
+
+# Passages that match, nothing generated
+npm run dcdr -- kn-search --control-url https://dcdr.ai --service-token $SVC   --collections product-sheets,safety-sheets --query "shelf life of T-55" --top-k 8 --mode EXACT_LOOKUP
+
+# A grounded answer, or a refusal (exit code 1 when refused; the response is still printed)
+npm run dcdr -- kn-answer --control-url https://dcdr.ai --service-token $SVC   --collections product-sheets --question "How long does T-55 keep once opened?" --locale en
+
+# Answer over exactly the passages a previous search returned (nothing is searched again)
+npm run dcdr -- kn-answer --control-url https://dcdr.ai --service-token $SVC   --collections product-sheets --question "How long does T-55 keep?" --chunk-ids <chunkId1>,<chunkId2>
+
+# Stream it: the text is printed as the model writes it
+npm run dcdr -- kn-answer --control-url https://dcdr.ai --service-token $SVC   --collections product-sheets --question "How long does T-55 keep?" --stream
+```
+
+Full list: `kn-collections`, `kn-collection`, `kn-documents`, `kn-document`, `kn-search`, `kn-answer`.
+
+Options: `--collections` (comma-separated, 1 to 10), `--query`, `--question`, `--top-k`,
+`--context-window` (0-3), `--mode`, `--locale`, `--chunk-ids`, `--status`, `--limit`, `--cursor`,
+`--stream`. A malformed `--top-k`, `--context-window` or `--status` is refused before anything is sent.
+
+**With `--stream`, the final event decides.** A refusal can arrive after text has already streamed:
+the CLI then prints `[refused: <REASON> - the text above is discarded]` and the refusal, and exits 1.
+With `--json` it prints `{ events, final, fatalError }`, where `final` is the authoritative answer.
+`--timeout-ms` bounds each call, including a whole answer stream (defaults: 15 s, 120 s for an answer).
+
+Client reference: [KNOWLEDGE.md](KNOWLEDGE.md).
 
 ## Output options
 

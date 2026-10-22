@@ -1538,6 +1538,46 @@ describe("workflow.contract capability catalog and the TOOL state", () => {
     expect(findWorkflowCapability("web.fetch")?.requiresEndpoint).toBeUndefined();
   });
 
+  it("publishes knowledge.search 1.0.0 as an implemented platform service (3.20.0)", () => {
+    // Frozen by publication, like every catalogue entry: a change is a new `version`, not an edit.
+    const search = findWorkflowCapability("knowledge.search");
+    expect(search?.version).toBe("1.0.0");
+    expect(search?.broker).toBe(WorkflowCapabilityBroker.PLATFORM);
+    // No endpoint (KN-10): the runner always calls its own control plane; the descriptor carries the
+    // grant and the run's session only, like `web.fetch`.
+    expect(search?.requiresEndpoint).toBe(false);
+    expect(search?.protocol).toBeUndefined();
+    expect(WORKFLOW_IMPLEMENTED_CAPABILITIES).toContain("knowledge.search");
+
+    const input = search?.inputSchema ?? {};
+    expect(Object.keys(input)).toEqual(["collections", "query", "topK", "modeKey"]);
+    expect({ type: input.collections.type, items: input.collections.itemsType, required: input.collections.required }).toEqual({
+      type: PromptVariableType.ARRAY,
+      items: PromptVariableType.STRING,
+      required: true,
+    });
+    expect(input.query.required).toBe(true);
+    expect(input.topK.required).toBe(false);
+    expect(input.topK.type).toBe(PromptVariableType.INTEGER);
+    expect(input.modeKey.required).toBe(false);
+
+    const output = search?.outputSchema ?? {};
+    expect(Object.keys(output)).toEqual(["passages"]);
+    expect(output.passages.type).toBe(PromptVariableType.ARRAY);
+    expect(output.passages.itemsType).toBe(PromptVariableType.OBJECT);
+    // The passage fields of `DcdrKnowledgePassage`, in its order; the three nullable ones are optional.
+    expect(Object.keys(output.passages.properties ?? {})).toEqual([
+      "chunkId", "documentId", "documentTitle", "collectionId", "ordinal", "text", "locator", "score", "lexicalRank", "semanticRank", "context",
+    ]);
+    const optional = Object.entries(output.passages.properties ?? {}).filter(([, variable]) => !variable.required).map(([name]) => name);
+    expect(optional).toEqual(["locator", "lexicalRank", "semanticRank", "context"]);
+  });
+
+  it("accepts a knowledge.search state with no connection", () => {
+    const definition = definitionWith({ capability: "knowledge.search", args: { collections: { kind: WorkflowValueKind.ARRAY, array: [literal("product-sheets")] }, query: literal("shelf life") } });
+    expect(codes(definition)).toEqual([]);
+  });
+
   it("declares nothing implemented that the catalog does not publish", () => {
     const orphans = WORKFLOW_IMPLEMENTED_CAPABILITIES.filter((id) => !WORKFLOW_CAPABILITIES.some((capability) => capability.id === id));
     expect(orphans).toEqual([]);

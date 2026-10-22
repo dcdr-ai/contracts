@@ -47,12 +47,15 @@ What you get in Cloud:
 	- `CHEAPEST_FIRST`, `FASTEST_FIRST`, `QUALITY_FIRST` (when metadata is present)
 	- safe fallback behavior via `fallbackMode` (e.g. fall back to `WEIGHTED` or declared order, or fail fast)
 	- plus per-request routing hints for debugging/ops (e.g. prefer/deny provider, force implementation)
-	- Source contract: [../src/policies.contract.ts](../src/policies.contract.ts#L183)
+	- Reference: [EXECUTION_POLICY.md](EXECUTION_POLICY.md) (`ExecutionPolicyType` in `@dcdr/contracts`)
 - Retries + fallback: policy-driven attempts, backoff/jitter, and repair flows for strict JSON intents
 - Execution tracing: understand which prompt + implementation actually ran, with attempt-by-attempt reports
 - Managed credentials: keep secrets out of JSON files; reuse encrypted credentials across implementations
 - Centralized logs + search: investigate failures, compare behavior across versions and implementations
 - Prompt versioning + canary (where available): roll out changes gradually and measure impact
+- Workflows: compose intents, HTTP calls and tool capabilities into typed, versioned, auditable runs, driven from your app with a service token ([WORKFLOW_CLIENT.md](WORKFLOW_CLIENT.md))
+- AI Gateway: point OpenAI- and Anthropic-compatible tools (Claude Code, Codex, SDKs) at DCDR with a service token instead of a provider key, with per-token model allowlists, limits and logs ([GATEWAY.md](GATEWAY.md))
+- Knowledge (3.20.0): upload documents into collections in the UI, then search them and get answers that cite their passages from your own app (`DcdrClient`, read-only, service token with `knowledge:*` scopes) or from a workflow (`knowledge.search`) ([KNOWLEDGE.md](KNOWLEDGE.md))
 
 Cloud Pro extends Cloud with:
 
@@ -70,13 +73,14 @@ In Cloud:
 
 - You don’t manage `registry.json` files.
 - You don’t run Docker.
-- You call a managed runtime endpoint using `Authorization: Bearer <DcdrSessionToken>`.
+- You call a managed runtime endpoint using `Authorization: Bearer <token>`: a `DcdrSessionToken`, or a managed service token whose scopes say what it may do (`execute:*`, `assets:*`, `workflows:*`, `knowledge:*`, `gateway`).
+- Workflows and knowledge are called on the control plane (`https://dcdr.ai`) with the same kind of service token; `DcdrClient` covers both origins.
 
 Typical flow:
 
 - 1) Go to the DCDR Cloud UI (https://dcdr.ai)
 - 2) Define intents, prompts, implementations, policies, and credentials via UI
-- 3) Create/get a customer token (`DcdrSessionToken`) for your app/user/workload
+- 3) Create/get a customer token (`DcdrSessionToken`) or a service token for your app/user/workload
 - 4) Call the runtime API using your preferred client (TypeScript client, OpenAPI-generated SDKs, etc.)
 
 Feature matrix: [TIERS_FEATURE_MATRIX.md](TIERS_FEATURE_MATRIX.md)
@@ -87,7 +91,7 @@ Before jumping into code, it helps to understand the three layers:
 
 - Cloud: authoring, versioning, rollouts, logs/QC
 - Runtime (self-hosted): executes intents and exposes HTTP API
-- Clients: your app calls the runtime via HTTP (SDK/CLI)
+- Clients: your app calls the runtime via HTTP (SDK/CLI); workflows and knowledge are called on the Cloud control plane (`https://dcdr.ai`) with a service token
 
 ### What is an intent?
 

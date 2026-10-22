@@ -204,11 +204,17 @@ Provider/model governance limits:
 - `DcdrProviderLimitsConfig` groups those entries by `IntentProvider`.
 - This contract is intentionally configuration-only: it does not prescribe where live counters are stored or decremented.
 
-## Workflow contract (3.0.0)
+## Workflow contract (since 3.0.0)
 
 `src/contracts/src/workflow.contract.ts` defines the declarative state machine that composes intents, HTTP calls, choices and transforms, its value-mapping DSL (`$ref` / `$fn` / `$template` shorthand parsed into `WorkflowValueNode` trees), a non-throwing validator (`validateWorkflowDefinition`) and the pure engine core shared by every host (`resolveWorkflowValue`, `evaluateLocalWorkflowState`, `resolveWorkflowTransition`, `computeWorkflowDefinitionSha256`). `CHOICE` cases reuse the shared condition tree. Full reference: [WORKFLOWS.md](WORKFLOWS.md). Workflows are not a registry section: the runtime executes intents only, and `WorkflowContract` is the published shape handed to the workflow runner and editors.
 
 `src/contracts/src/workflow.runner.contract.ts` (runner protocol shapes and `DcdrWorkflowRunnerClient`) is an **internal** surface shared by the DCDR control plane and its workflow runner workers; customers do not call it and it is not documented here.
+
+## Knowledge contract (3.20.0)
+
+`src/contracts/src/knowledge.contract.ts` defines the wire shapes of the read-only tenant knowledge API (`/api/dcdr/knowledge/*` on the control plane): collections and documents (`DcdrKnowledgeCollectionSummary` / `Detail`, `DcdrKnowledgeDocumentSummary` / `Detail`, metadata only), search (`DcdrKnowledgeSearchRequest` → `DcdrKnowledgeSearchResponse` with `DcdrKnowledgePassage[]` and a retrieval report) and grounded answers (`DcdrKnowledgeAnswerRequest` → `DcdrKnowledgeAnswerResponse`, with the five `DcdrKnowledgeAnswerRefusal` values as results rather than errors, and the model call's `ExecutionReport`). Passage `locator` and `context` are open to extra optional fields. Errors are `{ code, message, details }` with `DcdrKnowledgeErrorCode`. The client is `DcdrKnowledgeClient` (`knowledge.client.ts`), composed into `DcdrClient`.
+
+Access is two scopes together, published in `service-tokens.contract.ts`: an action (`knowledge:read`, `knowledge:run`; `knowledge:write` reserved) **and** a collection grant (`knowledge:collections:*`, or `knowledgeCollectionScope(key)` = `knowledge:collection:<key>`). `hasDcdrKnowledgeAccess(scopes, action, key)` and `grantedDcdrKnowledgeCollections(scopes)` implement the rule. The same search is the `knowledge.search` workflow capability (see [WORKFLOWS.md](WORKFLOWS.md#capability-catalogue-tool-states)). Full guide: [KNOWLEDGE.md](KNOWLEDGE.md).
 
 ## IntentContract (deep dive)
 

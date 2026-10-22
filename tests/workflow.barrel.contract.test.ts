@@ -59,6 +59,28 @@ describe("@dcdr/contracts entry point", () => {
       "WORKFLOW_IMPLEMENTED_CAPABILITIES",
       "findWorkflowCapability",
     ],
+    "knowledge.contract": [
+      "DCDR_KNOWLEDGE_API_BASE_PATH",
+      "DCDR_KNOWLEDGE_MAX_COLLECTIONS_PER_REQUEST",
+      "DcdrKnowledgeAnswerRefusal",
+      "DcdrKnowledgeCollectionStatus",
+      "DcdrKnowledgeDocumentStatus",
+      "DcdrKnowledgeSourceType",
+      "DcdrKnowledgeErrorCode",
+    ],
+    "knowledge.client": [
+      "DcdrKnowledgeClient",
+      "DcdrKnowledgeError",
+      "isDcdrKnowledgeError",
+      "buildDcdrKnowledgeRoutes",
+    ],
+    "service-tokens.contract (knowledge)": [
+      "DcdrKnowledgeAccessAction",
+      "hasDcdrKnowledgeAccess",
+      "grantedDcdrKnowledgeCollections",
+      "knowledgeCollectionScope",
+      "DCDR_KNOWLEDGE_COLLECTION_SCOPE_PREFIX",
+    ],
     "workflow.contract": [
       "WorkflowStateType",
       "WorkflowSchemaVersion",

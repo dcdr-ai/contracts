@@ -30,7 +30,40 @@ definition in CI):
 
 - [`examples/workflow-client/README.md`](../examples/workflow-client/README.md)
 
-Official workflow client runnable examples (run a workflow and wait, fire one with a service token,
-publish a definition, answer human tasks):
+## Example: knowledge for client apps (search, then answer)
 
-- [`examples/workflow-client/README.md`](../examples/workflow-client/README.md)
+Search a collection, show the passages, then ask for an answer over **exactly** those passages, so it
+cannot cite anything the reader has not seen. Needs a service token with `knowledge:run` and a grant for
+the collection (`knowledge:collection:product-sheets` or `knowledge:collections:*`). Full guide:
+[KNOWLEDGE.md](KNOWLEDGE.md).
+
+```ts
+import { DcdrClient, isDcdrKnowledgeError, DcdrKnowledgeErrorCode } from "@dcdr/contracts";
+
+const dcdr = new DcdrClient({ bearerToken: process.env.DCDR_SERVICE_TOKEN });
+const question = "How long does T-55 flour keep once opened?";
+
+try {
+  const { passages } = await dcdr.searchKnowledge({ collections: ["product-sheets"], query: question, topK: 6 });
+  passages.forEach((p, i) => console.log(`[${i + 1}] ${p.documentTitle} p.${p.locator?.page ?? "?"}: ${p.text}`));
+
+  const answer = await dcdr.answerFromKnowledge({
+    collections: ["product-sheets"],
+    question,
+    chunkIds: passages.map((p) => p.chunkId),   // answer over these, no second search
+  });
+
+  if (answer.refusal) console.log(`No answer: ${answer.refusal}`);   // a result, not an error
+  else console.log(answer.text, answer.citedChunkIds);
+} catch (e) {
+  if (isDcdrKnowledgeError(e) && e.code === DcdrKnowledgeErrorCode.NOT_FOUND) console.log("Collection missing or not granted");
+  else throw e;
+}
+```
+
+The same from the CLI ([CLI.md](CLI.md#knowledge-commands-kn-)):
+
+```bash
+npm run dcdr -- kn-search --control-url https://dcdr.ai --service-token $SVC --collections product-sheets --query "How long does T-55 flour keep once opened?" --json
+npm run dcdr -- kn-answer --control-url https://dcdr.ai --service-token $SVC --collections product-sheets --question "How long does T-55 flour keep once opened?" --stream
+```

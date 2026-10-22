@@ -1,6 +1,6 @@
 # Workflow contract (`workflow.contract.ts`)
 
-> Status: contracts 3.10.0. Workflow execution is a DCDR Cloud / Cloud Pro capability; this document covers the definition format, the execution model a run follows, and the helpers the package ships for tools that consume definitions.
+> Status: the workflow contract exists since contracts 3.0.0 (frames and nested parking since 3.10.0; `knowledge.search` since 3.20.0); this page is current for 3.20.0. Workflow execution is a DCDR Cloud / Cloud Pro capability; this document covers the definition format, the execution model a run follows, and the helpers the package ships for tools that consume definitions.
 
 A **workflow** is a declarative state machine that composes intents, HTTP calls, tool capabilities, agentic loops, human decisions and other workflows. The contract defines the shape (`WorkflowDefinition`), the value-mapping DSL used to feed states, a validator with addressed issues, and pure helpers for reference resolution, template rendering, choice selection and transition resolution that any host or editor can reuse.
 
@@ -42,7 +42,7 @@ One `WorkflowState` shape discriminated by `type`, with exactly one config block
 | --- | --- | --- |
 | `INTENT` | `intent { intent, vars, inputParts?, routing?, context? }` | `vars` validated against the intent `inputSchema`; `inputParts` only when the intent declares an `asset` variable |
 | `HTTP` | `http { connection, method, path, query?, headers?, body?, responseType, expectStatus? }` | the connection owns the base URL and credentials; `Authorization`/`Cookie`-style headers are rejected |
-| `TOOL` | `tool { capability, args }` | one capability of the published catalog (`web.fetch`, `ssh.exec`, …); a `CONNECTION`-brokered capability names a tenant connection, a `PLATFORM` one is granted per run |
+| `TOOL` | `tool { capability, args }` | one capability of the published catalog (`web.fetch`, `knowledge.search`, `ssh.exec`, …; see [Capability catalogue](#capability-catalogue-tool-states)); a `CONNECTION`-brokered capability names a tenant connection, a `PLATFORM` one is granted per run |
 | `CHOICE` | `choice { choices[{ id, condition, next }], default }` | first matching case wins; `default` is mandatory, so there are no dead ends |
 | `TRANSFORM` | `transform { output }` | pure value mapping |
 | `END` | `end { outcome, output?, errorCode?, errorMessage? }` | `SUCCEED` / `FAIL`; `output` overrides the definition output |
@@ -59,6 +59,51 @@ Common fields: `next` (required unless `CHOICE` / `END`), `onError { action: FAI
 ### Approval gate
 
 Any state but `END` may carry `approval { timeoutMs, assignmentGroupKey?, assignees?, instructions?, notifyRequester? }`. The run parks right before the state executes (a `WAITING` step with `HUMAN_TASK` semantics and `approval: true` in the wait details); the resume payload is the fixed `WORKFLOW_APPROVAL_FORM` (`approved`, optional `comment`). An approval executes the state normally; a rejection fails it with `WORKFLOW_APPROVAL_REJECTED_CODE` so the state's `onError` policy decides; a timeout applies `onError` like any other wait. Approvals are not a state type: a gated state keeps its own transitions and output.
+
+### Capability catalogue (`TOOL` states)
+
+A `TOOL` state calls one entry of `WORKFLOW_CAPABILITIES` (`workflow.capabilities.contract.ts`), and the validator refuses one a runner cannot execute (`WORKFLOW_IMPLEMENTED_CAPABILITIES`). `PLATFORM` capabilities are granted per run by the control plane; `CONNECTION` ones name a tenant connection of the listed protocol.
+
+| Capability | Broker | Does | Runner |
+| --- | --- | --- | --- |
+| `web.search` | `PLATFORM` | searches the public web: `{ results[{ title, url, snippet }] }` | ✅ |
+| `web.fetch` | `PLATFORM` | reads one URL as text | ✅ |
+| `knowledge.search` | `PLATFORM` | searches the tenant's knowledge collections: `{ passages }` (3.20.0) | ✅ |
+| `chat.post` | `CONNECTION` (`HTTP`) | posts to a chat channel through the tenant's webhook | ✅ |
+| `db.query` | `CONNECTION` (`DATA`) | one read-only query against the tenant's database | ✅ |
+| `mail.send` | `CONNECTION` (`SMTP`) | sends an email through the tenant's SMTP server | ✅ |
+| `file.put` / `file.get` / `file.list` | `CONNECTION` (`SFTP`) | writes, reads, lists text files on the tenant's SFTP server | ✅ |
+| `ssh.exec` | `CONNECTION` | one allowlisted command over SSH | ✅ |
+| `document.extract` | `PLATFORM` | document to text, with OCR | catalogued, not executed yet |
+| `embeddings.embed` | `PLATFORM` | texts to vectors | catalogued, not executed yet |
+
+`knowledge.search` 1.0.0 takes `collections` (keys, 1 to 10, required), `query` (required), `topK?` and `modeKey?`, and returns `passages`: the same `DcdrKnowledgePassage` objects the [knowledge client](KNOWLEDGE.md) returns. It calls the same route as the client, so the same scopes, usage counters and limits govern it; the control plane hands the runner a short-lived session carrying `knowledge:run` and the collections the definition names, so the author configures no token. It needs no endpoint (`requiresEndpoint: false`, like `web.fetch`): the runner always sends the search to its own control plane, the backend it polls for runs, and ignores any `baseUrl` in the descriptor, so the session never leaves the deployment. It returns passages only: the answer is written by a following `INTENT` state, with the tenant's own prompt and output schema.
+
+```json
+{
+  "search": {
+    "type": "TOOL",
+    "tool": {
+      "capability": "knowledge.search",
+      "args": { "collections": ["product-sheets"], "query": { "$ref": "input.question" }, "topK": 6 }
+    },
+    "next": "answer"
+  },
+  "answer": {
+    "type": "INTENT",
+    "intent": {
+      "intent": "PRODUCT_SHEET_ANSWER",
+      "vars": {
+        "question": { "$ref": "input.question" },
+        "passages": { "$ref": "states.search.output.passages" }
+      }
+    },
+    "next": "done"
+  }
+}
+```
+
+An empty `passages` is a successful step: let the intent, or a `CHOICE` on `states.search.output.passages`, decide what "nothing found" means. A `404`, `409` or `429` from the search fails the state with the control plane's code (`NOT_FOUND`, `INVALID_STATE`, `LIMIT_REACHED`) in its message, for `onError` to handle. Platform workflows (no tenant) cannot use knowledge in this version.
 
 ---
 

@@ -63,9 +63,8 @@ data: {"response":{"status":"OK","output":{"answer":"...","citations":[{"quote":
   (`["my.key"]`).
 - Only string fields stream. Numbers, booleans and `null` arrive with `final`.
 - For every string field, the deltas of the last attempt, concatenated, equal the value in `final`.
-- Structured streaming is supported on OpenAI and OpenAI-compatible Chat Completions (OpenAI, Grok,
-  compatible endpoints), Anthropic, Gemini and Mistral. Models served through the OpenAI Responses
-  API do not stream yet, in either mode: they send zero deltas and a `final`.
+- Structured streaming is supported on OpenAI (Chat Completions and the Responses API, which serves
+  the `gpt-5*` and `o*` models), OpenAI-compatible endpoints, Grok, Anthropic, Gemini and Mistral.
 
 ## TypeScript client usage
 

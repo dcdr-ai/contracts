@@ -39,6 +39,9 @@ export * from "./workflow.runner.contract";
 // The tenant workflow API client (`/api/dcdr/workflows/*`): the counterpart of `runtime.client` for
 // workflows. A transport, not a definition, which is why it is not part of `workflow.contract`.
 export * from "./workflow.client";
+// The tenant knowledge API (`/api/dcdr/knowledge/*`, 3.20.0): its wire shapes and its client.
+export * from "./knowledge.contract";
+export * from "./knowledge.client";
 export * from "./dcdr.client";
 export * from "./cache.contract";
 export * from "./storage.credentials.contract";
