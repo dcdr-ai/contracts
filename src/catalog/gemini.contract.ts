@@ -92,7 +92,8 @@ export function buildGeminiProviderModelDefinitions(
       id: "gemini-2.5-flash",
       types: [IntentType.CHAT],
       maxOutputTokens: 65536,
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): gemini-2.5-flash-lite is Gemini's Economy.
+      publicForCustomers: false,
       tokenUsageCovered: true,
       publicName: "DCDR Economy",
       badge: "Fast",
@@ -107,7 +108,7 @@ export function buildGeminiProviderModelDefinitions(
       recommendedUseCases: ["high_volume_chat", "extraction", "classification"],
       isRecommended: false,
       isGlobalDefault: false,
-      isCategoryDefault: true,
+      isCategoryDefault: false,
       pricing: pricingGemini({
         input: 0.3,
         cachedInput: 0.03,
@@ -161,6 +162,21 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-4-argon",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Best",
+      badge: "Gemini",
+      primaryCategory: args.catalogEnums.publicModelCategory.BEST,
+      categories: [
+        args.catalogEnums.publicModelCategory.BEST,
+        args.catalogEnums.publicModelCategory.SMART,
+      ],
+      qualityTier: 5,
+      speedTier: 4,
+      costTier: 3,
+      recommendedUseCases: ["reasoning", "agentic_coding", "long_context"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       tokenUsageCovered: true,
       maxOutputTokens: 32768,
       pricing: pricingGemini({
@@ -561,7 +577,8 @@ export function buildGeminiProviderModelDefinitions(
       id: "gemini-3.1-pro-preview",
       types: [IntentType.CHAT],
       maxOutputTokens: 65536,
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): superseded by gemini-4-argon.
+      publicForCustomers: false,
       tokenUsageCovered: true,
       publicName: "DCDR Best",
       badge: "Gemini",
@@ -1095,7 +1112,7 @@ export function buildGeminiProviderModelDefinitions(
       ],
       isRecommended: false,
       isGlobalDefault: false,
-      isCategoryDefault: false,
+      isCategoryDefault: true,
       pricing: pricingGemini({
         input: 0.1,
         cachedInput: 0.01,

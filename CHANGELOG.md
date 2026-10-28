@@ -4,6 +4,18 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261028.2] — 01:39UTC
+
+<!--
+sourceCommit: 73cc05c205bc41743f427e220a18d22dabddbf87
+queuedAtUtc: 
+previousMirroredBuild: 20261028.1 (2026-10-28)
+contractsSubmodule: aa1951d113cb..58f1baafea7f
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.22.0 - a simpler public model list with the newest models.** The DCDR managed profiles (Best, Smart, Fast, Economy) now hold one model per category from each of OpenAI, Google Gemini, xAI Grok and Anthropic, led by the newest generation: GPT-6.1, Gemini 4, Grok 4.7 and Claude Opus/Sonnet/Haiku 5.5. Every supported model, including those that left a profile, can still be picked directly under its provider.
+
 ## [20261028.1] — 00:24UTC
 
 <!--

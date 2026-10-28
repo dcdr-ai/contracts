@@ -197,7 +197,8 @@ export function buildMistralProviderModelDefinitions(
     {
       id: "ministral-8b-latest",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): Mistral is not one of the four big providers in the public set.
+      publicForCustomers: false,
       publicName: "DCDR Fast",
       badge: "Mistral",
       primaryCategory: args.catalogEnums.publicModelCategory.FAST,
@@ -241,7 +242,8 @@ export function buildMistralProviderModelDefinitions(
     {
       id: "ministral-3b-latest",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): Mistral is not one of the four big providers in the public set.
+      publicForCustomers: false,
       publicName: "DCDR Economy",
       badge: "Lowest cost",
       primaryCategory: args.catalogEnums.publicModelCategory.ECONOMY,

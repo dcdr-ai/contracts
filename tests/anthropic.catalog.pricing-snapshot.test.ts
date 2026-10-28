@@ -147,14 +147,20 @@ describe("Anthropic catalog pricing snapshot (2026-09-05)", () => {
       expect(def?.tokenUsageCovered).toBe(true);
     }
 
-    // claude-opus-4-8 holds the Anthropic BEST slot: it is the newest Opus whose
-    // multimodal rectangle still reproduces (see the claude-opus-5 case below).
+    // claude-opus-4-8 held the Anthropic BEST slot until contracts 3.22.0 (owner,
+    // 2026-10-28: one candidate per category), when claude-opus-5-5 replaced it.
+    expect(
+      ProviderModelRegistry.getModelDefinition(
+        IntentProvider.ANTHROPIC,
+        "claude-opus-5-5",
+      )?.publicForCustomers,
+    ).toBe(true);
     expect(
       ProviderModelRegistry.getModelDefinition(
         IntentProvider.ANTHROPIC,
         "claude-opus-4-8",
       )?.publicForCustomers,
-    ).toBe(true);
+    ).toBe(false);
 
     for (const modelId of ["claude-opus-5", "claude-fable-5-1"]) {
       expect(

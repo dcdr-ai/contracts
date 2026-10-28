@@ -43,17 +43,24 @@ describe("ProviderModelRegistry.listProviderModels onlyPublicForCustomers", () =
     );
 
     const ids = onlyPublic.map((m) => m.id);
-    expect(ids).toContain("gemini-3.5-flash");
-    expect(ids).toContain("gemini-3.1-pro-preview");
-    expect(ids).toContain("gemini-3-flash-preview");
-    expect(ids).toContain("gemini-2.5-flash");
-    expect(ids).toContain("gemini-2.5-flash-lite");
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        "gemini-4-argon",
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview",
+        "gemini-2.5-flash-lite",
+      ]),
+    );
+    expect(ids).toHaveLength(4);
+    expect(ids).not.toContain("gemini-3.1-pro-preview");
     expect(ids).not.toContain("gemini-2.5-pro");
   });
 
   it("listPublicCustomerModels returns models with required public metadata", () => {
     const items = ProviderModelRegistry.listPublicCustomerModels();
-    expect(items.length).toBe(17);
+    // 3.22.0 (owner, 2026-10-28): one candidate per category for each of the four big providers
+    // (OpenAI, Gemini, Grok, Anthropic), plus Office in PRIVATE. Grok and Anthropic have no Economy model.
+    expect(items.length).toBe(15);
 
     const globalDefaults = items.filter(
       (i) => i.model.isGlobalDefault === true,
@@ -96,16 +103,20 @@ describe("ProviderModelRegistry.listProviderModels onlyPublicForCustomers", () =
       ProviderModelRegistry.listPublicCustomerModelsByPrimaryCategory();
 
     expect(grouped[DcdrPublicModelCategory.BEST].length).toBe(4);
-    expect(grouped[DcdrPublicModelCategory.SMART].length).toBe(3);
-    expect(grouped[DcdrPublicModelCategory.FAST].length).toBe(5);
-    expect(grouped[DcdrPublicModelCategory.ECONOMY].length).toBe(4);
+    expect(grouped[DcdrPublicModelCategory.SMART].length).toBe(4);
+    expect(grouped[DcdrPublicModelCategory.FAST].length).toBe(4);
+    expect(grouped[DcdrPublicModelCategory.ECONOMY].length).toBe(2);
     expect(grouped[DcdrPublicModelCategory.PRIVATE].length).toBe(1);
 
     const bestIds = grouped[DcdrPublicModelCategory.BEST].map((m) => m.modelId);
-    expect(bestIds).toContain("gpt-5.6-sol");
-    expect(bestIds).toContain("claude-opus-4-8");
-    expect(bestIds).toContain("gemini-3.1-pro-preview");
-    expect(bestIds).toContain("grok-4.3");
+    expect(bestIds).toEqual(
+      expect.arrayContaining([
+        "gpt-6.1-sol",
+        "claude-opus-5-5",
+        "gemini-4-argon",
+        "grok-4.7",
+      ]),
+    );
 
     // Each primaryCategory with models should have at least one category default.
     for (const c of Object.values(DcdrPublicModelCategory)) {

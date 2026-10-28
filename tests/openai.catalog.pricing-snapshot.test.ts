@@ -116,13 +116,20 @@ describe("OpenAI catalog pricing snapshot (2026-09-05)", () => {
       expect(def?.tokenUsageCovered).toBe(true);
     }
 
-    // gpt-5.6-sol / -terra / -luna became the managed public OpenAI set once they
-    // carried a comprehension-grade multimodal rectangle; gpt-6-astra stays internal.
-    for (const modelId of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]) {
+    // gpt-5.6-sol / -terra / -luna were the managed public OpenAI set from 2026-09-05
+    // until contracts 3.22.0 (owner, 2026-10-28: one candidate per category), when
+    // gpt-6.1-sol / gpt-6.1-terra / gpt-6-luna replaced them. gpt-6-astra stays internal.
+    for (const modelId of ["gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna"]) {
       expect(
         ProviderModelRegistry.getModelDefinition(IntentProvider.OPEN_AI, modelId)
           ?.publicForCustomers,
       ).toBe(true);
+    }
+    for (const modelId of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]) {
+      expect(
+        ProviderModelRegistry.getModelDefinition(IntentProvider.OPEN_AI, modelId)
+          ?.publicForCustomers,
+      ).toBe(false);
     }
     expect(
       ProviderModelRegistry.getModelDefinition(

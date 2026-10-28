@@ -25,7 +25,7 @@ const CHAT_PROVIDERS = [
   IntentProvider.ANTHROPIC,
   IntentProvider.GEMINI,
   IntentProvider.GROK,
-  IntentProvider.MISTRAL,
+  // MISTRAL is implemented but out of the public set (owner, 2026-10-28: the four big providers only).
 ];
 
 interface PublicModelRow {

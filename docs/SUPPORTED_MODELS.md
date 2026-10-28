@@ -12,7 +12,7 @@ Rules
 - Provider tables summarize only the additional multimodal input/output surfaces that have been explicitly validated so far.
 - Generated from the contracts catalog; do not edit by hand.
 
-Generated: **2026-10-27**
+Generated: **2026-10-28**
 
 > Total officially supported models: **123**
 
@@ -54,7 +54,7 @@ Every model in this table is supported for standard text chat and structured JSO
 | `gpt-5-2025-08-07` | validation in progress (<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-mini` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-mini-2025-08-07` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5-nano` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `gpt-5-nano` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-nano-2025-08-07` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-pro` | validation in progress (<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-pro-2025-10-06` | validation in progress (<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
@@ -176,7 +176,7 @@ Every model in this table is supported for standard text chat and structured JSO
 
 ## Retired models
 
-Models their vendor has retired, more than 30 days after the retirement was detected, as of **2026-10-27**. They stay in the catalog so existing registries keep loading, but they are no longer listed above. A retirement detected less than 30 days ago keeps its row above, marked "retiring".
+Models their vendor has retired, more than 30 days after the retirement was detected, as of **2026-10-28**. They stay in the catalog so existing registries keep loading, but they are no longer listed above. A retirement detected less than 30 days ago keeps its row above, marked "retiring".
 
 | Provider | Model | Detected | Reason |
 | --- | --- | --- | --- |

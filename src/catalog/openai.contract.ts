@@ -60,6 +60,18 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-6.1-sol",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Best",
+      badge: "OpenAI",
+      primaryCategory: args.catalogEnums.publicModelCategory.BEST,
+      categories: [args.catalogEnums.publicModelCategory.BEST],
+      qualityTier: 5,
+      speedTier: 3,
+      costTier: 3,
+      recommendedUseCases: ["reasoning", "agentic_coding"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: true,
       tokenUsageCovered: true,
       parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -105,6 +117,21 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-6.1-terra",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Smart",
+      badge: "OpenAI",
+      primaryCategory: args.catalogEnums.publicModelCategory.SMART,
+      categories: [
+        args.catalogEnums.publicModelCategory.SMART,
+        args.catalogEnums.publicModelCategory.FAST,
+      ],
+      qualityTier: 4,
+      speedTier: 4,
+      costTier: 4,
+      recommendedUseCases: ["production_chat", "reasoning"],
+      isRecommended: true,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       tokenUsageCovered: true,
       parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -150,6 +177,9 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-6-sol",
       types: [IntentType.CHAT],
+      // Curated but kept private on purpose (owner, 2026-10-28): one OpenAI "DCDR Best", and that is gpt-6.1-sol,
+      // which supersedes this model at the same price.
+      publicForCustomers: false,
       tokenUsageCovered: true,
       parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -194,6 +224,21 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-6-luna",
       types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Fast",
+      badge: "OpenAI",
+      primaryCategory: args.catalogEnums.publicModelCategory.FAST,
+      categories: [
+        args.catalogEnums.publicModelCategory.FAST,
+        args.catalogEnums.publicModelCategory.ECONOMY,
+      ],
+      qualityTier: 3,
+      speedTier: 5,
+      costTier: 5,
+      recommendedUseCases: ["interactive_chat", "classification", "support"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: true,
       tokenUsageCovered: true,
       parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -239,6 +284,19 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "chat-latest",
       types: [IntentType.CHAT],
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): a moving ChatGPT alias, not pinned and the priciest Smart; gpt-6.1-terra is OpenAI's Smart.
+      publicForCustomers: false,
+      publicName: "DCDR Smart",
+      badge: "OpenAI",
+      primaryCategory: args.catalogEnums.publicModelCategory.SMART,
+      categories: [args.catalogEnums.publicModelCategory.SMART],
+      qualityTier: 4,
+      speedTier: 4,
+      costTier: 1,
+      recommendedUseCases: ["production_chat", "interactive_chat"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       tokenUsageCovered: true,
       parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -398,7 +456,8 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-5.6-sol",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): superseded by gpt-6.1-sol.
+      publicForCustomers: false,
       publicName: "DCDR Best",
       badge: "OpenAI",
       primaryCategory: args.catalogEnums.publicModelCategory.BEST,
@@ -409,7 +468,7 @@ export function buildOpenAIProviderModelDefinitions(
       recommendedUseCases: ["reasoning", "agentic_coding"],
       isRecommended: false,
       isGlobalDefault: false,
-      isCategoryDefault: true,
+      isCategoryDefault: false,
       tokenUsageCovered: true,
       parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -455,7 +514,8 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-5.6-terra",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): superseded by gpt-6.1-terra.
+      publicForCustomers: false,
       publicName: "DCDR Smart",
       badge: "Recommended",
       primaryCategory: args.catalogEnums.publicModelCategory.SMART,
@@ -467,7 +527,7 @@ export function buildOpenAIProviderModelDefinitions(
       speedTier: 4,
       costTier: 3,
       recommendedUseCases: ["production_chat", "reasoning"],
-      isRecommended: true,
+      isRecommended: false,
       isGlobalDefault: false,
       isCategoryDefault: false,
       tokenUsageCovered: true,
@@ -515,7 +575,8 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-5.6-luna",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): superseded by gpt-6-luna.
+      publicForCustomers: false,
       publicName: "DCDR Fast",
       badge: "OpenAI",
       primaryCategory: args.catalogEnums.publicModelCategory.FAST,
@@ -529,7 +590,7 @@ export function buildOpenAIProviderModelDefinitions(
       recommendedUseCases: ["interactive_chat", "classification", "support"],
       isRecommended: false,
       isGlobalDefault: false,
-      isCategoryDefault: true,
+      isCategoryDefault: false,
       tokenUsageCovered: true,
       parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -1023,7 +1084,8 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-5.4-nano",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-10-28: one candidate per category for each of the four big providers): superseded by gpt-5-nano, cheaper with a re-curated IMAGE/DOCUMENT rectangle.
+      publicForCustomers: false,
       tokenUsageCovered: true,
       publicName: "DCDR Economy",
       badge: "OpenAI",
@@ -1861,6 +1923,18 @@ export function buildOpenAIProviderModelDefinitions(
         IntentType.MULTIMODAL,
         IntentType.IMAGE_ANALYSIS,
       ],
+      publicForCustomers: true,
+      publicName: "DCDR Economy",
+      badge: "OpenAI",
+      primaryCategory: args.catalogEnums.publicModelCategory.ECONOMY,
+      categories: [args.catalogEnums.publicModelCategory.ECONOMY],
+      qualityTier: 2,
+      speedTier: 5,
+      costTier: 5,
+      recommendedUseCases: ["high_volume_chat", "classification", "extraction"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       pricing: args.pricingPerMillionTokens({
         input: 0.05,
         cachedInput: 0.005,
@@ -1871,22 +1945,16 @@ export function buildOpenAIProviderModelDefinitions(
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
         preferredApi: args.catalogEnums.preferredApi.RESPONSES,
         inputParts: {
-          status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
-          supportedAssetTypes: [
-            AssetType.TEXT,
-            AssetType.IMAGE,
-            AssetType.AUDIO,
-            AssetType.VIDEO,
-            AssetType.DOCUMENT,
-          ],
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
           supportedSourceKinds: [
             ExecutionPartSourceKind.INLINE,
             ExecutionPartSourceKind.URL,
             ExecutionPartSourceKind.ASSET,
           ],
           notes:
-            "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
-          updatedAt: "2026-06-28",
+            "Re-curated on 2026-10-28 with the unified comprehension-grade curator (RM-050/RM-051), signed URL and storage rows present, replacing the untrusted transport-only claim. IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT passes INLINE only, so it is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail the canonical cues on every source kind.",
+          updatedAt: "2026-10-28",
         },
         reason: "Validated via provider E2E; routed via OpenAI Responses API",
         updatedAt: "2026-06-28",
