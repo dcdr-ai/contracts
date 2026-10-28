@@ -13,25 +13,38 @@ import type {
 const GEMINI_PRICING_URL = "https://ai.google.dev/gemini-api/docs/pricing";
 const GEMINI_PRICING_UPDATED_AT_20260519 = Date.UTC(2026, 4, 19);
 const GEMINI_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
+/** Context-caching (cached input) rates added and promotional rates re-verified. */
+const GEMINI_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
 
+/**
+ * Builds Gemini token pricing from the paid-tier standard table.
+ *
+ * `cachedInput` is the published context-caching rate (cache storage per hour is billed
+ * separately and not expressible here). `updatedAt` defaults to the 2026-05-19 snapshot so
+ * entries that were not re-verified keep their original date.
+ */
 function pricingGeminiPerMillionTokens(args: {
   pricingPerMillionTokens: ProviderCatalogModuleBuildArgs["pricingPerMillionTokens"];
   input: number;
   output: number;
+  cachedInput?: number;
   tiers?: Array<{
     name: string;
     condition?: string;
     input: number;
     output: number;
+    cachedInput?: number;
   }>;
+  updatedAt?: number;
   notes?: string;
 }): ProviderModelPricing {
   return args.pricingPerMillionTokens({
     input: args.input,
     output: args.output,
+    cachedInput: args.cachedInput,
     tiers: args.tiers,
     sourceUrl: GEMINI_PRICING_URL,
-    updatedAt: GEMINI_PRICING_UPDATED_AT_20260519,
+    updatedAt: args.updatedAt ?? GEMINI_PRICING_UPDATED_AT_20260519,
     confidence: "official",
     notes: args.notes,
   });
@@ -46,19 +59,24 @@ export function buildGeminiProviderModelDefinitions(
   const pricingGemini = (pricingArgs: {
     input: number;
     output: number;
+    cachedInput?: number;
     tiers?: Array<{
       name: string;
       condition?: string;
       input: number;
       output: number;
+      cachedInput?: number;
     }>;
+    updatedAt?: number;
     notes?: string;
   }): ProviderModelPricing => {
     return pricingGeminiPerMillionTokens({
       pricingPerMillionTokens: args.pricingPerMillionTokens,
       input: pricingArgs.input,
       output: pricingArgs.output,
+      cachedInput: pricingArgs.cachedInput,
       tiers: pricingArgs.tiers,
+      updatedAt: pricingArgs.updatedAt,
       notes: pricingArgs.notes,
     });
   };
@@ -92,8 +110,18 @@ export function buildGeminiProviderModelDefinitions(
       isCategoryDefault: true,
       pricing: pricingGemini({
         input: 0.3,
+        cachedInput: 0.03,
         output: 2.5,
-        tiers: [{ name: "audio", condition: "audio", input: 1.0, output: 2.5 }],
+        tiers: [
+          {
+            name: "audio",
+            condition: "audio",
+            input: 1.0,
+            cachedInput: 0.1,
+            output: 2.5,
+          },
+        ],
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
         notes:
           "Prices may differ by modality; output includes thinking tokens.",
       }),
@@ -129,6 +157,142 @@ export function buildGeminiProviderModelDefinitions(
       },
     },
 
+    // --- Discovered on the 2026-10-27 Gemini Models API sync ---
+    {
+      id: "gemini-4-argon",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      maxOutputTokens: 32768,
+      pricing: pricingGemini({
+        input: 2.0,
+        cachedInput: 0.1,
+        output: 10.0,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Promotional standard rate published through 2026-11-30 (2.00 in / 0.10 cached / 10.00 out, thinking included; implicit caching only); from 2026-12-01 the rate is 4.00 in / 0.20 cached / 20.00 out.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming).",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.AUDIO,
+            AssetType.VIDEO,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. Full 5/5 rectangle on every source kind, including genuine AUDIO and VIDEO comprehension.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gemini-3.8-live",
+      types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
+      pricing: pricingGemini({
+        input: 0.75,
+        output: 4.5,
+        tiers: [
+          { name: "audio", condition: "audio", input: 3.0, output: 12.0 },
+          {
+            name: "image/video",
+            condition: "image/video input",
+            input: 1.0,
+            output: 4.5,
+          },
+        ],
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Live API model; docs also publish per-minute rates (0.005/min audio in, 0.002/min image/video in, 0.018/min audio out).",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason: "Discovered via Gemini Models API on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gemini-3.8-live-extended-thinking",
+      types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
+      pricing: pricingGemini({
+        input: 0.75,
+        output: 4.5,
+        tiers: [
+          { name: "audio", condition: "audio", input: 3.0, output: 12.0 },
+          {
+            name: "image/video",
+            condition: "image/video input",
+            input: 1.0,
+            output: 4.5,
+          },
+        ],
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Live API model, priced the same as gemini-3.8-live; docs also publish per-minute rates (0.005/min audio in, 0.002/min image/video in, 0.018/min audio out).",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason: "Discovered via Gemini Models API on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gemini-3.8-flash-tts",
+      types: [IntentType.CHAT],
+      maxOutputTokens: 16384,
+      pricing: pricingGemini({
+        input: 0.5,
+        output: 9.0,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "TTS model: output billed as audio tokens. Promotional rate; the published post-promotional rate is 1.00 in / 18.00 out.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason: "Discovered via Gemini Models API on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gemini-3.8-flash-lite-tts",
+      types: [IntentType.CHAT],
+      maxOutputTokens: 16384,
+      pricing: pricingGemini({
+        input: 0.5,
+        output: 6.0,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "TTS model: output billed as audio tokens. Promotional rate; the published post-promotional rate is 1.00 in / 12.00 out.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason: "Discovered via Gemini Models API on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gemini-nano-banana-2.1",
+      types: [IntentType.IMAGE_GENERATION],
+      pricing: pricingGemini({
+        input: 1.5,
+        output: 7.5,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Published standard rates (2026-10-27): 1.50 in (text/image/video), 7.50 out for text and thinking. Image output is billed separately at 30.00 per MTok, which the token pricing component cannot express.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason: "Discovered via Gemini Models API on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+
     // --- Newer preview families (pending E2E curation) ---
     // Discovered via Gemini Models API (2026-05-22).
     {
@@ -138,8 +302,10 @@ export function buildGeminiProviderModelDefinitions(
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 0.75,
+        cachedInput: 0.075,
         output: 3.75,
-        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 3.75 out); the post-promotional rate is 1.50 in / 7.50 out. Snapshot 2026-09-05.",
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 0.075 cached / 3.75 out); the post-promotional rate is 1.50 in / 0.15 cached / 7.50 out. Re-verified 2026-10-27.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -156,7 +322,7 @@ export function buildGeminiProviderModelDefinitions(
       pricing: pricingGemini({
         input: 0.75,
         output: 3.75,
-        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 3.75 out); the post-promotional rate is 1.50 in / 7.50 out. Snapshot 2026-09-05.",
+        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 3.75 out); the post-promotional rate is 1.50 in / 7.50 out. Snapshot 2026-09-05. As of 2026-10-27 the model has no row of its own on the pricing page, so this is the last verified price.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -172,8 +338,10 @@ export function buildGeminiProviderModelDefinitions(
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 0.75,
+        cachedInput: 0.075,
         output: 3.75,
-        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 3.75 out); the post-promotional rate is 1.50 in / 7.50 out. Snapshot 2026-09-05.",
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Promotional standard rate published through 2026-12-31 (0.75 in / 0.075 cached / 3.75 out); the post-promotional rate is 1.50 in / 0.15 cached / 7.50 out. Re-verified 2026-10-27.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -189,8 +357,10 @@ export function buildGeminiProviderModelDefinitions(
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 0.3,
+        cachedInput: 0.03,
         output: 2.5,
-        notes: "Published standard rates (2026-09-05): 0.30 in across text/image/video/audio, 2.50 out.",
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Published standard rates (re-verified 2026-10-27): 0.30 in across text/image/video/audio, 0.03 cached, 2.50 out.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -253,9 +423,11 @@ export function buildGeminiProviderModelDefinitions(
       maxOutputTokens: 65536,
       tokenUsageCovered: true,
       pricing: pricingGemini({
-        input: 2.0,
-        output: 10.0,
-        notes: "Published standard rates (2026-09-05): 2.00 in (text/image/video/audio), 10.00 out.",
+        input: 1.0,
+        cachedInput: 0.1,
+        output: 5.0,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Promotional standard rate published through 2026-12-31 (1.00 in / 0.10 cached / 5.00 out, text/image/video/audio); from 2027-01-01 the rate is 2.00 in / 0.20 cached / 10.00 out. Corrected 2026-10-27 from 2.00/10.00, which is the post-promotional rate.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -269,9 +441,11 @@ export function buildGeminiProviderModelDefinitions(
       types: [IntentType.CHAT],
       maxOutputTokens: 65536,
       pricing: pricingGemini({
-        input: 2.0,
-        output: 10.0,
-        notes: "Published standard rates (2026-09-05): 2.00 in (text/image/video/audio), 10.00 out.",
+        input: 1.0,
+        cachedInput: 0.1,
+        output: 5.0,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
+        notes: "Promotional standard rate published through 2026-12-31 (1.00 in / 0.10 cached / 5.00 out, text/image/video/audio); from 2027-01-01 the rate is 2.00 in / 0.20 cached / 10.00 out. Corrected 2026-10-27 from 2.00/10.00, which is the post-promotional rate.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
@@ -303,7 +477,7 @@ export function buildGeminiProviderModelDefinitions(
       pricing: pricingGemini({
         input: 1.5,
         output: 9.0,
-        notes: "Output price includes thinking tokens.",
+        notes: "Output price includes thinking tokens. As of 2026-10-27 the model has no row of its own on the pricing page, so this is the last verified price.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -402,21 +576,25 @@ export function buildGeminiProviderModelDefinitions(
       isCategoryDefault: false,
       pricing: pricingGemini({
         input: 2.0,
+        cachedInput: 0.2,
         output: 12.0,
         tiers: [
           {
             name: "prompts <= 200k",
             condition: "prompts <= 200k tokens",
             input: 2.0,
+            cachedInput: 0.2,
             output: 12.0,
           },
           {
             name: "prompts > 200k",
             condition: "prompts > 200k tokens",
             input: 4.0,
+            cachedInput: 0.4,
             output: 18.0,
           },
         ],
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
         notes: "Output price includes thinking tokens.",
       }),
       runtimeSupport: {
@@ -527,8 +705,18 @@ export function buildGeminiProviderModelDefinitions(
       maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 0.25,
+        cachedInput: 0.025,
         output: 1.5,
-        tiers: [{ name: "audio", condition: "audio", input: 0.5, output: 1.5 }],
+        tiers: [
+          {
+            name: "audio",
+            condition: "audio",
+            input: 0.5,
+            cachedInput: 0.05,
+            output: 1.5,
+          },
+        ],
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
         notes:
           "Prices may differ by modality; output includes thinking tokens.",
       }),
@@ -769,8 +957,18 @@ export function buildGeminiProviderModelDefinitions(
       isCategoryDefault: false,
       pricing: pricingGemini({
         input: 0.5,
+        cachedInput: 0.05,
         output: 3.0,
-        tiers: [{ name: "audio", condition: "audio", input: 1.0, output: 3.0 }],
+        tiers: [
+          {
+            name: "audio",
+            condition: "audio",
+            input: 1.0,
+            cachedInput: 0.1,
+            output: 3.0,
+          },
+        ],
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
         notes:
           "Prices may differ by modality; output includes thinking tokens.",
       }),
@@ -815,21 +1013,25 @@ export function buildGeminiProviderModelDefinitions(
       tokenUsageCovered: true,
       pricing: pricingGemini({
         input: 1.25,
+        cachedInput: 0.125,
         output: 10.0,
         tiers: [
           {
             name: "prompts <= 200k",
             condition: "prompts <= 200k tokens",
             input: 1.25,
+            cachedInput: 0.125,
             output: 10.0,
           },
           {
             name: "prompts > 200k",
             condition: "prompts > 200k tokens",
             input: 2.5,
+            cachedInput: 0.25,
             output: 15.0,
           },
         ],
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
         notes: "Output price includes thinking tokens.",
       }),
       runtimeSupport: {
@@ -896,8 +1098,18 @@ export function buildGeminiProviderModelDefinitions(
       isCategoryDefault: false,
       pricing: pricingGemini({
         input: 0.1,
+        cachedInput: 0.01,
         output: 0.4,
-        tiers: [{ name: "audio", condition: "audio", input: 0.3, output: 0.4 }],
+        tiers: [
+          {
+            name: "audio",
+            condition: "audio",
+            input: 0.3,
+            cachedInput: 0.03,
+            output: 0.4,
+          },
+        ],
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
         notes:
           "Prices may differ by modality; output includes thinking tokens.",
       }),

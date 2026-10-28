@@ -52,6 +52,9 @@ import {
   buildRulesProviderModelDefinitions,
   buildRulesProviderModelE2EOverrides,
 } from "./catalog/rules.contract";
+import { PROVIDER_MODEL_RETIREMENTS } from "./catalog/retirements.contract";
+
+export { PROVIDER_MODEL_RETIREMENTS };
 
 export interface ProviderPricingMeta {
   currency: "USD" | "EURO" | "GBP" | string;
@@ -176,6 +179,25 @@ export enum ProviderModelParameterSupportStatus {
   DEFAULT_ONLY = "DEFAULT_ONLY",
 }
 
+/**
+ * How a model takes a reasoning level (`PromptParameterKey.THINKING`) on the wire.
+ *
+ * Generic on purpose: providers either take a token budget (Anthropic's `budget_tokens`, Gemini's
+ * `thinkingBudget`) or a named effort (OpenAI's `reasoning_effort`, Anthropic's adaptive thinking
+ * with `output_config.effort`). Within one provider the control can differ per model, which is why
+ * it lives on the model entry: Claude models from the 4.7 generation on refuse
+ * `thinking.type=enabled` with a budget and accept only adaptive thinking steered by effort, while
+ * older ones still require the budget. Absent means the adapter's provider default, which is
+ * provider-scoped: Anthropic defaults to `EFFORT` (so a newly added Claude model works without the
+ * field) and marks the shrinking legacy set `TOKEN_BUDGET`; other adapters keep their own default.
+ */
+export enum ProviderModelThinkingControl {
+  /** An integer token budget derived from `THINKING_LEVEL_TOKEN_BUDGET`. */
+  TOKEN_BUDGET = "TOKEN_BUDGET",
+  /** A named effort level mapped from `ThinkingLevel`; the model decides how much to think. */
+  EFFORT = "EFFORT",
+}
+
 /** Optional parameter support metadata attached to a model definition (for UI and adapter normalization). */
 export interface ProviderModelParameterSupportInfo {
   /** Per-parameter support mapping. Omitted keys mean "unknown" (use adapter defaults). */
@@ -206,6 +228,12 @@ export interface ProviderModelParameterSupportInfo {
      */
     useNativeStructuredOutput?: boolean;
   };
+
+  /**
+   * How this model takes `PromptParameterKey.THINKING`. Set only from provider evidence (a 400 on
+   * the other control, or a measured pass); absent means the adapter's provider default.
+   */
+  thinkingControl?: ProviderModelThinkingControl;
 
   /** Human-readable notes (safe for UI/logs). */
   notes?: string;
@@ -281,6 +309,117 @@ export enum DcdrPublicModelCategory {
 }
 
 /**
+ * Retirement marker attached to a model definition (v3.21.0).
+ *
+ * Comes only from {@link PROVIDER_MODEL_RETIREMENTS} (one global list, same shape for every
+ * provider), never from a provider catalog file. A record is written when a measured call to the
+ * exact model id answers "not found" / "deprecated" - never because the id left a `/v1/models`
+ * listing, which is E2E scope (`ProviderModelE2EStatus.LEGACY`). The entry itself is kept, with its
+ * last observed `runtimeSupport` evidence: removing an id would break registries that still name it.
+ *
+ * Policy, one for all providers: for {@link PROVIDER_MODEL_RETIREMENT_GRACE_DAYS} days after
+ * `detectedAt` the model is RETIRING - it stays in the official listings, flagged with its detection
+ * date, and the consumer decides how to present it. After that it is RETIRED: it leaves the listings
+ * and lives only in the retired list ({@link ProviderModelRegistry.listRetiredModels}).
+ */
+export interface ProviderModelRetirementInfo {
+  /** ISO date (YYYY-MM-DD) on which the retirement was first measured. */
+  detectedAt: string;
+  /** What the vendor answered, in words safe for UI and logs. */
+  reason: string;
+}
+
+/** One entry of the global retired list: which model, when it was detected and why. */
+export interface ProviderModelRetirementRecord extends ProviderModelRetirementInfo {
+  provider: IntentProvider;
+  modelId: string;
+}
+
+/** Where a retired model is in the retirement policy (see {@link ProviderModelRetirementInfo}). */
+export enum ProviderModelRetirementStage {
+  /** Inside the grace window: still listed, flagged with its detection date. */
+  RETIRING = "RETIRING",
+  /** Past the grace window: out of the listings, only in the retired list. */
+  RETIRED = "RETIRED",
+}
+
+/** Days a detected retirement stays RETIRING (listed and flagged) before it becomes RETIRED. */
+export const PROVIDER_MODEL_RETIREMENT_GRACE_DAYS = 30;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Stage of a model in the retirement policy, as of `now`.
+ *
+ * Pure: depends only on the definition's marker and the clock passed in. RETIRING while
+ * `now < detectedAt + PROVIDER_MODEL_RETIREMENT_GRACE_DAYS` (UTC days), RETIRED from that instant on.
+ *
+ * @param definition Model definition (anything with an optional `retired` marker).
+ * @param now Clock to evaluate against; defaults to the current time.
+ * @returns `undefined` when the model carries no retirement marker.
+ */
+export function getProviderModelRetirementStage(
+  definition: { retired?: ProviderModelRetirementInfo } | null | undefined,
+  now: Date = new Date(),
+): ProviderModelRetirementStage | undefined {
+  const detectedAt = definition?.retired?.detectedAt;
+  if (!detectedAt) return undefined;
+  const detectedMs = Date.parse(`${detectedAt}T00:00:00Z`);
+  const graceEndsMs = detectedMs + PROVIDER_MODEL_RETIREMENT_GRACE_DAYS * DAY_MS;
+  return now.getTime() < graceEndsMs
+    ? ProviderModelRetirementStage.RETIRING
+    : ProviderModelRetirementStage.RETIRED;
+}
+
+/**
+ * Attaches the global retired list to the normalized catalog, failing loudly on a bad record.
+ *
+ * Runs at catalog load, before the DCDR virtual mirrors are built, so mirrors inherit the marker.
+ * Rejects: a record whose provider/model is not catalogued, a duplicate provider/model, a date that
+ * is not ISO `YYYY-MM-DD`, an empty reason, and a retired model that is `publicForCustomers`.
+ *
+ * @param modelsByProvider Normalized definitions, per provider.
+ * @param records The retired list to apply.
+ * @returns A copy of `modelsByProvider` with `retired` set on the matching definitions.
+ */
+export function attachProviderModelRetirements(
+  modelsByProvider: Record<IntentProvider, ProviderModelDefinition[]>,
+  records: ProviderModelRetirementRecord[],
+): Record<IntentProvider, ProviderModelDefinition[]> {
+  const byKey = new Map<string, ProviderModelRetirementRecord>();
+  for (const r of records) {
+    const key = `${r.provider}/${r.modelId}`;
+    if (byKey.has(key)) {
+      throw new Error(`Provider model retirements: duplicate record for ${key}.`);
+    }
+    if (!ISO_DATE_RE.test(String(r.detectedAt ?? "")) || Number.isNaN(Date.parse(`${r.detectedAt}T00:00:00Z`))) {
+      throw new Error(`Provider model retirements: ${key} detectedAt must be an ISO date (YYYY-MM-DD).`);
+    }
+    if (!String(r.reason ?? "").trim()) {
+      throw new Error(`Provider model retirements: ${key} needs a non-empty reason.`);
+    }
+    const def = (modelsByProvider[r.provider] ?? []).find((m) => m.id === r.modelId);
+    if (!def) {
+      throw new Error(`Provider model retirements: ${key} is not in the provider model catalog.`);
+    }
+    if (def.publicForCustomers) {
+      throw new Error(`Provider model retirements: ${key} is publicForCustomers and cannot be retired.`);
+    }
+    byKey.set(key, r);
+  }
+
+  const out = { ...modelsByProvider };
+  for (const provider of Object.keys(out) as IntentProvider[]) {
+    out[provider] = (out[provider] ?? []).map((def) => {
+      const r = byKey.get(`${provider}/${def.id}`);
+      return r ? { ...def, retired: { detectedAt: r.detectedAt, reason: r.reason } } : def;
+    });
+  }
+  return out;
+}
+
+/**
  * Canonical (de-duplicated) model definition.
  *
  * A single model can support multiple IntentType(s). Keeping the model metadata in one place
@@ -350,6 +489,12 @@ export interface ProviderModelDefinition {
    * and never inferred from a sibling, an alias or the family.
    */
   maxOutputTokens?: number;
+  /**
+   * Present when the vendor has retired this model, attached at load from
+   * {@link PROVIDER_MODEL_RETIREMENTS} (see {@link ProviderModelRetirementInfo} for the policy).
+   * Execution is not blocked by the catalogue.
+   */
+  retired?: ProviderModelRetirementInfo;
   pricing?: ProviderModelPricing;
   runtimeSupport?: ProviderModelRuntimeSupportInfo;
   parameterSupport?: ProviderModelParameterSupportInfo;
@@ -421,6 +566,14 @@ export interface ProviderModelDefinitionInput {
 export interface ProviderModelListProviderModelsOptions {
   /** When true, only returns models explicitly curated for customer-facing UIs. */
   onlyPublicForCustomers?: boolean;
+  /**
+   * When true, leaves out models in the RETIRED stage (v3.21.0). RETIRING models (inside the grace
+   * window) stay. Defaults to false so existing callers keep seeing every catalogued id; pickers and
+   * supported-model listings should pass true.
+   */
+  excludeRetired?: boolean;
+  /** Clock for the retirement stage; defaults to the current time. */
+  now?: Date;
 }
 
 /** Provider + model pairing for public customer model listing helpers. */
@@ -479,6 +632,7 @@ export interface ProviderCatalogModuleBuildArgs {
     promptParameterKey: typeof PromptParameterKey;
     parameterSupportStatus: typeof ProviderModelParameterSupportStatus;
     publicModelCategory: typeof DcdrPublicModelCategory;
+    thinkingControl: typeof ProviderModelThinkingControl;
     get e2eStatus(): typeof ProviderModelE2EStatus;
   };
 }
@@ -512,6 +666,7 @@ const PROVIDER_CATALOG_MODULE_BUILD_ARGS: ProviderCatalogModuleBuildArgs = {
     promptParameterKey: PromptParameterKey,
     parameterSupportStatus: ProviderModelParameterSupportStatus,
     publicModelCategory: DcdrPublicModelCategory,
+    thinkingControl: ProviderModelThinkingControl,
     get e2eStatus() {
       return ProviderModelE2EStatus;
     },
@@ -1004,7 +1159,10 @@ export const PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER: Record<
   const base = fillMissingPricingFromBaseModels(
     PROVIDER_MODEL_DEFINITIONS_BY_PROVIDER_RAW,
   );
-  const normalized = normalizeProviderModelDefinitions(base);
+  const normalized = attachProviderModelRetirements(
+    normalizeProviderModelDefinitions(base),
+    PROVIDER_MODEL_RETIREMENTS,
+  );
 
   return {
     ...normalized,
@@ -1352,9 +1510,63 @@ export class ProviderModelRegistry {
     provider: IntentProvider,
     options?: ProviderModelListProviderModelsOptions,
   ): ProviderModelDefinition[] {
-    const defs = ProviderModelRegistry.definitionsByProvider[provider] ?? [];
+    let defs = ProviderModelRegistry.definitionsByProvider[provider] ?? [];
+    if (options?.excludeRetired) {
+      const now = options.now ?? new Date();
+      defs = defs.filter(
+        (m) =>
+          getProviderModelRetirementStage(m, now) !==
+          ProviderModelRetirementStage.RETIRED,
+      );
+    }
     if (!options?.onlyPublicForCustomers) return defs;
     return defs.filter((m) => m.publicForCustomers === true);
+  }
+
+  /**
+   * True when the catalogue marks this model as retired by its vendor, in either stage (v3.21.0).
+   *
+   * @param provider Provider the model belongs to.
+   * @param modelId Exact model id.
+   * @returns False for unknown models: the catalogue only asserts what it has measured.
+   */
+  static isModelRetired(provider: IntentProvider, modelId: string): boolean {
+    return Boolean(
+      ProviderModelRegistry.getModelDefinition(provider, modelId)?.retired,
+    );
+  }
+
+  /**
+   * The definitive retired list: definitions in the RETIRED stage as of `now` (v3.21.0).
+   *
+   * Each carries `retired.detectedAt` and `retired.reason`. RETIRING models are not included; they
+   * are still in the regular listings.
+   *
+   * @param provider Limit to one provider; all providers when omitted (DCDR virtual mirrors excluded).
+   * @param now Clock for the retirement stage; defaults to the current time.
+   * @returns Provider + definition pairs in catalog order.
+   */
+  static listRetiredModels(
+    provider?: IntentProvider,
+    now: Date = new Date(),
+  ): Array<{ provider: IntentProvider; model: ProviderModelDefinition }> {
+    const providers = provider
+      ? [provider]
+      : (Object.values(IntentProvider) as IntentProvider[]).filter(
+          (p) => p !== IntentProvider.DCDR,
+        );
+    const out: Array<{ provider: IntentProvider; model: ProviderModelDefinition }> = [];
+    for (const p of providers) {
+      for (const model of ProviderModelRegistry.definitionsByProvider[p] ?? []) {
+        if (
+          getProviderModelRetirementStage(model, now) ===
+          ProviderModelRetirementStage.RETIRED
+        ) {
+          out.push({ provider: p, model });
+        }
+      }
+    }
+    return out;
   }
 
   /**
@@ -1618,4 +1830,19 @@ export class ProviderModelRegistry {
     }
     return { value: ceiling, clamped: true, ceiling };
   }
+}
+
+/**
+ * True when the catalogue marks `provider`/`modelId` as retired by its vendor, in either stage
+ * (v3.21.0). Use {@link getProviderModelRetirementStage} to tell RETIRING from RETIRED.
+ *
+ * @param provider Provider the model belongs to.
+ * @param modelId Exact model id.
+ * @returns False for unknown models.
+ */
+export function isProviderModelRetired(
+  provider: IntentProvider,
+  modelId: string,
+): boolean {
+  return ProviderModelRegistry.isModelRetired(provider, modelId);
 }

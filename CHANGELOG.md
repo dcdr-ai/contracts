@@ -4,6 +4,31 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261028.1] — 00:24UTC
+
+<!--
+sourceCommit: 83be3d30a6705d9bae31f09297ebec9c1dacda9a
+queuedAtUtc: 
+previousMirroredBuild: 20261022.2 (2026-10-22)
+contractsSubmodule: fe88d77665b8..aa1951d113cb
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.21.0 - model catalog refresh (2026-10).** New models: OpenAI `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6-sol`, `gpt-6-luna` and `chat-latest`, Gemini `gemini-4-argon` Anthropic `claude-opus-5-5`, `claude-sonnet-5-5` and `claude-haiku-5-5`, and Grok `grok-4.7`, all validated for text, structured output, streaming, token usage and multimodal input; plus new image, audio, live and speech models catalogued for evaluation. Prices re-checked against each vendor's official table: long-context rates for the newest OpenAI models, context-caching rates for Gemini, corrected promotional rates where a vendor changed them, and prices for every new model.
+- <kbd>CONTRACTS</kbd> **Models retired by their vendor are flagged in the catalog.** One list covers every provider. For 30 days after a retirement is detected the model stays listed, marked with the detection date; after that it is no longer listed as supported and appears only in the retired list (`ProviderModelRegistry.listRetiredModels()`, `getProviderModelRetirementStage()`, `listProviderModels(provider, { excludeRetired: true })`). Catalog entries are kept, so existing registries keep loading.
+- <kbd>CONTRACTS</kbd> **Models declare how they take a reasoning level** (`parameterSupport.thinkingControl`: token budget or effort).
+- <kbd>RUNTIME</kbd> **Plan call limits apply to the AI Gateway.** Calls through `/v1` now count against the workspace's monthly, daily and hourly call limits together with intent executions - one allowance whichever way a workspace calls - and are refused with `429` (`tier_quota_exceeded`, `tier_rate_limit_exceeded`) and `Retry-After` when it is used up, or `403` (`subscription_inactive`) when the subscription is not active. `/v1/messages/count_tokens` is not counted. Intent execution refusals keep their message and gain a `code` and `Retry-After`.
+- <kbd>RUNTIME</kbd> **Request-rate protection no longer blocks a workspace that is within its plan.** Authenticated workspace traffic is bounded by its plan's limits and by a short-window protection against runaway loops that answers `429` with `Retry-After` and never blocks the workspace or its network. The protection's windows are configurable (`DCDR_RATE_LIMIT_TENANT_*`, `DCDR_RATE_LIMIT_IP_*`). Rate-limit and block responses are JSON with a `code`.
+- <kbd>RUNTIME</kbd> **A release pipeline for the showcase images.** `azure_templates/publish-and-deploy-docker-showcase.yml` tests, builds, smoke-tests and pushes `aqrsystems/dcdr-showcase` and `aqrsystems/dcdr-showcase-sim`, always as the build-number tag (like the runtime and workflow-runner images, e.g. `20261023-1`) and `latest`, and can redeploy each showcase service through its own Portainer webhook onto the `latest` just pushed. Runtime and workflow-runner images are unchanged.
+### Fixed
+- <kbd>RUNTIME</kbd> **Thinking levels work on Claude models that only accept adaptive thinking.** Asking a recent Claude model (Claude 4.7 and later, including Opus 4.8 and Sonnet 5) to think was refused by the provider; the level is now sent in the form each model accepts, and older Claude models are unchanged.
+- <kbd>RUNTIME</kbd> **The newest Claude models no longer fail when sampling parameters are set.** They reject `top_p`, which is now left out for them as for the previous generation.
+- <kbd>RUNTIME</kbd> **A model retired by its vendor no longer fails an intent that has a fallback.** When the provider answers that the model does not exist (`MODEL_NOT_FOUND`), the runtime now moves on to the next implementation, as it already did for an unsupported model or a provider limit. The failed attempt stays in the execution report, and an intent without fallback still answers `422 MODEL_NOT_FOUND`.
+- <kbd>RUNTIME</kbd> **Showcase intents moved off `gpt-4.1-nano`, which OpenAI has retired.** Every scenario that used it as the primary or fallback model now uses `gpt-4.1-mini` (same API, measured image and document support); import bundles, generated intent definitions and the manual setup guide are updated.
+- <kbd>RUNTIME</kbd> **Monthly call quotas were reached early.** A call already counted by the control plane was counted again by the runtime, so a workspace could be refused well before its monthly limit; each call now counts once. The monthly allowance of tracked calls is also measured against calls that were actually tracked, not against every call.
+### Changed
+- <kbd>RUNTIME</kbd> **Showcase demos stay tidy between visitors.** In simulated mode the traffic generator now runs at about one call a minute and only while someone has the demo open, pausing when the last visitor leaves. The first visitor after 30 minutes without anyone (`IDLE_RESET_MINUTES`, 0 turns it off) gets a freshly reset demo, with a "Preparing the demo…" screen while it happens; it is never reset while someone is connected. Generated data is kept for less time (the newest 50 tickets, orders and runs or the last hour, waiting tasks answered after 15 minutes, today's calls), and every reset - Admin's button, the scheduled `RESET_AT` and the idle one - is the same full reset. `GENERATOR_PAUSE_WITHOUT_VISITORS=false` keeps the old round-the-clock traffic. Live mode is unchanged.
+
 ## [20261022.2] — 00:48UTC
 
 <!--

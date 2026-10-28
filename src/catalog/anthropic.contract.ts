@@ -14,6 +14,8 @@ const ANTHROPIC_PRICING_URL =
 const ANTHROPIC_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
 /** Cache-write columns added; the other columns re-verified unchanged the same day. */
 const ANTHROPIC_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
+/** Claude 5.5 generation priced from the official table; existing rows re-verified unchanged the same day. */
+const ANTHROPIC_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
 
 export const ANTHROPIC_PROVIDER_PRICING_FALLBACK_RULES: ProviderPricingFallbackRule[] =
   [
@@ -37,14 +39,154 @@ export function buildAnthropicProviderModelDefinitions(
         [args.catalogEnums.promptParameterKey.TOP_P]:
           args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
       },
+      thinkingControl: args.catalogEnums.thinkingControl.EFFORT,
       notes:
-        "Newer Claude generations reject explicit sampling parameters on the Anthropic Messages API; provider E2E returns 400 'top_p is deprecated for this model.'",
-      updatedAt: "2026-09-05",
+        "Newer Claude generations reject explicit sampling parameters on the Anthropic Messages API; provider E2E returns 400 'top_p is deprecated for this model.'" +
+        " Thinking: provider E2E on 2026-10-27 returns 400 'thinking.type.enabled is not supported for this model. Use thinking.type.adaptive and output_config.effort', so ThinkingLevel is sent as adaptive thinking + effort.",
+      updatedAt: "2026-10-27",
+    };
+
+  /**
+   * The closed set of older Claude models that still take `thinking.type=enabled` with
+   * `budget_tokens`. Anthropic's adapter defaults to adaptive thinking + effort, which every
+   * generation from 4.7 on requires, so only these legacy entries opt back into the budget.
+   */
+  const ANTHROPIC_THINKING_BUDGET_PARAMETER_SUPPORT: ProviderModelParameterSupportInfo =
+    {
+      thinkingControl: args.catalogEnums.thinkingControl.TOKEN_BUDGET,
+      notes:
+        "Pre-4.7 Claude generation: ThinkingLevel is sent as thinking.type=enabled with budget_tokens. Measured accepted on 2026-10-27 (provider E2E, ThinkingLevel=LOW) for claude-opus-4-6, claude-opus-4-5-20251101, claude-sonnet-4-6, claude-sonnet-4-5-20250929, claude-haiku-4-5-20251001 and the claude-haiku-4-5 alias; claude-opus-4-1-20250805 is retired (404) and keeps the budget its generation required.",
+      updatedAt: "2026-10-27",
     };
 
   return [
     // Source: Anthropic Models overview (latest models comparison), updated 2026-05-04
     // Note: DCDR runtime v1 treats Anthropic as CHAT-only; multimodal/vision intent types are intentionally not listed yet.
+    // --- Claude 5.5 generation (models overview, 2026-10-27) ---
+    {
+      id: "claude-opus-5-5",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      maxOutputTokens: 128000,
+      parameterSupport: ANTHROPIC_NO_SAMPLING_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 4.0,
+        cachedInput: 0.2,
+        cacheWriteInput: 5.0,
+        cacheWrite1hInput: 8.0,
+        output: 20.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20261027,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming + structured streaming, 1024-token baseline; every ThinkingLevel accepted as adaptive thinking + effort). Sampling parameters are stripped via parameterSupport: the model rejects top_p ('deprecated for this model').",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO are rejected deterministically by the Anthropic Messages provider path before any upstream model call.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "claude-sonnet-5-5",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      maxOutputTokens: 128000,
+      parameterSupport: ANTHROPIC_NO_SAMPLING_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        cachedInput: 0.1,
+        cacheWriteInput: 2.5,
+        cacheWrite1hInput: 4.0,
+        output: 10.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20261027,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming + structured streaming, 1024-token baseline; every ThinkingLevel accepted as adaptive thinking + effort). Sampling parameters are stripped via parameterSupport: the model rejects top_p ('deprecated for this model').",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO are rejected deterministically by the Anthropic Messages provider path before any upstream model call.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "claude-haiku-5-5",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      maxOutputTokens: 128000,
+      parameterSupport: ANTHROPIC_NO_SAMPLING_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 0.1,
+        cachedInput: 0.01,
+        cacheWriteInput: 0.125,
+        cacheWrite1hInput: 0.2,
+        output: 0.5,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Prompt > 100k tokens",
+            input: 0.5,
+            cachedInput: 0.05,
+            output: 2.5,
+          },
+        ],
+        notes:
+          "Priced by prompt length: a request whose prompt (cache reads and writes included) is over 100k tokens pays the long_context tier, whose cache writes are 0.625 (5m) / 1.00 (1h) per MTok.",
+        sourceUrl: ANTHROPIC_PRICING_URL,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20261027,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming + structured streaming, 1024-token baseline; every ThinkingLevel accepted as adaptive thinking + effort). Sampling parameters are stripped via parameterSupport: the model rejects top_p ('deprecated for this model').",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. IMAGE and DOCUMENT pass on every source kind. TEXT passes INLINE and ASSET but fails URL (the model reports sawProvidedInput=false), so it is excluded rather than published as a partial rectangle. AUDIO and VIDEO are rejected deterministically by the Anthropic Messages provider path before any upstream model call.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
     {
       id: "claude-opus-5",
       types: [IntentType.CHAT],
@@ -107,9 +249,10 @@ export function buildAnthropicProviderModelDefinitions(
           [args.catalogEnums.promptParameterKey.TOP_P]:
             args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
         },
+        thinkingControl: args.catalogEnums.thinkingControl.EFFORT,
         notes:
-          "Opus 4.8 currently rejects explicit temperature and top_p in provider E2E on the Anthropic Messages API; runtime should avoid sending both.",
-        updatedAt: "2026-06-16",
+          "Opus 4.8 currently rejects explicit temperature and top_p in provider E2E on the Anthropic Messages API; runtime should avoid sending both. Thinking: provider E2E on 2026-10-27 returns 400 'thinking.type.enabled is not supported for this model. Use thinking.type.adaptive and output_config.effort', so ThinkingLevel is sent as adaptive thinking + effort.",
+        updatedAt: "2026-10-27",
       },
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
@@ -156,9 +299,10 @@ export function buildAnthropicProviderModelDefinitions(
           [args.catalogEnums.promptParameterKey.TOP_P]:
             args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
         },
+        thinkingControl: args.catalogEnums.thinkingControl.EFFORT,
         notes:
-          "Opus 4.7 rejects explicit temperature/top_p in provider E2E on current Anthropic Messages API.",
-        updatedAt: "2026-06-07",
+          "Opus 4.7 rejects explicit temperature/top_p in provider E2E on current Anthropic Messages API. Thinking: provider E2E on 2026-10-27 returns 400 'thinking.type.enabled is not supported for this model. Use thinking.type.adaptive and output_config.effort', so ThinkingLevel is sent as adaptive thinking + effort.",
+        updatedAt: "2026-10-27",
       },
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
@@ -191,6 +335,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-4-6",
       types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_THINKING_BUDGET_PARAMETER_SUPPORT,
       maxOutputTokens: 128000,
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
@@ -226,6 +371,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-4-5-20251101",
       types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_THINKING_BUDGET_PARAMETER_SUPPORT,
       maxOutputTokens: 64000,
       pricing: args.pricingPerMillionTokens({
         input: 5.0,
@@ -261,6 +407,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-4-1-20250805",
       types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_THINKING_BUDGET_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
         input: 15.0,
         cachedInput: 1.5,
@@ -295,6 +442,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-sonnet-4-6",
       types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_THINKING_BUDGET_PARAMETER_SUPPORT,
       maxOutputTokens: 128000,
       tokenUsageCovered: true,
       pricing: args.pricingPerMillionTokens({
@@ -328,6 +476,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-sonnet-4-5-20250929",
       types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_THINKING_BUDGET_PARAMETER_SUPPORT,
       maxOutputTokens: 64000,
       pricing: args.pricingPerMillionTokens({
         input: 3.0,
@@ -394,9 +543,10 @@ export function buildAnthropicProviderModelDefinitions(
           [args.catalogEnums.promptParameterKey.TOP_P]:
             args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
         },
+        thinkingControl: args.catalogEnums.thinkingControl.EFFORT,
         notes:
-          "Sonnet 5 rejects explicit temperature/top_p on the current Anthropic Messages API path in provider E2E.",
-        updatedAt: "2026-07-04",
+          "Sonnet 5 rejects explicit temperature/top_p on the current Anthropic Messages API path in provider E2E. Thinking: provider E2E on 2026-10-27 returns 400 'thinking.type.enabled is not supported for this model. Use thinking.type.adaptive and output_config.effort', so ThinkingLevel is sent as adaptive thinking + effort.",
+        updatedAt: "2026-10-27",
       },
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -421,6 +571,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-haiku-4-5",
       types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_THINKING_BUDGET_PARAMETER_SUPPORT,
       tokenUsageCovered: true,
       pricing: args.pricingPerMillionTokens({
         input: 1.0,
@@ -512,9 +663,10 @@ export function buildAnthropicProviderModelDefinitions(
           [args.catalogEnums.promptParameterKey.TOP_P]:
             args.catalogEnums.parameterSupportStatus.NOT_SUPPORTED,
         },
+        thinkingControl: args.catalogEnums.thinkingControl.EFFORT,
         notes:
-          "Fable 5 rejects explicit temperature/top_p on the current Anthropic Messages API path in provider E2E.",
-        updatedAt: "2026-07-04",
+          "Fable 5 rejects explicit temperature/top_p on the current Anthropic Messages API path in provider E2E. Thinking: provider E2E on 2026-10-27 returns 400 'thinking.type.enabled is not supported for this model. Use thinking.type.adaptive and output_config.effort', so ThinkingLevel is sent as adaptive thinking + effort.",
+        updatedAt: "2026-10-27",
       },
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -538,6 +690,7 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-haiku-4-5-20251001",
       types: [IntentType.CHAT],
+      parameterSupport: ANTHROPIC_THINKING_BUDGET_PARAMETER_SUPPORT,
       maxOutputTokens: 64000,
       publicForCustomers: true,
       tokenUsageCovered: true,

@@ -7,13 +7,14 @@ Rules
 - Includes only models where `runtimeSupport.status === SUPPORTED` in the `ProviderModelRegistry` catalog.
 - Includes only models that support `IntentType.CHAT`.
 - Excludes the virtual provider `IntentProvider.DCDR` (those are aliases like `openai/gpt-...`).
+- Retired models: for 30 days after detection a model stays in its table marked "retiring"; after that it moves to the Retired models table at the end.
 - Every listed model is runtime-supported for standard text chat and structured JSON workflows.
 - Provider tables summarize only the additional multimodal input/output surfaces that have been explicitly validated so far.
 - Generated from the contracts catalog; do not edit by hand.
 
-Generated: **2026-09-14**
+Generated: **2026-10-27**
 
-> Total officially supported models: **122**
+> Total officially supported models: **123**
 
 ## OpenAI
 
@@ -21,6 +22,11 @@ Every model in this table is supported for standard text chat and structured JSO
 
 | Model | Validated multimodal input | Input source kinds | Validated multimodal output | Output source kinds |
 | --- | --- | --- | --- | --- |
+| `gpt-6.1-sol` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-6.1-terra` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-6-sol` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-6-luna` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `chat-latest` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-6-astra` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.6-sol` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.6-terra` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
@@ -37,24 +43,15 @@ Every model in this table is supported for standard text chat and structured JSO
 | `gpt-5.4-nano-2026-03-17` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.4-pro` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.4-pro-2026-03-05` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5.3-chat-latest` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.3-codex` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.2` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.2-2025-12-11` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5.2-chat-latest` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5.2-codex` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.2-pro` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.2-pro-2025-12-11` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.1` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5.1-2025-11-13` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5.1-chat-latest` | validation in progress (<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5.1-codex` | validation in progress (<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5.1-codex-max` | validation in progress (<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5.1-codex-mini` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5` | validation in progress (<kbd>audio</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-2025-08-07` | validation in progress (<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5-chat-latest` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `gpt-5-codex` | validation in progress (<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-mini` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-mini-2025-08-07` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `gpt-5-nano` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
@@ -65,34 +62,34 @@ Every model in this table is supported for standard text chat and structured JSO
 | `gpt-4.1-2025-04-14` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4.1-mini` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4.1-mini-2025-04-14` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `gpt-4.1-nano` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `gpt-4.1-nano-2025-04-14` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-4.1-nano` ⚠ retiring - detected 2026-10-27 | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-4.1-nano-2025-04-14` ⚠ retiring - detected 2026-10-27 | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o-2024-08-06` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o-2024-11-20` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o-mini` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o-mini-2024-07-18` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `gpt-4o-2024-05-13` | not validated | none | not curated | - |
-| `gpt-4-turbo` | not validated | none | not curated | - |
-| `gpt-4-turbo-2024-04-09` | not validated | none | not curated | - |
-| `gpt-4` | not validated | none | not curated | - |
-| `gpt-4-0613` | not validated | none | not curated | - |
-| `gpt-3.5-turbo` | not validated | none | not curated | - |
-| `gpt-3.5-turbo-0125` | not validated | none | not curated | - |
-| `gpt-3.5-turbo-1106` | not validated | none | not curated | - |
-| `gpt-3.5-turbo-16k` | not validated | none | not curated | - |
-| `o4-mini` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o4-mini-2025-04-16` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `gpt-4o-2024-05-13` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `gpt-4-turbo` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `gpt-4-turbo-2024-04-09` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `gpt-4` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `gpt-4-0613` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `gpt-3.5-turbo` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `gpt-3.5-turbo-0125` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `gpt-3.5-turbo-1106` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `gpt-3.5-turbo-16k` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
+| `o4-mini` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `o4-mini-2025-04-16` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `o3-pro` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `o3-pro-2025-06-10` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `o3` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `o3-2025-04-16` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o3-mini` | validation in progress (<kbd>text</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o3-mini-2025-01-31` | validation in progress (<kbd>text</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o1-pro` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o1-pro-2025-03-19` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o1` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o1-2024-12-17` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `o3-mini` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `o3-mini-2025-01-31` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `o1-pro` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `o1-pro-2025-03-19` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `o1` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
+| `o1-2024-12-17` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 
 ## Anthropic
 
@@ -100,12 +97,15 @@ Every model in this table is supported for standard text chat and structured JSO
 
 | Model | Validated multimodal input | Input source kinds | Validated multimodal output | Output source kinds |
 | --- | --- | --- | --- | --- |
+| `claude-opus-5-5` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `claude-sonnet-5-5` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `claude-haiku-5-5` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-opus-5` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `claude-opus-4-8` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-opus-4-7` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-opus-4-6` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-opus-4-5-20251101` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `claude-opus-4-1-20250805` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `claude-opus-4-1-20250805` ⚠ retiring - detected 2026-10-27 | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-4-6` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-4-5-20250929` | <kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-5` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
@@ -121,6 +121,7 @@ Every model in this table is supported for standard text chat and structured JSO
 | Model | Validated multimodal input | Input source kinds | Validated multimodal output | Output source kinds |
 | --- | --- | --- | --- | --- |
 | `gemini-2.5-flash` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gemini-4-argon` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gemini-3.8-flash` | not curated | - | not curated | - |
 | `gemini-3.7-flash` | not curated | - | not curated | - |
 | `gemini-3.6-flash` | not curated | - | not curated | - |
@@ -143,6 +144,7 @@ Every model in this table is supported for standard text chat and structured JSO
 
 | Model | Validated multimodal input | Input source kinds | Validated multimodal output | Output source kinds |
 | --- | --- | --- | --- | --- |
+| `grok-4.7` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `grok-4.6` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `grok-4.5` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `grok-4.3` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
@@ -171,3 +173,19 @@ Every model in this table is supported for standard text chat and structured JSO
 | `ministral-3b-2512` | not curated | - | not curated | - |
 | `ministral-8b-2512` | not curated | - | not curated | - |
 | `mistral-code-fim-latest` | not curated | - | not curated | - |
+
+## Retired models
+
+Models their vendor has retired, more than 30 days after the retirement was detected, as of **2026-10-27**. They stay in the catalog so existing registries keep loading, but they are no longer listed above. A retirement detected less than 30 days ago keeps its row above, marked "retiring".
+
+| Provider | Model | Detected | Reason |
+| --- | --- | --- | --- |
+| OPEN_AI | `gpt-5.3-chat-latest` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-5.2-chat-latest` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-5.2-codex` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-5.1-chat-latest` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-5.1-codex` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-5.1-codex-max` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-5.1-codex-mini` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-5-chat-latest` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-5-codex` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |

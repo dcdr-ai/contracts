@@ -25,8 +25,11 @@ const GEMINI_PRICING_EXPECTATIONS: GeminiPricingExpectation[] = [
   { modelId: "gemini-3.6-flash", input: 0.75, output: 3.75 },
   { modelId: "gemini-3.5-flash-lite", input: 0.3, output: 2.5 },
   { modelId: "gemini-omni-1.1-flash", input: 1.5, output: 9.0 },
-  { modelId: "gemini-robotics-er-2-preview", input: 2.0, output: 10.0 },
-  { modelId: "gemini-robotics-er-2-streaming-preview", input: 2.0, output: 10.0 },
+  // Re-verified 2026-10-27: promotional 1.00/5.00 through 2026-12-31 (2.00/10.00 is the 2027 rate).
+  { modelId: "gemini-robotics-er-2-preview", input: 1.0, output: 5.0 },
+  { modelId: "gemini-robotics-er-2-streaming-preview", input: 1.0, output: 5.0 },
+  // Discovered 2026-10-27; promotional rate through 2026-11-30.
+  { modelId: "gemini-4-argon", input: 2.0, output: 10.0 },
   // Image-generation families: text-side rates only.
   { modelId: "gemini-3.1-flash-image", input: 0.5, output: 3.0 },
   { modelId: "gemini-3.1-flash-lite-image", input: 0.25, output: 1.5 },

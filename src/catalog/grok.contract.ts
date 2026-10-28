@@ -10,6 +10,7 @@ import type {
 
 const XAI_PRICING_URL = "https://docs.x.ai/developers/pricing";
 const XAI_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
+const XAI_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
 
 /**
  * xAI publishes two price columns per text model: a base column for requests under
@@ -50,6 +51,47 @@ export function buildGrokProviderModelDefinitions(
   return [
     // Source: xAI pricing page (snapshot 2026-09-05; base + `>= 200k` long-context columns)
     // Runtime posture: curated public candidates are enabled for customer-facing BEST/FAST options.
+    // --- Discovered on the 2026-10-27 /v1/models sync ---
+    {
+      id: "grok-4.7",
+      types: [IntentType.CHAT],
+      parameterSupport: GROK_CHAT_PARAMETER_SUPPORT,
+      tokenUsageCovered: true,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        cachedInput: 0.5,
+        output: 6.0,
+        tiers: [
+          {
+            name: XAI_LONG_CONTEXT_TIER_NAME,
+            condition: XAI_LONG_CONTEXT_TIER_CONDITION,
+            input: 4.0,
+            cachedInput: 1.0,
+            output: 12.0,
+          },
+        ],
+        sourceUrl: XAI_PRICING_URL,
+        updatedAt: XAI_PRICING_UPDATED_AT_20261027,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Discovered via xAI /v1/models on 2026-10-27. Validated via provider E2E on 2026-10-28: text (canonical question probe), structured and streaming pass. The earlier echo probe (\"Reply with exactly: Hi Ada\") was refused by this model by design and was replaced for every model. preferredApi is intentionally omitted: Grok routing ignores it today (see RM-047).",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [AssetType.IMAGE, AssetType.DOCUMENT],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-28 with the unified comprehension-grade curator (signed URL and storage rows present): IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT fails on all three source kinds (no comprehensionEcho; URL returned an empty output). AUDIO and VIDEO fail the canonical cues: the model reports that the media content is not available to inspect.",
+          updatedAt: "2026-10-28",
+        },
+        updatedAt: "2026-10-28",
+      },
+    },
     {
       id: "grok-4.6",
       types: [IntentType.CHAT],
@@ -386,6 +428,16 @@ export function buildGrokProviderModelDefinitions(
         reason:
           "Discovered via xAI /v1/models; video generation runtime adapter and curation are not implemented yet.",
         updatedAt: "2026-07-04",
+      },
+    },
+    {
+      id: "grok-imagine-video-1.5-lite",
+      types: [IntentType.VIDEO_GENERATION],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via xAI /v1/models on 2026-10-27; video generation runtime adapter and curation are not implemented yet. Unpriced: xAI bills it per second of video (0.020/s), a unit the pricing components cannot express.",
+        updatedAt: "2026-10-27",
       },
     },
   ];

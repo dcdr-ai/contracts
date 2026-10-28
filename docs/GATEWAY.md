@@ -172,13 +172,19 @@ earlier than the gateway would. Streaming keeps data flowing for as long as the 
 
 ## Limits
 
-Two kinds of limits can refuse a request with `429 Too Many Requests` and a `Retry-After` header
-(seconds until the window that refused it resets):
+These limits can refuse a request with `429 Too Many Requests` and a `Retry-After` header (seconds
+until the window that refused it resets):
 
 | Code | Set by | Scope |
 | --- | --- | --- |
+| `tier_quota_exceeded` | your organization's **plan** | calls per month, shared with intent execution (`/api/execution`) |
+| `tier_rate_limit_exceeded` | your organization's **plan** | calls per hour or per day, shared with intent execution |
 | `provider_limit_exceeded` | your organization's **Provider Limits** | a provider or a model, for the whole organization: calls or budget per hour/day/month |
 | `service_token_limit_exceeded` | the **service token's limits** | this token: calls or budget per hour/day/week/month, optionally scoped to providers or models |
+| `rate_limited` | the runtime's burst protection | your organization, over a few seconds to an hour; set well above every plan, it only stops runaway loops |
+
+None of them blocks you: once `Retry-After` has passed, requests go through again. Your plan's limits
+count every gateway call except `/v1/messages/count_tokens`, which the provider does not bill.
 
 A provider or model that your organization disabled is not listed on `/v1/models` and is refused as
 `model_forbidden` or `model_not_found`.
@@ -239,9 +245,14 @@ On the Anthropic routes `error.type` follows Anthropic's error types (`authentic
 | 400 | `ambiguous_model` | Several bound providers serve this id; use a provider prefix. |
 | 400 | `route_not_supported_for_provider` | The provider does not serve this route (for example `/v1/responses` on Mistral). |
 | 403 | `credential_not_found` | The provider credential bound to the token no longer exists. |
+| 403 | `subscription_inactive` | Your organization's subscription is not active. |
+| 429 | `tier_quota_exceeded` | Your plan's monthly call quota is used up. `Retry-After` is set. |
+| 429 | `tier_rate_limit_exceeded` | Your plan's hourly or daily call limit is used up. `Retry-After` is set. |
+| 429 | `rate_limited` | Too many requests in a short time (a runaway loop). `Retry-After` is set. |
 | 429 | `provider_limit_exceeded` | An organization Provider Limit is reached. `Retry-After` is set. |
 | 429 | `service_token_limit_exceeded` | One of the token's limits is reached. `Retry-After` is set. |
 | 502 | `gateway_token_check_failed` | The token could not be checked; retry. |
+| 503 | `entitlements_unavailable` | Your organization's plan could not be checked; retry shortly. |
 | 502 | `gateway_credentials_resolve_failed` | The provider credential could not be loaded; retry. |
 | 502 | `gateway_upstream_failed` | The provider could not be reached, or its response was too large. |
 | 502 | `upstream_address_refused` | The configured OpenAI-compatible endpoint is not reachable from the runtime. |

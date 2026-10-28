@@ -15,6 +15,7 @@ const OPENAI_PRICING_UPDATED_AT_20260430 = Date.UTC(2026, 3, 30);
 const OPENAI_PRICING_UPDATED_AT_20260522 = Date.UTC(2026, 4, 22);
 const OPENAI_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
 const OPENAI_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
+const OPENAI_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
 
 /** Embeddings bill input tokens only; the output rate is the vendor's zero, not an estimate. */
 const OPENAI_EMBEDDINGS_PRICING_NOTE =
@@ -55,6 +56,299 @@ export function buildOpenAIProviderModelDefinitions(
     // Model IDs below are kept in roughly "newest first" order.
     // Discovered aliases are sourced from OpenAI `GET /v1/models` (snapshot 2026-04-27).
 
+    // --- Discovered on the 2026-10-27 /v1/models sync ---
+    {
+      id: "gpt-6.1-sol",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        cachedInput: 0.1,
+        output: 10.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 4.0,
+            cachedInput: 0.2,
+            output: 15.0,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming on the Responses API).",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), one model at a time, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO fail on every source kind; the model reports the file as present but its content as not accessible.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gpt-6.1-terra",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 1.0,
+        cachedInput: 0.05,
+        output: 5.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 2.0,
+            cachedInput: 0.1,
+            output: 7.5,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming on the Responses API).",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), one model at a time, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO fail on every source kind; the model says the content is unavailable for inspection.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gpt-6-sol",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        cachedInput: 0.2,
+        output: 10.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 4.0,
+            cachedInput: 0.4,
+            output: 15.0,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming on the Responses API).",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), one model at a time, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. IMAGE and DOCUMENT pass on every source kind. TEXT passes INLINE but fails URL and ASSET (the structured answer omits comprehensionEcho), so it is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail on every source kind.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gpt-6-luna",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 0.1,
+        cachedInput: 0.01,
+        output: 0.5,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 0.2,
+            cachedInput: 0.02,
+            output: 0.75,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming on the Responses API).",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), one model at a time, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO fail on every source kind; the model acknowledges the file without perceiving its content.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "chat-latest",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 5.0,
+        cachedInput: 0.5,
+        output: 30.0,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes: "OpenAI pricing table, 'Specialized models' row.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-10-27 (text + structured + SSE streaming on the Responses API). Routed to Responses: /v1/chat/completions rejects max_tokens for this model (400 unsupported_parameter, 2026-10-27), and the id does not match the gpt-5*/o* routing heuristic.",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-10-27 with the unified comprehension-grade curator (RM-050/RM-051), one model at a time, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO fail on every source kind; the model says the content cannot be determined.",
+          updatedAt: "2026-10-27",
+        },
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gpt-live-1",
+      types: [IntentType.MULTIMODAL],
+      pricing: args.pricingAudioMinutesPerMinute({
+        input: 0.05,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes:
+          "OpenAI pricing table: GPT-Live voice sessions at $0.05 / minute, billed per second; backend model and tool usage are billed separately.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gpt-image-2.5-sunburst",
+      types: [IntentType.IMAGE_GENERATION],
+      pricing: args.pricingPerMillionTokens({
+        input: 8,
+        cachedInput: 2,
+        output: 30,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes:
+          "Image modality pricing from OpenAI table; text-row input is 5.00 (cached 1.25) and text-row output is '-'",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gpt-image-2.5-sunburst-2026-09-08",
+      types: [IntentType.IMAGE_GENERATION],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gpt-image-2.5-flare",
+      types: [IntentType.IMAGE_GENERATION],
+      pricing: args.pricingPerMillionTokens({
+        input: 8,
+        cachedInput: 2,
+        output: 30,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes:
+          "Image modality pricing from OpenAI table; text-row input is 5.00 (cached 1.25) and text-row output is '-'",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+    {
+      id: "gpt-image-2.5-flare-2026-09-08",
+      types: [IntentType.IMAGE_GENERATION],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-10-27",
+      },
+    },
+
     // --- Discovered on the 2026-09-05 /v1/models sync ---
     {
       id: "gpt-6-astra",
@@ -65,8 +359,17 @@ export function buildOpenAIProviderModelDefinitions(
         input: 10.0,
         cachedInput: 1.0,
         output: 50.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 20.0,
+            cachedInput: 2.0,
+            output: 75.0,
+          },
+        ],
         sourceUrl: OPENAI_PRICING_URL,
-        updatedAt: OPENAI_PRICING_UPDATED_AT_20260905,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -113,8 +416,17 @@ export function buildOpenAIProviderModelDefinitions(
         input: 4.0,
         cachedInput: 0.4,
         output: 20.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 8.0,
+            cachedInput: 0.8,
+            output: 30.0,
+          },
+        ],
         sourceUrl: OPENAI_PRICING_URL,
-        updatedAt: OPENAI_PRICING_UPDATED_AT_20260905,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -164,8 +476,17 @@ export function buildOpenAIProviderModelDefinitions(
         input: 2.0,
         cachedInput: 0.2,
         output: 12.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 4.0,
+            cachedInput: 0.4,
+            output: 18.0,
+          },
+        ],
         sourceUrl: OPENAI_PRICING_URL,
-        updatedAt: OPENAI_PRICING_UPDATED_AT_20260905,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -215,8 +536,17 @@ export function buildOpenAIProviderModelDefinitions(
         input: 0.2,
         cachedInput: 0.02,
         output: 1.2,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 0.4,
+            cachedInput: 0.04,
+            output: 1.8,
+          },
+        ],
         sourceUrl: OPENAI_PRICING_URL,
-        updatedAt: OPENAI_PRICING_UPDATED_AT_20260905,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -245,6 +575,25 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-realtime-2.1",
       types: [IntentType.CHAT],
+      pricing: args.pricingPerMillionTokens({
+        // Base = Text modality; audio modality captured as a tier.
+        input: 4,
+        cachedInput: 0.4,
+        output: 24,
+        tiers: [
+          {
+            name: "audio",
+            condition: "Audio modality",
+            input: 32,
+            cachedInput: 0.4,
+            output: 64,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes:
+          "OpenAI pricing table provides separate Text/Audio/Image modality rows; image input is not expressible here.",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:
@@ -255,6 +604,25 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-realtime-2.1-mini",
       types: [IntentType.CHAT],
+      pricing: args.pricingPerMillionTokens({
+        // Base = Text modality; audio modality captured as a tier.
+        input: 0.6,
+        cachedInput: 0.06,
+        output: 2.4,
+        tiers: [
+          {
+            name: "audio",
+            condition: "Audio modality",
+            input: 10,
+            cachedInput: 0.3,
+            output: 20,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes:
+          "OpenAI pricing table provides separate Text/Audio/Image modality rows; image input is not expressible here.",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:
@@ -265,6 +633,12 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-live-transcribe",
       types: [IntentType.CHAT],
+      pricing: args.pricingAudioMinutesPerMinute({
+        input: 0.017,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes: "OpenAI pricing table: $0.017 / minute",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:
@@ -275,6 +649,12 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "gpt-transcribe",
       types: [IntentType.CHAT],
+      pricing: args.pricingAudioMinutesPerMinute({
+        input: 0.0045,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes: "OpenAI pricing table: $0.0045 / minute",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:
@@ -285,6 +665,15 @@ export function buildOpenAIProviderModelDefinitions(
     {
       id: "chatgpt-image-latest",
       types: [IntentType.IMAGE_GENERATION],
+      pricing: args.pricingPerMillionTokens({
+        input: 8,
+        cachedInput: 2,
+        output: 32,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        notes:
+          "Image modality pricing from OpenAI table; text-row is 5.00 in (cached 1.25) / 10.00 out",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
         reason:
@@ -1769,8 +2158,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT does not pass on all three source kinds and is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
           updatedAt: "2026-09-06",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. The status and inputParts evidence above are the last observed (provider E2E 2026-06-28 / 2026-09-06); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -1791,8 +2181,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Re-measured on 2026-09-06 with the unified comprehension-grade curator (RM-050/RM-051), replacing the transport-only claim that only proved the input arrived. IMAGE and DOCUMENT pass across INLINE/URL/ASSET. TEXT does not pass on all three source kinds and is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail the canonical comprehension cues on every source kind.",
           updatedAt: "2026-09-06",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. The status and inputParts evidence above are the last observed (provider E2E 2026-06-28 / 2026-09-06); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
 
@@ -2008,8 +2399,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-4o-2024-05-13 still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all text, image, audio, video, and document combinations failed with PARSE_FAIL across INLINE, URL, and ASSET sources.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E (structured uses prompt-only JSON)",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (structured uses prompt-only JSON) (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
       parameterSupport: {
         parameters: {
@@ -2038,8 +2430,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-4-turbo still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all text, image, audio, video, and document combinations failed with PARSE_FAIL across INLINE, URL, and ASSET sources.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2059,8 +2452,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-4-turbo-2024-04-09 still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all text, image, audio, video, and document combinations failed with PARSE_FAIL across INLINE, URL, and ASSET sources.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2080,8 +2474,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-4 still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all image/audio/video/document combinations plus text INLINE/URL failed with PARSE_FAIL, and text ASSET failed with a provider-side missing-object error for the managed fixture path.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2101,8 +2496,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-4-0613 still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all text/image/audio/document combinations plus video INLINE/URL failed with PARSE_FAIL, and video ASSET failed with a provider-side missing-object error for the managed fixture path.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
 
@@ -2123,8 +2519,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-3.5-turbo still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all text, image, audio, video, and document combinations failed with PARSE_FAIL across INLINE, URL, and ASSET sources.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2144,8 +2541,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-3.5-turbo-0125 still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all text, image, audio, video, and document combinations failed with PARSE_FAIL across INLINE, URL, and ASSET sources.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2165,8 +2563,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-3.5-turbo-1106 still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all text/image/audio combinations plus video INLINE/URL/ASSET and document INLINE/URL failed with PARSE_FAIL, and document ASSET failed with a provider-side missing-object error for the managed fixture path.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2186,8 +2585,9 @@ export function buildOpenAIProviderModelDefinitions(
             "One-model multimodal recuration on gpt-3.5-turbo-16k still shows a fully failing matrix and is intentionally not promoted as supported on this exact entry: all text, image, audio, video, and document combinations failed with PARSE_FAIL across INLINE, URL, and ASSET sources.",
           updatedAt: "2026-06-16",
         },
-        reason: "Validated via provider E2E",
-        updatedAt: "2026-06-16",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E (2026-06-16); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
 
@@ -2223,8 +2623,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
-        reason: "Validated via provider E2E; routed via OpenAI Responses API",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E; routed via OpenAI Responses API (2026-06-28); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2251,8 +2652,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
-        reason: "Validated via provider E2E; routed via OpenAI Responses API",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E; routed via OpenAI Responses API (2026-06-28); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2455,8 +2857,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
-        reason: "Validated via provider E2E; routed via OpenAI Responses API",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E; routed via OpenAI Responses API (2026-06-28); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2482,8 +2885,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
-        reason: "Validated via provider E2E; routed via OpenAI Responses API",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E; routed via OpenAI Responses API (2026-06-28); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
 
@@ -2517,8 +2921,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
-        reason: "Validated via provider E2E; routed via OpenAI Responses API",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E; routed via OpenAI Responses API (2026-06-28); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2545,8 +2950,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
-        reason: "Validated via provider E2E; routed via OpenAI Responses API",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E; routed via OpenAI Responses API (2026-06-28); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2580,8 +2986,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
-        reason: "Validated via provider E2E; routed via OpenAI Responses API",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E; routed via OpenAI Responses API (2026-06-28); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
     {
@@ -2626,8 +3033,9 @@ export function buildOpenAIProviderModelDefinitions(
             "Untrusted pending re-curation (RM-050): this rectangle was produced by the transport-only OpenAI curator, which accepted sawProvidedInput=true as proof of support. Every model re-measured on 2026-09-05 with the comprehension-grade curator (nano through flagship) failed AUDIO and VIDEO on all three source kinds, so the AUDIO/VIDEO claim here is contradicted by evidence. The listed asset types are retained only as the prior claim; treat them as unverified until this model is re-curated.",
           updatedAt: "2026-06-28",
         },
-        reason: "Validated via provider E2E; routed via OpenAI Responses API",
-        updatedAt: "2026-06-28",
+        reason:
+          "Retired upstream 2026-10: still listed by OpenAI /v1/models, but every call returns 404 model_not_found (\"has been deprecated\"), measured 2026-10-27. Last observed evidence kept: Validated via provider E2E; routed via OpenAI Responses API (2026-06-28); availability is E2E scope, so the entry is kept and skipped via a LEGACY E2E override.",
+        updatedAt: "2026-10-27",
       },
     },
 
@@ -2951,15 +3359,21 @@ export function buildOpenAIProviderModelDefinitions(
       types: [IntentType.MULTIMODAL],
       pricing: args.pricingPerMillionTokens({
         input: 0.6,
-        cachedInput: 0.3,
+        cachedInput: 0.06,
         output: 2.4,
         tiers: [
-          { name: "audio", condition: "Audio modality", input: 10, output: 20 },
+          {
+            name: "audio",
+            condition: "Audio modality",
+            input: 10,
+            cachedInput: 0.3,
+            output: 20,
+          },
         ],
         sourceUrl: OPENAI_PRICING_URL,
-        updatedAt: OPENAI_PRICING_UPDATED_AT_20260522,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
         notes:
-          "OpenAI pricing table provides separate Text/Audio modality rows; audio row has no cached input",
+          "OpenAI pricing table provides separate Text/Audio modality rows. Corrected 2026-10-27: 0.30 is the audio cached-input rate; the text cached-input rate is 0.06.",
       }),
     },
     {
@@ -3074,6 +3488,105 @@ export function buildOpenAIProviderModelE2EOverrides(
       status: args.catalogEnums.e2eStatus.LEGACY,
       reason:
         "Deprecated by OpenAI (2026-09-06 sweep): every call returns 404 model_not_found, and /v1/chat/completions reports it as deprecated. Still listed by /v1/models.",
+    },
+
+    // Retired upstream in 2026-10 but still returned by /v1/models (measured 2026-10-27):
+    // the listing does not reveal retirements, only a real call does. Each entry keeps its
+    // last observed runtimeSupport evidence and is skipped here rather than demoted or deleted.
+    "gpt-4.1-nano": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-4.1-nano-2025-04-14": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-4o-2024-05-13": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-4-turbo": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-4-turbo-2024-04-09": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-4": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-4-0613": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-3.5-turbo": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-3.5-turbo-0125": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-3.5-turbo-1106": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "gpt-3.5-turbo-16k": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "o4-mini": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "o4-mini-2025-04-16": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "o3-mini": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "o3-mini-2025-01-31": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "o1-pro": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "o1-pro-2025-03-19": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "o1": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+    "o1-2024-12-17": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
     },
 
     // No longer returned by OpenAI /v1/models (2026-09-05 sync). Availability is E2E
