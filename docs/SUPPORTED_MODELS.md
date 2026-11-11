@@ -12,9 +12,9 @@ Rules
 - Provider tables summarize only the additional multimodal input/output surfaces that have been explicitly validated so far.
 - Generated from the contracts catalog; do not edit by hand.
 
-Generated: **2026-10-28**
+Generated: **2026-11-11**
 
-> Total officially supported models: **123**
+> Total officially supported models: **125**
 
 ## OpenAI
 
@@ -110,6 +110,7 @@ Every model in this table is supported for standard text chat and structured JSO
 | `claude-sonnet-4-5-20250929` | <kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-5` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-haiku-4-5` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `claude-fable-5-2` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-fable-5-1` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-fable-5` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-haiku-4-5-20251001` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
@@ -121,6 +122,7 @@ Every model in this table is supported for standard text chat and structured JSO
 | Model | Validated multimodal input | Input source kinds | Validated multimodal output | Output source kinds |
 | --- | --- | --- | --- | --- |
 | `gemini-2.5-flash` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gemini-4-carbon` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gemini-4-argon` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gemini-3.8-flash` | not curated | - | not curated | - |
 | `gemini-3.7-flash` | not curated | - | not curated | - |
@@ -176,7 +178,7 @@ Every model in this table is supported for standard text chat and structured JSO
 
 ## Retired models
 
-Models their vendor has retired, more than 30 days after the retirement was detected, as of **2026-10-28**. They stay in the catalog so existing registries keep loading, but they are no longer listed above. A retirement detected less than 30 days ago keeps its row above, marked "retiring".
+Models their vendor has retired, more than 30 days after the retirement was detected, as of **2026-11-11**. They stay in the catalog so existing registries keep loading, but they are no longer listed above. A retirement detected less than 30 days ago keeps its row above, marked "retiring".
 
 | Provider | Model | Detected | Reason |
 | --- | --- | --- | --- |

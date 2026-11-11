@@ -16,6 +16,7 @@ const OPENAI_PRICING_UPDATED_AT_20260522 = Date.UTC(2026, 4, 22);
 const OPENAI_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
 const OPENAI_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
 const OPENAI_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
+const OPENAI_PRICING_UPDATED_AT_20261111 = Date.UTC(2026, 10, 11);
 
 /** Embeddings bill input tokens only; the output rate is the vendor's zero, not an estimate. */
 const OPENAI_EMBEDDINGS_PRICING_NOTE =
@@ -346,6 +347,45 @@ export function buildOpenAIProviderModelDefinitions(
         reason:
           "Discovered via OpenAI /v1/models on 2026-10-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
         updatedAt: "2026-10-27",
+      },
+    },
+    // Discovered on the 2026-11-11 /v1/models sync (newest image generation pair).
+    {
+      id: "gpt-image-2.6-sunburst",
+      types: [IntentType.IMAGE_GENERATION],
+      pricing: args.pricingPerMillionTokens({
+        input: 8,
+        cachedInput: 2,
+        output: 30,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261111,
+        notes:
+          "Image modality pricing from OpenAI table (2026-11-11); text-row input is 5.00 (cached 1.25) and text-row output is '-'",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-11-11; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-11-11",
+      },
+    },
+    {
+      id: "gpt-image-2.6-flare",
+      types: [IntentType.IMAGE_GENERATION],
+      pricing: args.pricingPerMillionTokens({
+        input: 8,
+        cachedInput: 2,
+        output: 30,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261111,
+        notes:
+          "Image modality pricing from OpenAI table (2026-11-11); text-row input is 5.00 (cached 1.25) and text-row output is '-'",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-11-11; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-11-11",
       },
     },
     {
@@ -3655,6 +3695,45 @@ export function buildOpenAIProviderModelE2EOverrides(
       status: args.catalogEnums.e2eStatus.LEGACY,
       reason:
         "Retired upstream (2026-10): still listed by /v1/models, but calls return 404 model_not_found ('has been deprecated'), measured 2026-10-27.",
+    },
+
+    // No longer returned by OpenAI /v1/models (2026-11-11 sync); one minimal call per id the
+    // same day. Each catalog entry and its last observed runtimeSupport are preserved.
+    ...Object.fromEntries(
+      [
+        "gpt-4o-search-preview",
+        "gpt-4o-search-preview-2025-03-11",
+        "gpt-4o-mini-search-preview",
+        "gpt-4o-mini-search-preview-2025-03-11",
+        "gpt-audio-mini-2025-10-06",
+      ].map((modelId) => [
+        modelId,
+        {
+          status: args.catalogEnums.e2eStatus.LEGACY,
+          reason:
+            "No longer listed by /v1/models (2026-11-11 sync); /v1/chat/completions returns 404 model_not_found ('has been deprecated'), measured 2026-11-11.",
+        },
+      ]),
+    ),
+    ...Object.fromEntries(
+      [
+        "o3-deep-research",
+        "o3-deep-research-2025-06-26",
+        "o4-mini-deep-research",
+        "o4-mini-deep-research-2025-06-26",
+      ].map((modelId) => [
+        modelId,
+        {
+          status: args.catalogEnums.e2eStatus.LEGACY,
+          reason:
+            "No longer listed by /v1/models (2026-11-11 sync); /v1/responses answers 404 'does not exist or you do not have access to it' and /v1/chat/completions answers 404 'has been deprecated', measured 2026-11-11.",
+        },
+      ]),
+    ),
+    "gpt-image-1": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "No longer listed by /v1/models (2026-11-11 sync) and gone from the pricing page, but still answers: /v1/images/generations with an invalid size returns a 400 size validation error (not model_not_found), measured 2026-11-11.",
     },
 
     // No longer returned by OpenAI /v1/models (2026-09-05 sync). Availability is E2E

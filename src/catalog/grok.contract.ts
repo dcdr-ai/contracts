@@ -461,5 +461,13 @@ export function buildGrokProviderModelDefinitions(
 export function buildGrokProviderModelE2EOverrides(
   args: ProviderCatalogModuleBuildArgs,
 ): Record<string, ProviderModelE2EOverride> {
-  return {};
+  return {
+    // No longer returned by xAI /v1/models (2026-11-11 sync) and gone from the pricing page.
+    // The catalog entry and its last observed runtimeSupport are preserved.
+    "grok-imagine-image-quality": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "No longer listed by xAI /v1/models (2026-11-11 sync), but still answers: /v1/images/generations with n=0 returns the 400 argument validation error that a listed model returns (an unknown id answers 404 not-found), measured 2026-11-11.",
+    },
+  };
 }

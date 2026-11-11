@@ -3,6 +3,8 @@ import { ExecutionPartSourceKind } from "../src/execution.contract";
 import { IntentType } from "../src/intent.contract";
 import { IntentProvider } from "../src/provider.contract";
 import {
+  PROVIDER_MODEL_E2E_OVERRIDES,
+  ProviderModelE2EStatus,
   ProviderModelRegistry,
   ProviderModelRuntimeSupportStatus,
 } from "../src/provider.catalog.contract";
@@ -238,5 +240,17 @@ describe("Grok catalog pricing snapshot (2026-09-05)", () => {
         ProviderModelRegistry.getModelPricing(IntentProvider.GROK, modelId),
       ).toBeNull();
     }
+  });
+});
+
+describe("Grok catalog drift pass (2026-11-11)", () => {
+  it("keeps grok-imagine-image-quality (de-listed but still answering) as LEGACY only, not retired", () => {
+    const overrides = PROVIDER_MODEL_E2E_OVERRIDES[IntentProvider.GROK] ?? {};
+    expect(overrides["grok-imagine-image-quality"]?.status).toBe(ProviderModelE2EStatus.LEGACY);
+
+    const def = ProviderModelRegistry.getModelDefinition(IntentProvider.GROK, "grok-imagine-image-quality");
+    expect(def).not.toBeNull();
+    expect(def?.retired).toBeUndefined();
+    expect(def?.runtimeSupport?.status).toBe(ProviderModelRuntimeSupportStatus.IN_PROGRESS);
   });
 });

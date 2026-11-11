@@ -10,11 +10,14 @@ import type {
   ProviderModelPricing,
 } from "../provider.catalog.contract";
 
-const GEMINI_PRICING_URL = "https://ai.google.dev/gemini-api/docs/pricing";
+/** Google's pricing page; the former ai.google.dev/gemini-api/docs/pricing 301-redirects here (2026-11-11). */
+const GEMINI_PRICING_URL = "https://aistudio.google.com/docs/pricing";
 const GEMINI_PRICING_UPDATED_AT_20260519 = Date.UTC(2026, 4, 19);
 const GEMINI_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
 /** Context-caching (cached input) rates added and promotional rates re-verified. */
 const GEMINI_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
+/** 2026-11-11 drift pass: new model ids priced and every priced entry re-checked. */
+const GEMINI_PRICING_UPDATED_AT_20261111 = Date.UTC(2026, 10, 11);
 
 /**
  * Builds Gemini token pricing from the paid-tier standard table.
@@ -158,11 +161,66 @@ export function buildGeminiProviderModelDefinitions(
       },
     },
 
+    // --- Discovered on the 2026-11-11 Gemini Models API sync ---
+    {
+      id: "gemini-4-carbon",
+      types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Best",
+      badge: "Gemini",
+      primaryCategory: args.catalogEnums.publicModelCategory.BEST,
+      categories: [
+        args.catalogEnums.publicModelCategory.BEST,
+        args.catalogEnums.publicModelCategory.SMART,
+      ],
+      qualityTier: 5,
+      speedTier: 3,
+      costTier: 3,
+      recommendedUseCases: ["reasoning", "agentic_coding", "long_context"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
+      tokenUsageCovered: true,
+      maxOutputTokens: 32768,
+      pricing: pricingGemini({
+        input: 2.0,
+        cachedInput: 0.1,
+        output: 10.0,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261111,
+        notes: "Promotional standard rate published through 2026-11-30 (2.00 in / 0.10 cached / 10.00 out, thinking included; implicit caching only; no long-context tier). Scheduled increase: from 2026-12-01 the published rate is 4.00 in / 0.20 cached / 20.00 out. The catalog has no effective-date field, so this entry carries today's rate and must be updated on 2026-12-01.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-11 (text + structured + SSE streaming + structured streaming in JSON mode; token usage reported).",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.AUDIO,
+            AssetType.VIDEO,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-11 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. Full 5/5 rectangle on every source kind, including genuine AUDIO and VIDEO comprehension.",
+          updatedAt: "2026-11-11",
+        },
+        updatedAt: "2026-11-11",
+      },
+    },
+
     // --- Discovered on the 2026-10-27 Gemini Models API sync ---
     {
       id: "gemini-4-argon",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-11-11: one candidate per category for each of the four big providers): superseded as Gemini's DCDR Best by gemini-4-carbon (more capable, same price).
+      publicForCustomers: false,
       publicName: "DCDR Best",
       badge: "Gemini",
       primaryCategory: args.catalogEnums.publicModelCategory.BEST,
@@ -183,8 +241,8 @@ export function buildGeminiProviderModelDefinitions(
         input: 2.0,
         cachedInput: 0.1,
         output: 10.0,
-        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
-        notes: "Promotional standard rate published through 2026-11-30 (2.00 in / 0.10 cached / 10.00 out, thinking included; implicit caching only); from 2026-12-01 the rate is 4.00 in / 0.20 cached / 20.00 out.",
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261111,
+        notes: "Promotional standard rate published through 2026-11-30 (2.00 in / 0.10 cached / 10.00 out, thinking included; implicit caching only; no long-context tier); re-verified 2026-11-11. Scheduled increase: from 2026-12-01 the published rate is 4.00 in / 0.20 cached / 20.00 out. The catalog has no effective-date field, so this entry carries today's rate and must be updated on 2026-12-01.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
@@ -386,6 +444,23 @@ export function buildGeminiProviderModelDefinitions(
       },
     },
     {
+      id: "gemini-omni-1.2-flash",
+      types: [IntentType.CHAT],
+      maxOutputTokens: 65536,
+      pricing: pricingGemini({
+        input: 1.5,
+        output: 9.0,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261111,
+        notes: "Published standard rates (2026-11-11): 1.50 in (text/image/video), 9.00 out for text. Video output is billed separately at 12.00 per MTok.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
+        reason:
+          "Provider probe on 2026-11-11 returns 400 'This model only supports Interactions API.' (same as gemini-omni-1.1-flash) — it is not reachable through the generateContent surface the runtime CHAT adapter uses.",
+        updatedAt: "2026-11-11",
+      },
+    },
+    {
       id: "gemini-omni-1.1-flash",
       types: [IntentType.CHAT],
       maxOutputTokens: 65536,
@@ -458,10 +533,9 @@ export function buildGeminiProviderModelDefinitions(
       maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 1.0,
-        cachedInput: 0.1,
         output: 5.0,
-        updatedAt: GEMINI_PRICING_UPDATED_AT_20261027,
-        notes: "Promotional standard rate published through 2026-12-31 (1.00 in / 0.10 cached / 5.00 out, text/image/video/audio); from 2027-01-01 the rate is 2.00 in / 0.20 cached / 10.00 out. Corrected 2026-10-27 from 2.00/10.00, which is the post-promotional rate.",
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261111,
+        notes: "Promotional standard rate published through 2026-12-31 (1.00 in / 5.00 out, text/image/video/audio); from 2027-01-01 the rate is 2.00 in / 10.00 out. Corrected 2026-10-27 from 2.00/10.00, which is the post-promotional rate. Corrected 2026-11-11: the cached-input rate (0.10) was dropped because this model's own pricing row publishes no context-caching price (that rate belongs to gemini-robotics-er-2-preview).",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
@@ -532,22 +606,26 @@ export function buildGeminiProviderModelDefinitions(
       maxOutputTokens: 65536,
       pricing: pricingGemini({
         input: 2.0,
+        cachedInput: 0.2,
         output: 12.0,
         tiers: [
           {
             name: "prompts <= 200k",
             condition: "prompts <= 200k tokens",
             input: 2.0,
+            cachedInput: 0.2,
             output: 12.0,
           },
           {
             name: "prompts > 200k",
             condition: "prompts > 200k tokens",
             input: 4.0,
+            cachedInput: 0.4,
             output: 18.0,
           },
         ],
-        notes: "Output price includes thinking tokens.",
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261111,
+        notes: "Output price includes thinking tokens. Shares the gemini-3.1-pro-preview pricing row, which names this id; context-caching rates (0.20 / 0.40 above 200k) added 2026-11-11.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,

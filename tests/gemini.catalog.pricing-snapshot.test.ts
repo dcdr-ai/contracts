@@ -1,3 +1,5 @@
+import { AssetType } from "../src/asset.contract";
+import { ExecutionPartSourceKind } from "../src/execution.contract";
 import { IntentType } from "../src/intent.contract";
 import { IntentProvider } from "../src/provider.contract";
 import {
@@ -10,7 +12,8 @@ import {
 /**
  * Regression coverage for the 2026-09-05 Gemini catalog + pricing snapshot.
  *
- * Source of truth: https://ai.google.dev/gemini-api/docs/pricing (standard rates).
+ * Source of truth: https://aistudio.google.com/docs/pricing (standard rates; the former
+ * ai.google.dev/gemini-api/docs/pricing URL 301-redirects there since 2026-11-11).
  */
 interface GeminiPricingExpectation {
   modelId: string;
@@ -30,6 +33,9 @@ const GEMINI_PRICING_EXPECTATIONS: GeminiPricingExpectation[] = [
   { modelId: "gemini-robotics-er-2-streaming-preview", input: 1.0, output: 5.0 },
   // Discovered 2026-10-27; promotional rate through 2026-11-30.
   { modelId: "gemini-4-argon", input: 2.0, output: 10.0 },
+  // Discovered 2026-11-11; same promotional rate and date as gemini-4-argon.
+  { modelId: "gemini-4-carbon", input: 2.0, output: 10.0 },
+  { modelId: "gemini-omni-1.2-flash", input: 1.5, output: 9.0 },
   // Image-generation families: text-side rates only.
   { modelId: "gemini-3.1-flash-image", input: 0.5, output: 3.0 },
   { modelId: "gemini-3.1-flash-lite-image", input: 0.25, output: 1.5 },
@@ -147,5 +153,54 @@ describe("Gemini catalog pricing snapshot (2026-09-05)", () => {
         ProviderModelRegistry.getModelDefinition(IntentProvider.GEMINI, modelId),
       ).not.toBeNull();
     }
+  });
+});
+
+describe("Gemini catalog drift pass (2026-11-11)", () => {
+  it("curates gemini-4-carbon from provider E2E: SUPPORTED, usage covered, full 5x3 rectangle", () => {
+    const def = ProviderModelRegistry.getModelDefinition(IntentProvider.GEMINI, "gemini-4-carbon");
+    expect(def?.types).toEqual([IntentType.CHAT]);
+    expect(def?.maxOutputTokens).toBe(32768);
+    expect(def?.runtimeSupport?.status).toBe(ProviderModelRuntimeSupportStatus.SUPPORTED);
+    expect(def?.tokenUsageCovered).toBe(true);
+    expect(def?.runtimeSupport?.inputParts?.status).toBe(ProviderModelRuntimeSupportStatus.SUPPORTED);
+    expect(def?.runtimeSupport?.inputParts?.supportedAssetTypes).toEqual([
+      AssetType.TEXT,
+      AssetType.IMAGE,
+      AssetType.AUDIO,
+      AssetType.VIDEO,
+      AssetType.DOCUMENT,
+    ]);
+    expect(def?.runtimeSupport?.inputParts?.supportedSourceKinds).toEqual([
+      ExecutionPartSourceKind.INLINE,
+      ExecutionPartSourceKind.URL,
+      ExecutionPartSourceKind.ASSET,
+    ]);
+  });
+
+  it("records the Interactions-API-only gemini-omni-1.2-flash as NOT_SUPPORTED like its 1.1 sibling", () => {
+    const def = ProviderModelRegistry.getModelDefinition(IntentProvider.GEMINI, "gemini-omni-1.2-flash");
+    expect(def?.runtimeSupport?.status).toBe(ProviderModelRuntimeSupportStatus.NOT_SUPPORTED);
+    expect(def?.tokenUsageCovered).toBeUndefined();
+    expect(def?.maxOutputTokens).toBe(65536);
+  });
+
+  it("only carries a cached-input rate where the model's own pricing row publishes one", () => {
+    // gemini-robotics-er-2-streaming-preview's row has no context-caching price.
+    expect(
+      ProviderModelRegistry.getTokenPricing(IntentProvider.GEMINI, "gemini-robotics-er-2-streaming-preview")
+        ?.cachedInput,
+    ).toBeUndefined();
+    // gemini-3.1-pro-preview-customtools shares the gemini-3.1-pro-preview row, caching included.
+    expect(
+      ProviderModelRegistry.getTokenPricing(IntentProvider.GEMINI, "gemini-3.1-pro-preview-customtools")
+        ?.cachedInput,
+    ).toBe(0.2);
+  });
+
+  it("cites the current Google pricing URL", () => {
+    expect(ProviderModelRegistry.getModelPricing(IntentProvider.GEMINI, "gemini-4-carbon")?.sourceUrl).toBe(
+      "https://aistudio.google.com/docs/pricing",
+    );
   });
 });

@@ -16,6 +16,8 @@ const ANTHROPIC_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
 const ANTHROPIC_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
 /** Claude 5.5 generation priced from the official table; existing rows re-verified unchanged the same day. */
 const ANTHROPIC_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
+/** Claude Fable 5.2 priced from the official table; existing rows re-verified unchanged the same day. */
+const ANTHROPIC_PRICING_UPDATED_AT_20261111 = Date.UTC(2026, 10, 11);
 
 export const ANTHROPIC_PROVIDER_PRICING_FALLBACK_RULES: ProviderPricingFallbackRule[] =
   [
@@ -66,7 +68,8 @@ export function buildAnthropicProviderModelDefinitions(
     {
       id: "claude-opus-5-5",
       types: [IntentType.CHAT],
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-11-11: one candidate per category for each of the four big providers): superseded as Anthropic's DCDR Best by claude-fable-5-2.
+      publicForCustomers: false,
       publicName: "DCDR Best",
       badge: "Anthropic",
       primaryCategory: args.catalogEnums.publicModelCategory.BEST,
@@ -646,6 +649,58 @@ export function buildAnthropicProviderModelDefinitions(
           updatedAt: "2026-06-26",
         },
         updatedAt: "2026-05-04",
+      },
+    },
+    {
+      id: "claude-fable-5-2",
+      types: [IntentType.CHAT],
+      publicForCustomers: true,
+      publicName: "DCDR Best",
+      badge: "Anthropic",
+      primaryCategory: args.catalogEnums.publicModelCategory.BEST,
+      categories: [args.catalogEnums.publicModelCategory.BEST],
+      qualityTier: 5,
+      speedTier: 3,
+      costTier: 1,
+      recommendedUseCases: ["reasoning", "agentic_coding"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
+      maxOutputTokens: 128000,
+      tokenUsageCovered: true,
+      parameterSupport: ANTHROPIC_NO_SAMPLING_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 8.0,
+        cachedInput: 0.2,
+        cacheWriteInput: 10.0,
+        cacheWrite1hInput: 16.0,
+        output: 40.0,
+        sourceUrl: ANTHROPIC_PRICING_URL,
+        updatedAt: ANTHROPIC_PRICING_UPDATED_AT_20261111,
+        notes:
+          "Anthropic pricing page snapshot 2026-11-11. Cache hits are priced at 0.025x base input on Fable 5.2, as on Fable 5.1 (other models use the standard 0.1x multiplier). No long-context tier.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-11 (text + structured + SSE streaming with the 1024-token baseline; every ThinkingLevel from MINIMAL to MAX accepted as adaptive thinking + effort). Structured streaming of the ~150-word probe needs a 4096-token budget: at 1024 the model spends it reasoning and returns PROVIDER_EMPTY_RESPONSE. Sampling parameters are stripped via parameterSupport.",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-11 with the unified comprehension-grade curator (RM-050/RM-051), INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind (unlike Fable 5.1, TEXT passes). AUDIO and VIDEO are rejected deterministically by the Anthropic Messages provider path before any upstream model call.",
+          updatedAt: "2026-11-11",
+        },
+        updatedAt: "2026-11-11",
       },
     },
     {

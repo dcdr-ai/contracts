@@ -4,6 +4,26 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261111.1] — 11:00UTC
+
+<!--
+sourceCommit: a1567941471b2dd40386cdc2d4e9482476e35461
+queuedAtUtc: 
+previousMirroredBuild: 20261028.2 (2026-10-28)
+contractsSubmodule: 58f1baafea7f..28d196c9fc02
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.23.0 - Claude Fable 5.2.** Anthropic's `claude-fable-5-2` joins the catalog, validated for text, structured output, streaming, reasoning levels, token usage and image, document and text input, and priced from Anthropic's official table. It is now Anthropic's **DCDR Best** model, in place of Claude Opus 5.5, which can still be picked under Anthropic like every supported model.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.23.0 - Gemini 4 Carbon and a model catalog refresh.** Google's `gemini-4-carbon` joins the catalog, validated for text, structured output, streaming, token usage and text, image, audio, video and document input, and priced from Google's official table. It is now Gemini's **DCDR Best** model, in place of Gemini 4 Argon, which can still be picked under Gemini. OpenAI's `gpt-image-2.6-sunburst` and `gpt-image-2.6-flare` and Google's `gemini-omni-1.2-flash` are catalogued for evaluation. OpenAI's search-preview and deep-research models and one audio snapshot are flagged as retired by OpenAI. Prices were re-checked against the official OpenAI, Gemini and xAI tables, with two Gemini cached-input rates corrected. Gemini 4 prices are scheduled to double on 2026-12-01 per Google's page.
+- <kbd>RUNTIME</kbd> **DCDR installs can keep the runtime's managed assets in the install's own file store.** On a private cloud or on-premises install, the assets the runtime stores for itself (execution outputs, uploaded inputs) can now live in the install's own store - an S3-compatible one such as the install's in-stack MinIO or the customer's S3, or Google Cloud Storage - under the runtime's own folder of the install's bucket, configured from the `DCDR_ASSET_STORAGE_*` variables, with access keys read from secret files. A missing or invalid variable stops the runtime at startup and names the variable. Without `DCDR_ASSET_STORAGE_PROVIDER` nothing changes: AQR's SaaS keeps its current storage.
+- <kbd>RUNTIME</kbd> **Files from the install's own store can be passed to a model as input by URL.** On a DCDR install with an S3-compatible store, a signed link to one of the runtime's own files in that store is fetched by the runtime and handed to the model, so knowledge documents and other stored files reach the model even when the store is only reachable inside the install. Every other URL is treated exactly as before.
+- <kbd>RUNTIME</kbd> **A new showcase demo: Inmos, a fictitious property developer and builder.** Home reservations in the buyer's language checked against the price list, with offers below list and large cash payments waiting for the sales director; subcontractors' monthly works certifications cross-checked with the suppliers' delivery notes and held for the site manager when they disagree; buyers' post-sale claims assessed from their photos against the warranty and the building code, with the clause cited and a person deciding repairs above the limit and every decline. English and Spanish throughout.
+- <kbd>RUNTIME</kbd> **Showcase: Telaro, an online clothing and footwear brand that sells across Europe.** A new fictitious demo: product listings written in five languages from a supplier photo and approved before they are published, returns judged from the customer's photos, orders held on payment signals until a person decides, parcels on a live map with notices in each customer's language, multilingual customer care and reviews, and policies answered with citations. Case queues can now be decided without photos, and sample documents can be photos.
+### Changed
+- <kbd>RUNTIME</kbd> **How long uploaded assets are kept is documented.** The asset upload API (`POST /api/assets/upload`, `uploadAsset`) now states that an asset in DCDR-managed storage is kept while something in the platform references it, and at least for a grace period after the upload (7 days by default); one that nothing references is deleted after that, and closing the account deletes all of them. An application that keeps an asset path only on its own side should upload the file again when it needs it. Assets in a customer's own storage are not affected.
+- <kbd>RUNTIME</kbd> **Uploading a file that is already stored starts its retention period again.** An upload of content the platform already holds still returns the same asset path, and now also counts as a new upload for retention, so a file uploaded again is never cleaned up as if it were old. Its content and details are unchanged.
+
 ## [20261028.2] — 01:39UTC
 
 <!--

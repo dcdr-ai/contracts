@@ -92,6 +92,33 @@ export const PROVIDER_MODEL_RETIREMENTS: ProviderModelRetirementRecord[] = [
     reason: OPENAI_DOES_NOT_EXIST_REASON,
   })),
 
+  // --- OpenAI: measured 2026-11-11 (ids gone from the /v1/models listing, one call each) ---
+  ...[
+    "gpt-4o-search-preview",
+    "gpt-4o-search-preview-2025-03-11",
+    "gpt-4o-mini-search-preview",
+    "gpt-4o-mini-search-preview-2025-03-11",
+    "gpt-audio-mini-2025-10-06",
+  ].map((modelId) => ({
+    provider: IntentProvider.OPEN_AI,
+    modelId,
+    detectedAt: "2026-11-11",
+    reason: OPENAI_DEPRECATED_404_REASON,
+  })),
+  // /v1/responses (their own surface) answers the generic "does not exist or you do not have
+  // access"; the same-day /v1/chat/completions call names them deprecated.
+  ...[
+    "o3-deep-research",
+    "o3-deep-research-2025-06-26",
+    "o4-mini-deep-research",
+    "o4-mini-deep-research-2025-06-26",
+  ].map((modelId) => ({
+    provider: IntentProvider.OPEN_AI,
+    modelId,
+    detectedAt: "2026-11-11",
+    reason: OPENAI_DEPRECATED_404_REASON,
+  })),
+
   // --- Gemini: measured 2026-10-28 (re-check of the LEGACY overrides) ---
   ...["gemini-2.0-flash", "gemini-2.0-flash-001", "gemini-2.0-flash-lite", "gemini-2.0-flash-lite-001", "gemini-3-pro-preview"].map(
     (modelId) => ({

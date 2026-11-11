@@ -212,6 +212,19 @@ Notes:
 - `intent` is optional for managed uploads; tenant-global cache identity no longer depends on it.
 - The TypeScript client infers common `mimeType` and `partType` values from `name` when omitted.
 
+Retention of uploaded assets (DCDR-managed storage):
+
+- An uploaded asset is kept while something in the platform references it (a knowledge document, an intent or
+  workflow, a run, or an execution log that is still within its retention), and in any case for a grace period after
+  the upload: **7 days** by default; on a DCDR install the operator can change it.
+- An asset that nothing in the platform references is **deleted** once that grace period is over. If your application
+  keeps an `assetPath` only on its own side, do not rely on it beyond the grace period: upload the file again when you
+  need it. The same content returns the same `assetPath` (`created=false`), and the grace period starts again from
+  that upload.
+- Closing the account deletes all of the workspace's managed assets.
+- This applies to the DCDR-managed storage (`storageOwner: SYSTEM`). Assets written to a storage of your own
+  (`storageOwner: CUSTOMER`, chosen with `storageId`) are yours to keep or delete.
+
 Managed storage credential model:
 
 - Public asset routes stay secret-free.

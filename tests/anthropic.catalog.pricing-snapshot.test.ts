@@ -26,6 +26,8 @@ interface AnthropicPricingExpectation {
 }
 
 const ANTHROPIC_PRICING_EXPECTATIONS: AnthropicPricingExpectation[] = [
+  // Added 2026-11-11 (3.23.0); cache hits at 0.025x base input, as on Fable 5.1.
+  { modelId: "claude-fable-5-2", input: 8.0, cachedInput: 0.2, output: 40.0 },
   { modelId: "claude-fable-5-1", input: 10.0, cachedInput: 0.25, output: 50.0 },
   { modelId: "claude-fable-5", input: 10.0, cachedInput: 1.0, output: 50.0 },
   { modelId: "claude-opus-5", input: 5.0, cachedInput: 0.5, output: 25.0 },
@@ -148,13 +150,20 @@ describe("Anthropic catalog pricing snapshot (2026-09-05)", () => {
     }
 
     // claude-opus-4-8 held the Anthropic BEST slot until contracts 3.22.0 (owner,
-    // 2026-10-28: one candidate per category), when claude-opus-5-5 replaced it.
+    // 2026-10-28: one candidate per category), then claude-opus-5-5 until 3.23.0 (owner,
+    // 2026-11-11: "el best es fable"), when claude-fable-5-2 took it.
+    expect(
+      ProviderModelRegistry.getModelDefinition(
+        IntentProvider.ANTHROPIC,
+        "claude-fable-5-2",
+      )?.publicForCustomers,
+    ).toBe(true);
     expect(
       ProviderModelRegistry.getModelDefinition(
         IntentProvider.ANTHROPIC,
         "claude-opus-5-5",
       )?.publicForCustomers,
-    ).toBe(true);
+    ).toBe(false);
     expect(
       ProviderModelRegistry.getModelDefinition(
         IntentProvider.ANTHROPIC,
@@ -168,6 +177,39 @@ describe("Anthropic catalog pricing snapshot (2026-09-05)", () => {
           ?.publicForCustomers,
       ).toBe(false);
     }
+  });
+
+  it("records the 2026-11-11 provider E2E outcome for claude-fable-5-2", () => {
+    const def = ProviderModelRegistry.getModelDefinition(
+      IntentProvider.ANTHROPIC,
+      "claude-fable-5-2",
+    );
+
+    expect(def?.types).toEqual([IntentType.CHAT]);
+    expect(def?.maxOutputTokens).toBe(128000);
+    expect(def?.runtimeSupport?.status).toBe(
+      ProviderModelRuntimeSupportStatus.SUPPORTED,
+    );
+    expect(def?.tokenUsageCovered).toBe(true);
+    // The pricing page publishes no long-context tier for Fable 5.2.
+    expect(
+      ProviderModelRegistry.getTokenPricing(IntentProvider.ANTHROPIC, "claude-fable-5-2")
+        ?.tiers ?? [],
+    ).toEqual([]);
+
+    // Unlike Fable 5.1, TEXT passed comprehension on every source kind.
+    const inputParts = def?.runtimeSupport?.inputParts;
+    expect(inputParts?.status).toBe(ProviderModelRuntimeSupportStatus.SUPPORTED);
+    expect(inputParts?.supportedAssetTypes).toEqual([
+      AssetType.TEXT,
+      AssetType.IMAGE,
+      AssetType.DOCUMENT,
+    ]);
+    expect(inputParts?.supportedSourceKinds).toEqual([
+      ExecutionPartSourceKind.INLINE,
+      ExecutionPartSourceKind.URL,
+      ExecutionPartSourceKind.ASSET,
+    ]);
   });
 
   it("keeps the claude-opus-5 multimodal rectangle marked untrusted", () => {

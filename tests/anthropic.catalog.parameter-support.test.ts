@@ -11,6 +11,7 @@ describe("Anthropic catalog parameter support", () => {
     for (const modelId of [
       "claude-sonnet-5",
       "claude-fable-5",
+      "claude-fable-5-2",
       "claude-opus-5-5",
       "claude-sonnet-5-5",
       "claude-haiku-5-5",
@@ -38,6 +39,7 @@ describe("Anthropic catalog parameter support", () => {
 
   it("marks the models that refuse a thinking budget as effort-controlled (measured 2026-10-27)", () => {
     for (const modelId of [
+      "claude-fable-5-2",
       "claude-fable-5-1",
       "claude-fable-5",
       "claude-opus-5-5",

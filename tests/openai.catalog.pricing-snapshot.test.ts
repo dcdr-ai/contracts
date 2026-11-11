@@ -196,3 +196,51 @@ describe("OpenAI catalog pricing snapshot (2026-09-05)", () => {
     }
   });
 });
+
+/** Ids that left the OpenAI /v1/models listing on 2026-11-11 and whose own call answered "deprecated". */
+const OPENAI_RETIRED_20261111 = [
+  "gpt-4o-search-preview",
+  "gpt-4o-search-preview-2025-03-11",
+  "gpt-4o-mini-search-preview",
+  "gpt-4o-mini-search-preview-2025-03-11",
+  "gpt-audio-mini-2025-10-06",
+  "o3-deep-research",
+  "o3-deep-research-2025-06-26",
+  "o4-mini-deep-research",
+  "o4-mini-deep-research-2025-06-26",
+];
+
+describe("OpenAI catalog drift pass (2026-11-11)", () => {
+  it("prices the new gpt-image-2.6 pair from the image modality row", () => {
+    for (const modelId of ["gpt-image-2.6-sunburst", "gpt-image-2.6-flare"]) {
+      const def = ProviderModelRegistry.getModelDefinition(IntentProvider.OPEN_AI, modelId);
+      expect(def?.types).toEqual([IntentType.IMAGE_GENERATION]);
+      expect(def?.runtimeSupport?.status).toBe(ProviderModelRuntimeSupportStatus.IN_PROGRESS);
+      expect(def?.publicForCustomers).toBe(false);
+
+      const tokens = ProviderModelRegistry.getTokenPricing(IntentProvider.OPEN_AI, modelId);
+      expect(tokens?.input).toBe(8);
+      expect(tokens?.cachedInput).toBe(2);
+      expect(tokens?.outputUsd).toBe(30);
+    }
+  });
+
+  it("retires the measured ids with a 2026-11-11 record, a LEGACY override and their evidence intact", () => {
+    const overrides = PROVIDER_MODEL_E2E_OVERRIDES[IntentProvider.OPEN_AI] ?? {};
+    for (const modelId of OPENAI_RETIRED_20261111) {
+      const def = ProviderModelRegistry.getModelDefinition(IntentProvider.OPEN_AI, modelId);
+      expect(def?.retired?.detectedAt).toBe("2026-11-11");
+      expect(overrides[modelId]?.status).toBe(ProviderModelE2EStatus.LEGACY);
+      // The last observed runtime-support verdict is kept, never rewritten by a retirement.
+      expect(def?.runtimeSupport?.updatedAt).toBe("2026-05-22");
+    }
+  });
+
+  it("keeps gpt-image-1 (de-listed but still answering) as LEGACY only, not retired", () => {
+    const overrides = PROVIDER_MODEL_E2E_OVERRIDES[IntentProvider.OPEN_AI] ?? {};
+    expect(overrides["gpt-image-1"]?.status).toBe(ProviderModelE2EStatus.LEGACY);
+    expect(
+      ProviderModelRegistry.getModelDefinition(IntentProvider.OPEN_AI, "gpt-image-1")?.retired,
+    ).toBeUndefined();
+  });
+});

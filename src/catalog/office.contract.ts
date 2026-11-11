@@ -9,7 +9,8 @@ import type {
   ProviderModelParameterSupportInfo,
 } from "../provider.catalog.contract";
 
-const OFFICE_REFERENCE_PRICING_URL = "https://ai.google.dev/gemini-api/docs/pricing";
+/** Google's Gemini pricing page (the former ai.google.dev URL 301-redirects here since 2026-11-11). */
+const OFFICE_REFERENCE_PRICING_URL = "https://aistudio.google.com/docs/pricing";
 const OFFICE_REFERENCE_PRICING_UPDATED_AT_20260519 = Date.UTC(2026, 4, 19);
 
 /**

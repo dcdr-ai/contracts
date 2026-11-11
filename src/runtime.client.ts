@@ -610,6 +610,9 @@ export class DcdrRuntimeClient {
    * Notes
    * - Cloud-only managed feature.
    * - When `storageId` is omitted, runtime resolves the tenant default storage.
+   * - Retention (DCDR-managed storage): an asset is kept while something in the platform references it, and at
+   *   least for a grace period after the upload (7 days by default). One that nothing references is deleted after
+   *   that, so an `assetPath` kept only on the caller's side must not be relied on beyond it. See `docs/CLIENT.md`.
    */
   async uploadAsset(
     request: DcdrRuntimeAssetUploadInput,
