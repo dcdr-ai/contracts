@@ -2,3 +2,5 @@
 coverage/
 test-results/
 .nyc_output/
+# Tarballs from npm pack (handed to the backend to verify, never committed)
+*.tgz

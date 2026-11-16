@@ -39,6 +39,24 @@ docker run --rm -p 8443:8000 \
 - `ALLOW_SESSION_BYPASS` (default `false`): allows `x-session-bypass` for dev/testing when explicitly enabled.
 - `SESSION_BYPASS_TOKEN` (optional): the expected `x-session-bypass` value.
 
+## Tenant entitlements (DCDR Cloud and DCDR installs)
+
+When the runtime serves customer traffic, it reads each tenant's entitlements (plan, quotas, subscription
+state) from the DCDR control plane and caches them.
+
+- `TENANT_ENTITLEMENTS_MAX_AGE_MS` (default 5 minutes): how long a cached snapshot is used before it is refreshed.
+- `TENANT_ENTITLEMENTS_STALE_MAX_AGE_MS` (default 10 minutes): how old a cached snapshot may be and still be used
+  while the control plane cannot be reached.
+- `TENANT_ENTITLEMENTS_FAIL_CLOSED` (default: closed): when the control plane cannot be reached and no usable
+  snapshot is cached, customer requests are refused with HTTP `503`. **Only the exact value `false` opens it**
+  and lets requests through without entitlements; unset, blank or any other value (`0`, `no`, `False`, a typo)
+  keeps it closed.
+
+**A DCDR install must never run with `TENANT_ENTITLEMENTS_FAIL_CLOSED` set to anything but `true`.** Leave it
+unset (the DCDR installer does). Fail-closed is what keeps an install's licence, plan and quotas in force
+while the control plane is unreachable; opening it means customer traffic runs with no limits and no
+licence check for as long as the outage lasts.
+
 ## Managed asset storage on a DCDR install
 
 On a DCDR install (private cloud or on premises) the runtime keeps the assets it manages for itself in

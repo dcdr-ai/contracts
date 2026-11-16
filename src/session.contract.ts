@@ -62,7 +62,9 @@ export interface DcdrSessionKeyring {
  * v3.13.0).
  *
  * The runtime refuses an internal run grant unless every flag holds: expiry is not what revokes a grant,
- * the state of its run is.
+ * the state of its run is. From v3.24.0 the same check also vouches for a tenant run session (see
+ * {@link DCDR_WORKFLOW_SESSION_AID_PREFIX}); for one that uploads or reads assets the runtime asks without
+ * `intent`, and the answer's `intentAllowed` is then `false` and not consulted.
  */
 export interface WorkflowRunGrantStatusResponse {
   runId: string;
@@ -70,10 +72,51 @@ export interface WorkflowRunGrantStatusResponse {
   active: boolean;
   /** `true` only for a run with no customer. */
   internal: boolean;
-  /** `true` when the run's published definition uses the intent asked about. */
+  /** `true` when the run's published definition uses the intent asked about; `false` when none was asked. */
   intentAllowed: boolean;
   /** Run deadline (ISO-8601), when it has one. */
   deadlineAt: string | null;
+  /**
+   * The run's customer (v3.24.0); `null` for a platform run.
+   *
+   * A runtime refuses a tenant run session unless this equals the session's signed `cid`, so a control
+   * plane that does not send it (an answer from before 3.24.0) refuses every tenant run session rather
+   * than letting one act for a customer it was not minted for. Internal run grants do not read it.
+   */
+  customerId?: string | null;
+}
+
+/**
+ * `aid` prefix of the sessions a control plane mints for one workflow run (v3.24.0): `workflow_<key>`.
+ *
+ * A customer-keyring session with this prefix and a UUID `id` (the run) is a **tenant run session**: the
+ * runtime checks it live against its run, as it does an internal run grant, instead of looking it up in
+ * the service-token allowlist, where it is never stored.
+ */
+export const DCDR_WORKFLOW_SESSION_AID_PREFIX = "workflow_";
+
+/**
+ * `aid` of a stored, managed service token (v3.24.0).
+ *
+ * Managed tokens are the ones listed in the service-token snapshot. Both sides refuse to treat this
+ * marker as a workflow run session, so a managed token can never skip the allowlist.
+ */
+export const DCDR_MANAGED_SERVICE_TOKEN_AID = "service";
+
+/**
+ * Whether a session `aid` names a workflow run session (`workflow_<key>`, v3.24.0).
+ *
+ * Only the shape of the claim: it says nothing about whether the token is genuine or its run alive. The
+ * caller verifies the signature first and checks the run live afterwards. The managed-token marker and a
+ * bare prefix with no workflow key are never a run session.
+ *
+ * @param aid Signed `aid` claim of a verified session.
+ * @returns `true` for `workflow_<key>` with a non-empty key.
+ */
+export function isDcdrWorkflowRunSessionAid(aid: string | null | undefined): boolean {
+  if (typeof aid !== "string") return false;
+  if (aid === DCDR_MANAGED_SERVICE_TOKEN_AID) return false;
+  return aid.startsWith(DCDR_WORKFLOW_SESSION_AID_PREFIX) && aid.length > DCDR_WORKFLOW_SESSION_AID_PREFIX.length;
 }
 
 /** Raw JSON shape of a keyring before validation. */

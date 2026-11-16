@@ -19,7 +19,7 @@ Where you see them:
 | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `BAD_REQUEST`                | Missing/invalid required input at the API boundary.                                                     |
 | `TOKEN_BUDGET_TOO_LOW`       | Output budget too small to produce visible output (common with high-reasoning models).                  |
-| `INVALID_INPUT`              | Input is syntactically valid but semantically unusable for execution (e.g. empty prompt after mapping). |
+| `INVALID_INPUT`              | Input is syntactically valid but semantically unusable for execution (e.g. empty prompt after mapping), or `vars` do not match the intent's input schema (HTTP 400; `details.field` names the offending field, `details.reason` says why). |
 | `VALIDATION_ERROR`           | Contract/schema validation failed for request or derived config.                                        |
 | `UNSUPPORTED_OPERATION`      | The request asks for a feature/operation the runtime does not support.                                  |
 | `MISSING_VARIABLE`           | A required prompt variable is missing.                                                                  |
@@ -34,7 +34,7 @@ Where you see them:
 | `NO_ACTIVE_MODEL`            | No active model configured for the requested intent.                                                    |
 | `NO_ELIGIBLE_IMPLEMENTATION` | Implementations exist but none are eligible after filters/windows/deny rules.                           |
 | `PROVIDER_ERROR`             | Upstream provider rejected the request (4xx/other non-success that is not more specific).               |
-| `PROVIDER_EMPTY_RESPONSE`    | Provider returned a successful response but with no usable output.                                      |
+| `PROVIDER_EMPTY_RESPONSE`    | Provider returned a successful response but with no usable output (e.g. a reasoning model that spent its whole output budget). With `allowFallback`, the next implementation is tried; the empty attempt stays in the report with its token usage. |
 | `TIMEOUT`                    | Execution exceeded a timeout or was aborted/cancelled.                                                  |
 | `RATE_LIMIT`                 | Provider rate-limited the request (typically 429).                                                      |
 | `SERVICE_TOKEN_LIMIT_EXCEEDED` | One of the calling service token's limits has no room left in its window (429, `Retry-After`).        |

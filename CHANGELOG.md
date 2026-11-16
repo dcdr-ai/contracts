@@ -4,6 +4,29 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261116.2] — 15:41UTC
+
+<!--
+sourceCommit: eb840c3dd3e877cfa5f985f82a2056854bba1f3d
+queuedAtUtc: 
+previousMirroredBuild: 20261111.1 (2026-11-11)
+contractsSubmodule: 28d196c9fc02..0dad5ad6316f
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.24.0 - workflow run sessions.** `WorkflowRunGrantStatusResponse.customerId`, `DCDR_WORKFLOW_SESSION_AID_PREFIX`, `isDcdrWorkflowRunSessionAid()` and `DCDR_MANAGED_SERVICE_TOKEN_AID`, so the control plane and the runtime recognise a customer workflow run's session the same way. Additive.
+### Fixed
+- <kbd>RUNTIME</kbd> **Customer workflow runs can execute their intents.** A workflow run that belongs to a customer failed authentication at its first intent step, and could not store large payloads as assets. The runtime now accepts the session the control plane issues for each run, checks it against the run while the run is in progress, and limits it to that customer, that run's intents and asset operations. Platform workflows and service tokens behave as before.
+- <kbd>RUNTIME</kbd> **An empty answer from a model falls back to the next implementation.** With fallback enabled, an intent now moves on to its next implementation when a model returns an empty answer (for example a reasoning model that spends its whole output budget thinking). The empty attempt stays in the execution report with its token usage.
+- <kbd>RUNTIME</kbd> **Input that does not match an intent's input schema answers 400, not 500.** Run and dry-run answer HTTP 400 `INVALID_INPUT` naming the offending field; a streamed execution reports it in its final event. A malformed input schema answers `CONFIG_ERROR`.
+- <kbd>RUNTIME</kbd> **The AI Gateway accepts tokens again on deployments with default settings.** The runtime asked the control plane to check gateway tokens at the wrong address unless a deployment configured it explicitly, so `/v1` refused every token with `invalid_gateway_token`, even tokens with the `gateway` scope. It now uses the control plane's real address by default (`DCDR_GATEWAY_TOKEN_CHECK_PATH` still overrides it), and a test pins every address the runtime calls on the control plane.
+- <kbd>RUNTIME</kbd> **The tenant run session asset test no longer depends on the machine's storage credentials** (`tests/infra/app.workflow.tenant-run-session.integration.test.ts`): it failed on the CI agent, which has none.
+- <kbd>RUNTIME</kbd> **No more false "different credentials" warning.** A request with a single `Authorization: Bearer` header no longer logs that it carries two credentials.
+### Changed
+- <kbd>CONTRACTS</kbd> **Package tarballs are never committed.** The contracts repository ignores `*.tgz` (the tarballs from `npm pack` handed over for verification before a release). No package change.
+- <kbd>RUNTIME</kbd> **The workflow runner pauses while the install's licence is read-only.** Instead of failing one run after another, it stops claiming work for a while (5 minutes by default, `WORKFLOW_RUNNER_LICENSE_BACKOFF_MS`) and logs it once.
+- <kbd>RUNTIME</kbd> **DCDR installs keep tenant entitlements fail-closed.** Documented as a requirement for installs (`TENANT_ENTITLEMENTS_FAIL_CLOSED`), with a test that pins the default. Only the exact value `false` now turns it off: any other value, such as `0`, `no` or a typo, keeps it on.
+
 ## [20261111.1] — 11:00UTC
 
 <!--

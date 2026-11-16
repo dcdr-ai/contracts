@@ -356,7 +356,11 @@ Common knobs:
 - `maxAttempts` — total attempts across all candidates
 - `maxPerCandidate` — attempts per implementation before switching
 - `attemptTimeoutMs`
-- `allowFallback`
+- `allowFallback` — also lets an execution move on to the next implementation after errors that refuse one
+  candidate rather than the request, even when they are not in `retryOn`: an unsupported or retired model
+  (`MODEL_UNSUPPORTED`, `MODEL_NOT_FOUND`), a provider or service-token limit (`PROVIDER_LIMIT_EXCEEDED`,
+  `SERVICE_TOKEN_LIMIT_EXCEEDED`) and, since 2026-11, an empty answer (`PROVIDER_EMPTY_RESPONSE`, typically a
+  reasoning model that spent its whole output budget). Each failed attempt stays in the report with its usage.
 - `repairOnParseFail` — useful when you require strict JSON output
 - `retryOn` — error classes that are retryable
 - backoff/jitter (`retryBackoffMs`, `retryBackoffStrategy`, `retryJitterMs`, `retryBackoffCapMs`)
