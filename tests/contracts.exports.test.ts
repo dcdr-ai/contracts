@@ -90,6 +90,16 @@ describe("@dcdr/contracts exports", () => {
     expect(contracts.DCDR_DEFAULT_TELEMETRY_URL).toBe("https://telemetry.dcdr.ai");
   });
 
+  it("exports the telemetry end-user id mode and pseudonym helper from the root barrel (3.26.0)", () => {
+    // Wire values the control plane stores per service.
+    expect(contracts.TelemetryEndUserIdMode.PSEUDONYMISED).toBe("PSEUDONYMISED");
+    expect(contracts.TelemetryEndUserIdMode.AS_SENT).toBe("AS_SENT");
+    expect(typeof contracts.telemetryEndUserPseudonym).toBe("function");
+    expect(typeof contracts.decodeTelemetryHashKey).toBe("function");
+    expect(contracts.DCDR_TELEMETRY_HASH_KEY_MIN_BYTES).toBe(16);
+    expect(contracts.DCDR_TELEMETRY_END_USER_PSEUDONYM_TEST_VECTORS.length).toBeGreaterThan(0);
+  });
+
   it("exports the shared condition contract from the root barrel", () => {
     expect(ConditionLogicOp.AND).toBe("AND");
     expect(ConditionOperator.EQUALS).toBe("EQUALS");

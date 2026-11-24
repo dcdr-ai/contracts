@@ -4,6 +4,19 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261124.3] — 19:21UTC
+
+<!--
+sourceCommit: 3e50305bce99aeced4d8a6e2c1567198230d58a1
+queuedAtUtc: 
+previousMirroredBuild: 20261124.2 (2026-11-24)
+contractsSubmodule: 5c90d212b678..a52f1efcb88b
+-->
+
+### Added
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.26.0 - end-user id mode per telemetry service.** Each telemetry service can say how the id of its end users leaves the runtime, separately from its payload level: as a keyed pseudonym (the default) or as the app reported it (only when chosen explicitly). The package also exports the pseudonym computation itself, with reference results, so every side computes the same pseudonym for the same id. Additive.
+- <kbd>RUNTIME</kbd> **End-user ids in telemetry follow the service's end-user id mode.** Pseudonymised services never send an end-user id in clear, even at payload level FULL; services set to as-sent send it as reported at every payload level, cut at 256 characters. Services without a mode keep the previous behaviour. The pseudonym now covers the whole id as reported, including ids longer than 256 characters.
+
 ## [20261124.2] — 12:07UTC
 
 <!--

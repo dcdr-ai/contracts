@@ -97,6 +97,28 @@ export enum TelemetryPayloadLevel {
   FULL = "FULL",
 }
 
+/**
+ * How the end user id of a telemetry service leaves the runtime (since 3.26.0).
+ *
+ * Independent of {@link TelemetryPayloadLevel}: the payload level governs content, this mode governs the end
+ * user id at every payload level. Carried per service by {@link DcdrTelemetryServiceSnapshotEntry.endUserIdMode};
+ * when the snapshot entry has no mode (a control plane older than 3.26.0) the runtime keeps the earlier rule:
+ * sent as reported under FULL, pseudonymised under METADATA and NONE.
+ */
+export enum TelemetryEndUserIdMode {
+  /**
+   * The id is replaced by a keyed pseudonym at every payload level, FULL included (the default for a new
+   * service). See {@link telemetryEndUserPseudonym}. When the tenant key is unusable the end user is dropped,
+   * never sent in clear.
+   */
+  PSEUDONYMISED = "PSEUDONYMISED",
+  /**
+   * The id is sent as reported at every payload level, NONE and METADATA included, cut at 256 characters.
+   * Only on the tenant's explicit choice.
+   */
+  AS_SENT = "AS_SENT",
+}
+
 /** Lifecycle of a telemetry service, as the control plane holds it. */
 export enum TelemetryServiceStatus {
   /** Seen in automatic discovery mode; accepted. */
@@ -203,8 +225,9 @@ export interface TelemetryToolRef {
 /**
  * End user reported by the app (`user.id`, `enduser.id`, `langfuse.user.id`...).
  *
- * Under METADATA (and NONE) the runtime replaces the value with
- * `hex(HMAC-SHA256(tenant key, value))` before buffering; under FULL it is sent as reported.
+ * The service's {@link TelemetryEndUserIdMode} decides whether the runtime replaces the value with its pseudonym
+ * ({@link telemetryEndUserPseudonym}: `hex(HMAC-SHA256(tenant key, utf8(value)))`) before buffering or sends it
+ * as reported. Without a mode (older control plane): pseudonymised under METADATA and NONE, as reported under FULL.
  */
 export interface TelemetryEndUser {
   id: string;
@@ -220,8 +243,8 @@ export interface TelemetryEndUser {
 /**
  * Content summary sent instead of content (METADATA), and alongside it (FULL).
  *
- * Hashes are keyed: `hex(HMAC-SHA256(tenant key, utf8(text)))` with the same key and version as
- * {@link TelemetryEndUser}, so a short prompt cannot be confirmed by hashing guesses.
+ * Hashes are keyed: `hex(HMAC-SHA256(tenant key, utf8(text)))` ({@link telemetryEndUserPseudonym}) with the same
+ * key and version as {@link TelemetryEndUser}, so a short prompt cannot be confirmed by hashing guesses.
  */
 export interface TelemetryContentSummary {
   inputMessageCount?: number;
@@ -346,6 +369,11 @@ export interface DcdrTelemetryServiceSnapshotEntry {
   processors?: ProcessingProcessor[];
   /** Whether the tenant's global processors (the registry's `processors`) run before the service's own. */
   applyGlobalProcessors: boolean;
+  /**
+   * How the service's end user id leaves the runtime, at every payload level (since 3.26.0). Absent (a control
+   * plane older than 3.26.0): sent as reported under FULL, pseudonymised under METADATA and NONE.
+   */
+  endUserIdMode?: TelemetryEndUserIdMode;
 }
 
 /** Tenant-wide telemetry settings carried by the snapshot. */
@@ -438,4 +466,146 @@ export function isDcdrTelemetryServiceAccepted(
   if (!settings.enabled) return false;
   if (!entry) return !settings.strictMode;
   return entry.status === TelemetryServiceStatus.DISCOVERED || entry.status === TelemetryServiceStatus.ACKNOWLEDGED;
+}
+
+// ---------------------------------------------------------------------------------------------------
+// End-user pseudonym and keyed hashes (since 3.26.0)
+// ---------------------------------------------------------------------------------------------------
+
+/** One running HMAC computation (Node's `crypto.Hmac` satisfies it). */
+export interface TelemetryHmac {
+  /** Adds `data`, encoded as UTF-8, to the input. */
+  update(data: string, inputEncoding: "utf8"): TelemetryHmac;
+  /** Ends the computation; lowercase hex. */
+  digest(encoding: "hex"): string;
+}
+
+/**
+ * HMAC primitive injected by the caller, so this module never imports `crypto` (it is bundled for the web too).
+ * Node's `crypto` module satisfies it as is: `telemetryEndUserPseudonym(crypto, key, value)`.
+ */
+export interface TelemetryHmacDeps {
+  /** Starts an HMAC-SHA256 computation with the raw key bytes. */
+  createHmac(algorithm: "sha256", key: Uint8Array): TelemetryHmac;
+}
+
+/** One reference input and result of {@link telemetryEndUserPseudonym}. */
+export interface DcdrTelemetryPseudonymTestVector {
+  /** Tenant key, base64 (as in {@link DcdrTelemetryTenantSettings.userIdKey}). */
+  key: string;
+  /** End user id exactly as the app reported it. */
+  value: string;
+  /** Expected pseudonym: `hex(HMAC-SHA256(key bytes, utf8(value)))`, lowercase. */
+  expected: string;
+}
+
+/** Shortest decoded tenant key accepted for pseudonyms and hashes, in bytes (the control plane issues 32). */
+export const DCDR_TELEMETRY_HASH_KEY_MIN_BYTES = 16;
+
+/**
+ * Reference vectors for {@link telemetryEndUserPseudonym}, computed with Node's `crypto`. Any other
+ * implementation (the control plane looking a user up by id, another language) must reproduce every one.
+ * They pin UTF-8 encoding of non-ASCII ids, no case folding (`ada@` and `Ada@` differ) and that the full
+ * reported id is hashed, not the 256-character cut used when an id is sent as reported.
+ */
+export const DCDR_TELEMETRY_END_USER_PSEUDONYM_TEST_VECTORS: readonly DcdrTelemetryPseudonymTestVector[] = Object.freeze([
+  {
+    key: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+    value: "ada@example.com",
+    expected: "5c820b4a5aac8f31eb6741825bfecb8e97f00488d5edaed1ae2908c29d0b7e38",
+  },
+  {
+    key: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+    value: "Ada@Example.com",
+    expected: "787fbfb0243a60f5d91d9566ce05f7a4a95af00d677ecd983c814deca9dce3a2",
+  },
+  {
+    key: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+    value: "José@ejemplo.es",
+    expected: "29248a3e0ce6ca4ec7097d96990947ad859aad99fb116c2a36e40f16c3cd1173",
+  },
+  {
+    key: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+    value: "用户-😀",
+    expected: "9cfaf98d85373ed8be6c231b3bada83a13a4df96768778e501b55ce9e48d5f9d",
+  },
+  {
+    // 325 characters: longer than the 256-character cut of an id sent as reported.
+    key: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+    value: "user-" + "0123456789abcdef".repeat(20),
+    expected: "b142f9326d0957150f43e2a2a390a6a2a5a7cb21105b74adfddc54b987cff002",
+  },
+  {
+    // The shortest usable key (16 bytes).
+    key: "oKGio6SlpqeoqaqrrK2urw==",
+    value: "ada@example.com",
+    expected: "9656eb275fd81bae4b35600d68d637d7fc1b78786951b439b73e6f9cfb1680b3",
+  },
+].map((v) => Object.freeze(v)));
+
+/** Standard and URL-safe base64 alphabets share one table: `+` and `-` are 62, `/` and `_` are 63. */
+const BASE64_SEXTETS: Readonly<Record<string, number>> = (() => {
+  const table: Record<string, number> = {};
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  for (let i = 0; i < alphabet.length; i++) table[alphabet[i]] = i;
+  table["-"] = 62;
+  table["_"] = 63;
+  return Object.freeze(table);
+})();
+
+/**
+ * Decodes a tenant telemetry key (base64) into its bytes.
+ *
+ * Same rules as Node's `Buffer.from(key, "base64")`, without `Buffer`, so the result is identical in the runtime,
+ * the control plane and a browser: standard and URL-safe alphabets, characters outside them skipped (whitespace
+ * included), decoding stops at the first `=`, a trailing group of 2 or 3 characters yields 1 or 2 bytes (a lone
+ * character yields none), and each UTF-16 code unit is read by its low byte as Node does.
+ *
+ * @param base64Key Key text.
+ * @returns The key bytes, or `undefined` when the key is unusable: not a string, empty, or shorter than
+ *   {@link DCDR_TELEMETRY_HASH_KEY_MIN_BYTES} once decoded (nothing is pseudonymised or hashed with a weak key).
+ */
+export function decodeTelemetryHashKey(base64Key: string): Uint8Array | undefined {
+  if (!base64Key || typeof base64Key !== "string") return undefined;
+  const bytes: number[] = [];
+  let acc = 0;
+  let sextets = 0;
+  for (let i = 0; i < base64Key.length; i++) {
+    const ch = String.fromCharCode(base64Key.charCodeAt(i) & 0xff);
+    const v = Object.prototype.hasOwnProperty.call(BASE64_SEXTETS, ch) ? BASE64_SEXTETS[ch] : undefined;
+    if (v === undefined) {
+      if (ch === "=") break;
+      continue;
+    }
+    acc = (acc << 6) | v;
+    sextets++;
+    if (sextets === 4) {
+      bytes.push((acc >> 16) & 0xff, (acc >> 8) & 0xff, acc & 0xff);
+      acc = 0;
+      sextets = 0;
+    }
+  }
+  if (sextets === 2) bytes.push((acc >> 4) & 0xff);
+  else if (sextets === 3) bytes.push((acc >> 10) & 0xff, (acc >> 2) & 0xff);
+  return bytes.length >= DCDR_TELEMETRY_HASH_KEY_MIN_BYTES ? Uint8Array.from(bytes) : undefined;
+}
+
+/**
+ * Keyed pseudonym of an end user id: `hex(HMAC-SHA256(key bytes, utf8(value)))`, lowercase.
+ *
+ * The single implementation of the telemetry keyed hash: the runtime computes end user pseudonyms and the
+ * content summary hashes ({@link TelemetryContentSummary.inputHash} and siblings) with it. To find a user's
+ * spans, hash the id exactly as the app reports it (no trimming, no case folding, the full id even when it is
+ * longer than 256 characters) with every key version the tenant has had, and match each result against
+ * {@link TelemetryEndUser.id} with the same {@link TelemetryEndUser.keyVersion}.
+ *
+ * @param deps HMAC primitive (Node: the `crypto` module).
+ * @param base64Key Tenant key, base64 ({@link DcdrTelemetryTenantSettings.userIdKey}).
+ * @param value Value to pseudonymise.
+ * @returns The 64-character hex pseudonym, or `undefined` when the key is unusable ({@link decodeTelemetryHashKey}).
+ */
+export function telemetryEndUserPseudonym(deps: TelemetryHmacDeps, base64Key: string, value: string): string | undefined {
+  const key = decodeTelemetryHashKey(base64Key);
+  if (!key) return undefined;
+  return deps.createHmac("sha256", key).update(value, "utf8").digest("hex");
 }

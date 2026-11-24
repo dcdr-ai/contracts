@@ -185,8 +185,8 @@ is buffered or sent**, unless you set the service's payload level to FULL.
 
 Also:
 
-- **End-user ids** (`user.id`, `enduser.id`, Langfuse and Vercel user fields) are replaced by a keyed pseudonym
-  under `NONE` and `METADATA`, and kept as sent under `FULL`.
+- **End-user ids** (`user.id`, `enduser.id`, Langfuse and Vercel user fields) follow their own setting per service,
+  independent of the payload level (see [End-user ids](#end-user-ids) below).
 - **Error messages** can contain content, so below FULL only the error type travels; the message is withheld.
 - When content arrives on a service that is not FULL, DCDR records that it did (finding `CONTENT_RECEIVED`) so you
   can turn capture off in the app: the app is still sending prompt content to your network and to its provider.
@@ -200,6 +200,32 @@ To stop the content at the source, turn capture off in the instrumentation (for 
 `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false`, `TRACELOOP_TRACE_CONTENT=false`,
 `OPENINFERENCE_HIDE_INPUTS=true` / `OPENINFERENCE_HIDE_OUTPUTS=true`, `recordInputs: false` / `recordOutputs: false`
 in the Vercel AI SDK), or redact it in a Collector.
+
+### End-user ids
+
+Each service has an end-user id mode, separate from its payload level (since 3.26.0): the payload level decides how
+much content leaves your network, the end-user id mode decides how the id of the person using your app does.
+
+| End-user id mode | What leaves the runtime, at every payload level |
+|---|---|
+| Pseudonymised (default) | A keyed pseudonym of the id, never the id itself, even on a FULL service |
+| As sent | The id as your app reported it, cut at 256 characters, even on a NONE or METADATA service. Only when you choose it explicitly |
+
+The pseudonym is `hex(HMAC-SHA256(workspace key, UTF-8 of the id))`: the HMAC-SHA256 of the id **exactly as your app
+reported it** (no trimming, no lower-casing, the whole id even past 256 characters) with your workspace's key, in
+lowercase hex. The same user gets the same pseudonym within your workspace and key version, so you can count and
+follow users without DCDR holding their ids; nobody without your workspace key can reverse it or confirm a guess.
+`user-42` and `User-42` are two different users: if your app reports the same person with different spellings,
+normalize the id in the app. When the key is rotated, the same user gets a new pseudonym; each span records the key
+version it was computed with. If the key is ever unusable, the end-user id is dropped, never sent in clear.
+
+`telemetryEndUserPseudonym()` in `@dcdr/contracts` is that computation, the one the runtime uses (the HMAC is
+passed in; Node's `crypto` module fits as is), and `DCDR_TELEMETRY_END_USER_PSEUDONYM_TEST_VECTORS` lists reference
+results for checking another implementation.
+
+A runtime that receives no mode for a service (from a control plane older than 3.26.0) keeps the earlier rule:
+kept as sent under FULL, pseudonymised under NONE and METADATA. A service the runtime does not know yet (seen for
+the first time) follows that rule too.
 
 ## Redacting before the data leaves your network (Collector)
 

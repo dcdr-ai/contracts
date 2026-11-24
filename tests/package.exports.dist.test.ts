@@ -17,6 +17,14 @@ interface ContractsPackageJson {
   exports?: Record<string, string | ExportConditions>;
 }
 
+/** The part of `dist/telemetry.contract.js` the 3.26.0 surface check reads. */
+interface DistTelemetryModule {
+  TelemetryEndUserIdMode: Record<string, string>;
+  telemetryEndUserPseudonym: (...args: string[]) => string | undefined;
+  decodeTelemetryHashKey: (key: string) => Uint8Array | undefined;
+  DCDR_TELEMETRY_END_USER_PSEUDONYM_TEST_VECTORS: Array<{ key: string; value: string; expected: string }>;
+}
+
 /**
  * Load result for a dist module target.
  */
@@ -131,6 +139,19 @@ describe("@dcdr/contracts dist/ exports", () => {
       .map((f) => `./${f.replace(/\.ts$/, "")}`);
     const missing = modules.filter((m) => !Object.prototype.hasOwnProperty.call(exportsMap, m));
     expect(missing).toEqual([]);
+  });
+
+  it("dist telemetry.contract exposes the 3.26.0 end-user surface and stays free of node crypto", () => {
+    const target = resolveExportDefault(exportsMap["./telemetry.contract"]);
+    expect(target).toBe("./dist/telemetry.contract.js");
+    const abs = resolveFromPackageRoot(packageRoot, target as string);
+    const mod = nodeLoader(abs) as DistTelemetryModule;
+    expect(mod.TelemetryEndUserIdMode.AS_SENT).toBe("AS_SENT");
+    expect(typeof mod.telemetryEndUserPseudonym).toBe("function");
+    expect(typeof mod.decodeTelemetryHashKey).toBe("function");
+    expect(Array.isArray(mod.DCDR_TELEMETRY_END_USER_PSEUDONYM_TEST_VECTORS)).toBe(true);
+    // Bundled for the web too: the HMAC is injected, never required.
+    expect(fs.readFileSync(abs, "utf8")).not.toMatch(/require(["'](node:)?crypto["'])/);
   });
 
   it("package.json export conditions include types paths pointing to real .d.ts files", () => {
