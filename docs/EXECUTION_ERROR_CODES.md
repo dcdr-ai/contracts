@@ -45,6 +45,7 @@ Where you see them:
 | `SCHEMA_FAIL`                | Output parsed but did not match the expected schema.                                                    |
 | `INTERNAL_ERROR`             | Unexpected runtime failure (bug/exception).                                                             |
 | `CIRCUIT_OPEN`               | Execution blocked by circuit breaker protection.                                                        |
+| `TELEMETRY_REPORTED_ERROR`   | Not a DCDR execution: an error your own app reported on an OpenTelemetry span ([TELEMETRY.md](TELEMETRY.md)). The reported type is in `details.type`. |
 
 ## Runtime guard
 

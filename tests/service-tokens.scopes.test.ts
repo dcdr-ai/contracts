@@ -17,6 +17,7 @@ describe("DcdrServiceTokenScope", () => {
     expect(DcdrServiceTokenScope.REGISTRY_READ).toBe("registry:read");
     expect(DcdrServiceTokenScope.ENTITLEMENTS_READ).toBe("entitlements:read");
     expect(DcdrServiceTokenScope.LOGS_WRITE).toBe("logs:write");
+    expect(DcdrServiceTokenScope.TRACES_WRITE).toBe("traces:write");
     expect(DcdrServiceTokenScope.ASSETS_READ).toBe("assets:read");
     expect(DcdrServiceTokenScope.ASSETS_WRITE).toBe("assets:write");
     expect(DcdrServiceTokenScope.ASSETS_DELETE).toBe("assets:delete");

@@ -24,6 +24,9 @@ Quick map (method → HTTP surface):
 | `deleteAsset(request)`                               | `DELETE /api/assets`                        | required                    | Delete a managed asset                   |
 | `circuitBreakerStatus(provider, model?, tenantCid?)` | `GET /api/execution/circuit-breakers`       | required                    | Observe breaker state (tenant-scoped)    |
 | `resetCircuitBreaker(provider, model?, tenantCid?)`  | `PUT /api/execution/circuit-breakers/reset` | internal only               | Reset breaker state (ops)                |
+| `exportTelemetryTraces(request, options?)`           | `POST /v1/traces`                           | `traces:write` token        | Export OpenTelemetry spans (OTLP/HTTP)   |
+| `exportTelemetryLogs(request, options?)`             | `POST /v1/logs`                             | `traces:write` token        | Export GenAI log events (OTLP/HTTP)      |
+| `telemetryTest(options?)`                            | `POST /v1/traces`                           | `traces:write` token        | Check a telemetry setup end to end       |
 
 What “auth required” means:
 
@@ -305,6 +308,42 @@ Notes:
 ### `resetCircuitBreaker(provider, model?, tenantCid?)`
 
 - Endpoint: `PUT /api/execution/circuit-breakers/reset`
+
+## Telemetry (OTLP)
+
+Since 3.25.0. The client exports OpenTelemetry data to the runtime's OTLP/HTTP receivers, the same endpoints an
+OpenTelemetry SDK uses (see [TELEMETRY.md](TELEMETRY.md)). The `bearerToken` must be a service token with the
+`traces:write` scope; without a `bearerToken` the methods throw `CONFIGURATION` before sending anything (the
+receivers accept no other credential). `DcdrClient` exposes the same three methods.
+
+### `exportTelemetryTraces(request, options?)` / `exportTelemetryLogs(request, options?)`
+
+- Endpoints: `POST /v1/traces`, `POST /v1/logs`
+- `request`: an OTLP/JSON object (`DcdrOtlpExportTraceServiceRequest` with `resourceSpans`,
+  `DcdrOtlpExportLogsServiceRequest` with `resourceLogs`), or a pre-encoded body `DcdrOtlpRawBody`
+  (`{ body: Uint8Array, contentType: DcdrOtlpContentType.PROTOBUF | JSON, contentEncoding?: GZIP | DEFLATE }`) sent as is.
+- `options.gzip`: compress the body (uses `CompressionStream`: Node 18+, current browsers). `options.timeoutMs`
+  overrides the client timeout for this call.
+- Resolves `{ status: 200, partialSuccess? }`. `partialSuccess` carries `rejectedSpans` / `rejectedLogRecords`
+  and an `errorMessage` (also used for warnings such as non-GenAI spans dropped). The runtime answers in the
+  request's format; the client reads both JSON and protobuf responses.
+- Failures throw `DcdrRuntimeError`: `400`, `413`, `415` → `VALIDATION`; `401` → `UNAUTHORIZED`; `403` →
+  `FORBIDDEN` (no `traces:write`, plan without telemetry); `404` → `NOT_FOUND` (runtime in `--registry` mode);
+  `429` → `RATE_LIMITED`; `503` → `SERVER_ERROR`. `retryAfterSeconds` is set when the runtime sent
+  `Retry-After`; `details` carries the `google.rpc.Status` body (`{ code, message }`), decoded from protobuf when
+  the request was protobuf.
+
+```ts
+const result = await client.exportTelemetryTraces({ resourceSpans: [/* ... */] }, { gzip: true });
+if (result.partialSuccess) console.warn(result.partialSuccess.errorMessage);
+```
+
+### `telemetryTest(options?)`
+
+Sends one synthetic GenAI span with no content (built by `buildTelemetryTestTracesRequest`, also exported) and
+returns the export result plus the `traceId`, `spanId` and `serviceName` it used. Options: `serviceName`
+(default `dcdr-telemetry-test`), `environment`, `serviceVersion`, `gzip`, `timeoutMs`. The CLI's
+`telemetry-test` is this method.
 
 ## Request/response shapes
 

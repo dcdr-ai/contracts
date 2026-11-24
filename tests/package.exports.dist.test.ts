@@ -121,6 +121,18 @@ describe("@dcdr/contracts dist/ exports", () => {
     }
   });
 
+  it("exports a subpath for every source module, so `@dcdr/contracts/<module>` resolves in Node", () => {
+    // Regression (3.25.0): `telemetry.contract` had no subpath export. tsconfig paths and jest's mapper resolve
+    // `@dcdr/contracts/telemetry.contract` anyway, so typecheck and tests were green while the built runtime
+    // crashed at boot with ERR_PACKAGE_PATH_NOT_EXPORTED.
+    const modules = fs
+      .readdirSync(path.join(packageRoot, "src"))
+      .filter((f) => f.endsWith(".ts") && f !== "index.ts")
+      .map((f) => `./${f.replace(/\.ts$/, "")}`);
+    const missing = modules.filter((m) => !Object.prototype.hasOwnProperty.call(exportsMap, m));
+    expect(missing).toEqual([]);
+  });
+
   it("package.json export conditions include types paths pointing to real .d.ts files", () => {
     expect(typesTargets.length).toBeGreaterThan(0);
 

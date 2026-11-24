@@ -348,6 +348,49 @@ These help separate **gateway overhead** from **provider time**.
 - `dcdr_runtime_provider_total_duration_seconds{intent}` (Histogram)
   - Sum of provider execution durations across attempts (includes retries/fallback)
 
+### OpenTelemetry receivers (`/v1/traces`, `/v1/logs`)
+
+Telemetry from your own AI apps (see [TELEMETRY.md](TELEMETRY.md)). Every label is a bounded set; no tenant,
+service or span id is ever a label.
+
+- `dcdr_runtime_telemetry_requests_total{signal,status}` (Counter)
+  - OTLP requests by `signal` (`traces | logs`) and HTTP `status` answered (`200`, `400`, `401`, `403`, `404`, `405`, `408`, `413`, `415`, `429`, `503`)
+
+- `dcdr_runtime_telemetry_items_total{signal,outcome}` (Counter)
+  - Spans / log records by `outcome`: `received | accepted | rejected | dropped | forwarded_refused` (spans of an unknown service in strict mode, rejected but recorded for discovery)
+
+- `dcdr_runtime_telemetry_rejected_total{signal,reason}` (Counter)
+  - Rejections reported in `partial_success`: `INVALID_ID | IN_FUTURE | TOO_OLD | SERVICE_PENDING | SERVICE_BLOCKED | SERVICE_UNKNOWN_STRICT`
+
+- `dcdr_runtime_telemetry_dropped_total{signal,reason}` (Counter)
+  - Dropped without rejection: `NOT_GENAI` (spans that are not GenAI nor connect one), `NOT_GENAI_EVENT` (log records that are not GenAI events), `UNMATCHED_LOG` (log records whose span never arrived), `JOIN_OVERFLOW`, `SERVICE_MISMATCH` (log records of another service than their span's), `SPAN_CONTRIBUTION_CAP` (log records past the per-span limit of one request), `OVERSIZED`, `BUFFER_HARD_LIMIT` (accepted spans the buffer could not hold; never expected, alert on any)
+
+- `dcdr_runtime_telemetry_decode_errors_total{signal,reason}` (Counter)
+  - Bodies refused by the OTLP decoder (`TRUNCATED`, `INVALID_JSON`, `TOO_MANY_ITEMS`, `DECOMPRESSED_TOO_LARGE`, ...)
+
+- `dcdr_runtime_telemetry_buffer_depth{store}` (Gauge)
+  - Spans waiting to be sent to the control plane, in `memory` or on the disk `spool`
+
+- `dcdr_runtime_telemetry_spool_dropped_total` (Counter)
+  - Spans dropped from the full spool (oldest first). Should stay at 0; a rising value means the control plane is unreachable for long
+
+- `dcdr_runtime_telemetry_flush_total{outcome}` (Counter)
+  - Batches sent to the control plane (`ok | error`)
+
+- `dcdr_runtime_telemetry_backend_discarded_total` (Counter)
+  - Spans the control plane received but did not keep (outside its retention window): expected, not an error
+
+- `dcdr_runtime_telemetry_snapshot_fetch_total{status}` (Counter)
+  - Telemetry configuration fetches (`200 | 304 | 404 | error | invalid`)
+
+- `dcdr_runtime_telemetry_join_pending{kind}` (Gauge)
+  - Held while spans and their log records meet: `spans`, `log_contributions`, `bytes` (estimated)
+
+- `dcdr_runtime_telemetry_join_early_finalized_total{reason}` (Counter)
+  - Spans sent before their wait ended (`span_cap | byte_budget`)
+
+Watch first: `requests_total{status=~"5..|429"}`, `buffer_depth{store="spool"}` and `spool_dropped_total`.
+
 ### Execution planning / exploration
 
 These metrics are only emitted when exploration is applied (candidate re-ordering).

@@ -85,6 +85,48 @@ Behavior
 - Signed links to the runtime's own files in an S3-compatible install store can be used as `URL`
   input parts: the runtime fetches them itself, even when the store is only reachable inside the install.
 
+## OpenTelemetry receivers (`/v1/traces`, `/v1/logs`)
+
+Available with the control plane only (not in `--registry` mode). Defaults suit most installs; see
+[TELEMETRY.md](TELEMETRY.md) for what the endpoints do.
+
+Request limits (a request over a size limit is refused whole with `413`):
+
+- `DCDR_TELEMETRY_MAX_BODY_BYTES` (default `5242880`, 5 MB): request body as received (compressed).
+- `DCDR_TELEMETRY_BODY_READ_TIMEOUT_MS` (default `30000`): time to receive a whole body; past it the request is answered `408` and the connection closed.
+- `DCDR_TELEMETRY_MAX_DECOMPRESSED_BYTES` (default `20971520`, 20 MB): body after gzip / deflate.
+- `DCDR_TELEMETRY_MAX_ITEMS` (default `2000`): spans or log records per request.
+- `DCDR_TELEMETRY_MAX_VALUES` (default `500000`): decoded attribute values per request.
+- `DCDR_TELEMETRY_MAX_DEPTH` (default `32`): attribute nesting depth.
+- `DCDR_TELEMETRY_MAX_SPAN_AGE_MS` (default `2592000000`, 30 days): older spans are rejected.
+- `DCDR_TELEMETRY_MAX_FUTURE_SKEW_MS` (default `300000`, 5 minutes): spans starting further in the future are rejected.
+
+Rate limit per service token (answers `429` with `Retry-After`; never bans):
+
+- `DCDR_TELEMETRY_RATE_LIMIT_PER_SECOND` (default `20`; `0` disables): sustained requests per second.
+- `DCDR_TELEMETRY_RATE_LIMIT_BURST` (default `200`): burst allowance.
+- `DCDR_TELEMETRY_MAX_CONCURRENT_DECODES_PER_TENANT` (default `4`): requests of one workspace read and decoded at the same time; past it `429` with `Retry-After: 1`.
+
+Telemetry configuration from the control plane:
+
+- `DCDR_TELEMETRY_SERVICES_SNAPSHOT_PATH` (default `/api/dcdr/telemetry/services_snapshot`).
+- `DCDR_TELEMETRY_SNAPSHOT_TTL_MS` (default `30000`): how long a workspace's configuration is reused before it is revalidated.
+- `DCDR_TELEMETRY_SNAPSHOT_MAX_STALE_MS` (default `600000`): how long a cached configuration keeps being used while the control plane cannot be reached; past it the receivers answer `503`.
+- `DCDR_TELEMETRY_UNKNOWN_CUSTOMER_TTL_MS` (default `30000`): how long a "workspace not found" answer is reused.
+- `DCDR_TELEMETRY_SNAPSHOT_RETRY_BACKOFF_MS` (default `30000`): after a failed refresh, how long the cached configuration is served without asking the control plane again.
+
+Pipeline to the control plane:
+
+- `DCDR_TELEMETRY_PATH` (default `/api/dcdr/telemetry`): ingest route.
+- `DCDR_TELEMETRY_JOIN_WINDOW_MS` (default `10000`): how long a span waits for the log records that carry its content (and the other way round).
+- `DCDR_TELEMETRY_JOIN_MAX_PENDING_SPANS` (default `10000`), `DCDR_TELEMETRY_JOIN_MAX_PENDING_LOGS` (default `20000`), `DCDR_TELEMETRY_JOIN_MAX_PENDING_BYTES` (default `67108864`, 64 MB): bounds of that wait (memory only).
+- `DCDR_TELEMETRY_JOIN_MAX_CONTRIBUTIONS_PER_SPAN` (default `256`): log records one request may bring to the same span; the rest are dropped and reported in `partialSuccess`.
+- `DCDR_TELEMETRY_BUFFER_MAX_SPANS` (default `5000`) and `DCDR_TELEMETRY_BUFFER_MAX_BYTES` (default `67108864`, 64 MB): spans held in memory before spilling to disk, whichever is reached first.
+- `DCDR_TELEMETRY_SPOOL_DIR` (default `<BACKEND_LOG_FOLDER>/dcdr.telemetry.spool`): disk spool; `DCDR_TELEMETRY_SPOOL_MAX_BYTES` (default `268435456`, 256 MB) caps it. When memory and spool cannot take a request the receivers answer `503` (nothing of that request is kept).
+- `DCDR_TELEMETRY_TENANT_MAX_BUFFER_SHARE` (default `0.5`; `1` disables): share of the buffer (memory and spool bytes together) one workspace may hold; a request that would take it past its share is answered `503` while others keep sending. Telemetry answered `200` is never dropped to make room.
+- `DCDR_TELEMETRY_FLUSH_INTERVAL_MS` (default `5000`): how often batches are sent.
+- `DCDR_TELEMETRY_BATCH_MAX_SPANS` (default and maximum `100`), `DCDR_TELEMETRY_BATCH_MAX_BYTES` (default and maximum `4194304`): a batch closes at whichever comes first.
+
 ## Logs
 
 - `BACKEND_LOG_FOLDER` (default `./log`): log folder path.

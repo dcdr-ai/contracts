@@ -317,6 +317,50 @@ Each entry records:
 - optional typed policy decision metadata (`policyOutcome`, `policyReasonCode`)
 - bounded mutation/evidence metadata
 
+## Privacy rules: what PII detection and redaction look for
+
+`PII_DETECTION` and `PII_REDACTION` share one built-in, deterministic pattern set. A string target is
+treated as containing personal data when it contains any of:
+
+- **E-mail addresses** (`ada@example.com`).
+- **Phone numbers**
+  - international, with a `+` or `00` prefix and a country code, 7 to 15 digits in total, written
+    with or without spaces, dots, dashes or parentheses: `+34 612 345 678`, `+34612345678`,
+    `+1 (415) 555-0123`, `+44 (0)20 7946 0958`, `0049 30 1234567`, `+33 6 12 34 56 78`;
+  - common national formats, written with separators:
+    - Spain (9 digits starting with 6, 7, 8 or 9): `612 345 678`, `612 34 56 78`, `612-345-678`,
+      `91 234 56 78`;
+    - US/Canada: `(415) 555-0123`, `415-555-0123`, `415.555.0123`, `1-800-555-0199`;
+    - France: `06 12 34 56 78`, `01.23.45.67.89`;
+    - UK, Germany and other trunk-`0` formats: `020 7946 0958`, `07911 123456`, `030 1234567`,
+      `030/1234567`, `(030) 1234567`.
+- **Long digit runs** of 9 to 16 consecutive digits (card or account numbers, and phone numbers
+  written without separators such as `612345678`).
+- **SSN-shaped numbers** (`123-45-6789`).
+- **DNI-shaped identifiers** (8 digits and a letter, `12345678Z`).
+
+Phone detection is deliberately conservative around numbers that are not phones: amounts
+(`1.234.567,89`, `12,345.67 EUR`, `$1,234,567`), dates and times (`2026-11-16`, `16/11/2026`,
+`10:30:00`, ISO timestamps), IP addresses, version strings (`3.24.0`), percentages, decimals and ids
+that mix letters and digits (`INV-2026-000123`) are not treated as phone numbers. The long-digit-run
+pattern still applies to them, so any 9 to 16 consecutive digits (for example the all-digit last
+group of a UUID, or a Unix timestamp) count as personal data.
+
+Phones are handled exactly like the rest of the PII:
+
+- `PII_REDACTION` replaces each occurrence with `configuration.replacement` (default `[REDACTED]`),
+  the `+`/`00` prefix and separators included.
+- `PII_DETECTION` reports it with the configured `matchMode` (`PII_DETECTION_WARN`,
+  `PII_DETECTION_BLOCKED`, `PII_DETECTION_REVIEW`). Reason codes name the rule, not the kind of
+  personal data found.
+- The `entityTypes` configuration field is accepted but not applied yet: every kind above is always
+  checked.
+
+The patterns are heuristics, not a guarantee: a number written in an unusual layout may be missed,
+and a non-personal number shaped exactly like a phone (for example `612 345 678` used as a
+space-grouped amount) is masked. Combine them with `REPLACE_REGEX` or `MASK_SUBSTRING` on known
+fields when a format specific to your data must always be caught.
+
 ## Policy-oriented rule semantics
 
 The current policy-oriented rule family is:

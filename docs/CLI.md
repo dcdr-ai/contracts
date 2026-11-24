@@ -44,7 +44,15 @@ npm run dcdr -- circuit-breaker openai --base-url http://localhost:8000 --api-to
 
 # Circuit breaker reset (internal-only)
 npm run dcdr -- circuit-breaker-reset openai --base-url http://localhost:8000 --api-token dev-token
+
+# Telemetry: send one synthetic GenAI span (no content) with a traces:write service token and print
+# whether it was accepted, with its trace id (exit code 1 on a refusal: 401, 403, 429...)
+npm run dcdr -- telemetry-test --base-url https://runtime.dcdr.ai --bearer <SERVICE_TOKEN> \
+  --service-name support-assistant --environment production [--service-version 1.4.2] [--gzip] [--json]
 ```
+
+`telemetry-test` wraps `DcdrRuntimeClient.telemetryTest()`; see [TELEMETRY.md](TELEMETRY.md) for the setup it
+checks.
 
 ## Workflow commands (`wf-*`)
 

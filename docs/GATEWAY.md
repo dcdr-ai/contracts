@@ -6,6 +6,9 @@ else changes in the tool. Every call is authenticated with a DCDR service token,
 credential your organization bound to that token, checked against your governance limits, and logged
 as metadata for usage, cost and audit.
 
+Apps that do not call through the gateway can still be observed: they export OpenTelemetry to the same host
+(`POST /v1/traces`, `POST /v1/logs`). See [TELEMETRY.md](TELEMETRY.md).
+
 Use it for:
 
 - coding agents and IDE assistants (Claude Code, Codex, Cursor and other OpenAI-compatible tools);
@@ -278,7 +281,11 @@ Every gateway request produces an execution log with **metadata only**:
 - outcome: HTTP status, gateway or provider error code, whether the call reached the provider;
 - size and cost inputs: token usage reported by the provider (prompt, completion, cached and
   cache-write tokens), number of messages/inputs, character counts, tool-call counts, finish reason,
-  time to first streamed chunk, latency.
+  time to first streamed chunk, latency;
+- trace context: when the request carries a valid W3C `traceparent` header (OpenTelemetry SDKs send it
+  automatically), its trace id and parent span id, so the call can be matched to your app's telemetry
+  (see [TELEMETRY.md](TELEMETRY.md)). They are used only for that correlation inside your organization; a
+  missing or malformed header changes nothing.
 
 **Prompts and responses are not stored.** No message text, tool arguments or generated content is
 kept. Token usage is used for budgets and cost reporting in DCDR.

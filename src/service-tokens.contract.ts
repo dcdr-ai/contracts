@@ -35,6 +35,13 @@ export enum DcdrServiceTokenScope {
   ENTITLEMENTS_READ = "entitlements:read",
   /** Write execution logs back to the control plane. */
   LOGS_WRITE = "logs:write",
+  /**
+   * Send OpenTelemetry telemetry to the runtime (`POST /v1/traces` and `POST /v1/logs`). Since 3.25.0.
+   *
+   * Separate from {@link LOGS_WRITE}, which keeps its meaning (runtime write-back to the control plane):
+   * a token handed to an external AI app to export its traces should grant nothing else.
+   */
+  TRACES_WRITE = "traces:write",
   /** Read a managed asset (`GET /api/assets`). */
   ASSETS_READ = DcdrAssetScope.READ,
   /** Create a managed asset (`POST /api/assets/upload`). */

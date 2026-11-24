@@ -288,6 +288,252 @@ export interface DcdrRuntimeAuthCheckResponse {
   entitlements?: DcdrEntitlementsContract;
 }
 
+// ---------------------------------------------------------------------------------------------------
+// OpenTelemetry (OTLP/HTTP) export to the runtime's `/v1/traces` and `/v1/logs` (since 3.25.0)
+// ---------------------------------------------------------------------------------------------------
+
+/** OTLP/JSON `AnyValue`: exactly one member set. `intValue` is a decimal string (int64) or a safe number. */
+export interface DcdrOtlpAnyValue {
+  stringValue?: string;
+  boolValue?: boolean;
+  intValue?: string | number;
+  doubleValue?: number;
+  arrayValue?: { values: DcdrOtlpAnyValue[] };
+  kvlistValue?: { values: DcdrOtlpKeyValue[] };
+  /** Base64. */
+  bytesValue?: string;
+}
+
+/** OTLP/JSON `KeyValue`. */
+export interface DcdrOtlpKeyValue {
+  key: string;
+  value: DcdrOtlpAnyValue;
+}
+
+/** OTLP/JSON `Resource`. */
+export interface DcdrOtlpResource {
+  attributes?: DcdrOtlpKeyValue[];
+  droppedAttributesCount?: number;
+}
+
+/** OTLP/JSON `InstrumentationScope`. */
+export interface DcdrOtlpScope {
+  name?: string;
+  version?: string;
+  attributes?: DcdrOtlpKeyValue[];
+}
+
+/** OTLP/JSON `Span.Event`. */
+export interface DcdrOtlpSpanEvent {
+  timeUnixNano?: string;
+  name: string;
+  attributes?: DcdrOtlpKeyValue[];
+}
+
+/** OTLP/JSON `Span.Link`. */
+export interface DcdrOtlpSpanLink {
+  traceId: string;
+  spanId: string;
+  traceState?: string;
+  attributes?: DcdrOtlpKeyValue[];
+}
+
+/** OTLP/JSON `Status` (`code`: 0 unset, 1 ok, 2 error). */
+export interface DcdrOtlpSpanStatus {
+  code?: number;
+  message?: string;
+}
+
+/** OTLP/JSON `Span`. Ids are lowercase hex (32 / 16 characters); times are Unix nanoseconds as decimal strings. */
+export interface DcdrOtlpSpan {
+  traceId: string;
+  spanId: string;
+  parentSpanId?: string;
+  traceState?: string;
+  name: string;
+  /** `SpanKind`: 1 internal, 2 server, 3 client, 4 producer, 5 consumer. */
+  kind?: number;
+  startTimeUnixNano: string;
+  endTimeUnixNano: string;
+  attributes?: DcdrOtlpKeyValue[];
+  events?: DcdrOtlpSpanEvent[];
+  links?: DcdrOtlpSpanLink[];
+  status?: DcdrOtlpSpanStatus;
+  flags?: number;
+}
+
+/** OTLP/JSON `ScopeSpans`. */
+export interface DcdrOtlpScopeSpans {
+  scope?: DcdrOtlpScope;
+  spans: DcdrOtlpSpan[];
+  schemaUrl?: string;
+}
+
+/** OTLP/JSON `ResourceSpans`. */
+export interface DcdrOtlpResourceSpans {
+  resource?: DcdrOtlpResource;
+  scopeSpans: DcdrOtlpScopeSpans[];
+  schemaUrl?: string;
+}
+
+/** OTLP/JSON `ExportTraceServiceRequest` (body of `POST /v1/traces`). */
+export interface DcdrOtlpExportTraceServiceRequest {
+  resourceSpans: DcdrOtlpResourceSpans[];
+}
+
+/** OTLP/JSON `LogRecord`. */
+export interface DcdrOtlpLogRecord {
+  timeUnixNano?: string;
+  observedTimeUnixNano?: string;
+  severityNumber?: number;
+  severityText?: string;
+  body?: DcdrOtlpAnyValue;
+  attributes?: DcdrOtlpKeyValue[];
+  traceId?: string;
+  spanId?: string;
+  /** GenAI event name (`gen_ai.client.inference.operation.details`, `gen_ai.user.message`...). */
+  eventName?: string;
+  flags?: number;
+}
+
+/** OTLP/JSON `ScopeLogs`. */
+export interface DcdrOtlpScopeLogs {
+  scope?: DcdrOtlpScope;
+  logRecords: DcdrOtlpLogRecord[];
+  schemaUrl?: string;
+}
+
+/** OTLP/JSON `ResourceLogs`. */
+export interface DcdrOtlpResourceLogs {
+  resource?: DcdrOtlpResource;
+  scopeLogs: DcdrOtlpScopeLogs[];
+  schemaUrl?: string;
+}
+
+/** OTLP/JSON `ExportLogsServiceRequest` (body of `POST /v1/logs`). */
+export interface DcdrOtlpExportLogsServiceRequest {
+  resourceLogs: DcdrOtlpResourceLogs[];
+}
+
+/** Wire format of a raw OTLP body. */
+export enum DcdrOtlpContentType {
+  PROTOBUF = "application/x-protobuf",
+  JSON = "application/json",
+}
+
+/** Compression already applied to a raw OTLP body. */
+export enum DcdrOtlpContentEncoding {
+  GZIP = "gzip",
+  DEFLATE = "deflate",
+}
+
+/**
+ * A pre-encoded OTLP body (for example the bytes an OpenTelemetry exporter produced), sent as is.
+ */
+export interface DcdrOtlpRawBody {
+  body: Uint8Array;
+  contentType: DcdrOtlpContentType;
+  /** Set when `body` is already compressed. */
+  contentEncoding?: DcdrOtlpContentEncoding;
+}
+
+/** Options of a telemetry export. */
+export interface DcdrTelemetryExportOptions {
+  /** Gzip the body before sending (needs `CompressionStream`, present in Node 18+ and current browsers). */
+  gzip?: boolean;
+  /** Overrides the client's timeout for this call. */
+  timeoutMs?: number;
+}
+
+/** OTLP `partial_success`: what the runtime rejected or dropped (absent on a full success). */
+export interface DcdrTelemetryPartialSuccess {
+  /** Spans rejected (`/v1/traces`). */
+  rejectedSpans?: number;
+  /** Log records rejected (`/v1/logs`). */
+  rejectedLogRecords?: number;
+  /** Developer-facing message (also used for warnings, e.g. non-GenAI spans dropped). */
+  errorMessage?: string;
+}
+
+/** Result of a telemetry export (HTTP 200). Failures throw {@link DcdrRuntimeError}. */
+export interface DcdrTelemetryExportResult {
+  status: number;
+  partialSuccess?: DcdrTelemetryPartialSuccess;
+}
+
+/** Options of {@link buildTelemetryTestTracesRequest} / {@link DcdrRuntimeClient.telemetryTest}. */
+export interface DcdrTelemetryTestOptions {
+  /** `service.name` of the synthetic span (default `dcdr-telemetry-test`). */
+  serviceName?: string;
+  /** `deployment.environment.name`. */
+  environment?: string;
+  /** `service.version`. */
+  serviceVersion?: string;
+  /** Span start (ms); defaults to now. */
+  nowMs?: number;
+  /** 32 lowercase hex characters; random by default. */
+  traceId?: string;
+  /** 16 lowercase hex characters; random by default. */
+  spanId?: string;
+}
+
+/** Result of {@link DcdrRuntimeClient.telemetryTest}. */
+export interface DcdrTelemetryTestResult extends DcdrTelemetryExportResult {
+  traceId: string;
+  spanId: string;
+  serviceName: string;
+}
+
+/** Default `service.name` of the synthetic test span. */
+export const DCDR_TELEMETRY_TEST_SERVICE_NAME = "dcdr-telemetry-test";
+
+/**
+ * Builds one synthetic GenAI span with no content (a `chat` call on the OpenTelemetry GenAI conventions:
+ * provider, model, token counts), to check a telemetry setup end to end: onboarding live checks,
+ * `dcdr telemetry-test`, support.
+ *
+ * @param options service identity, clock and ids
+ * @returns an OTLP/JSON `ExportTraceServiceRequest` with one span
+ */
+export function buildTelemetryTestTracesRequest(options: DcdrTelemetryTestOptions = {}): DcdrOtlpExportTraceServiceRequest {
+  const nowMs = typeof options.nowMs === "number" && Number.isFinite(options.nowMs) ? Math.floor(options.nowMs) : Date.now();
+  const startNs = (BigInt(nowMs) * BigInt(1_000_000)).toString();
+  const endNs = (BigInt(nowMs + 250) * BigInt(1_000_000)).toString();
+  const resource: DcdrOtlpKeyValue[] = [{ key: "service.name", value: { stringValue: options.serviceName || DCDR_TELEMETRY_TEST_SERVICE_NAME } }];
+  if (options.environment) resource.push({ key: "deployment.environment.name", value: { stringValue: options.environment } });
+  if (options.serviceVersion) resource.push({ key: "service.version", value: { stringValue: options.serviceVersion } });
+  return {
+    resourceSpans: [
+      {
+        resource: { attributes: resource },
+        scopeSpans: [
+          {
+            scope: { name: "dcdr.telemetry-test", version: "1" },
+            spans: [
+              {
+                traceId: options.traceId ?? randomHex(16),
+                spanId: options.spanId ?? randomHex(8),
+                name: "chat dcdr-telemetry-test",
+                kind: 3,
+                startTimeUnixNano: startNs,
+                endTimeUnixNano: endNs,
+                attributes: [
+                  { key: "gen_ai.operation.name", value: { stringValue: "chat" } },
+                  { key: "gen_ai.provider.name", value: { stringValue: "openai" } },
+                  { key: "gen_ai.request.model", value: { stringValue: "dcdr-telemetry-test" } },
+                  { key: "gen_ai.usage.input_tokens", value: { intValue: "1" } },
+                  { key: "gen_ai.usage.output_tokens", value: { intValue: "1" } },
+                ],
+                status: { code: 1 },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
 /**
  * Configuration for `DcdrRuntimeClient`.
  */
@@ -1052,6 +1298,123 @@ export class DcdrRuntimeClient {
   }
 
   /**
+   * Calls `POST /v1/traces`: exports OpenTelemetry spans (OTLP/HTTP) as an external AI app would.
+   *
+   * @remarks
+   * - Auth: the configured `bearerToken` must be a service token with scope `traces:write`; without one the
+   *   call throws `CONFIGURATION` before any request (the receivers accept no other credential).
+   * - `request` is OTLP/JSON, or a pre-encoded body ({@link DcdrOtlpRawBody}, protobuf or JSON, compressed
+   *   or not) sent as is. `options.gzip` compresses an uncompressed body first.
+   * - 200 resolves with `partialSuccess` when the runtime rejected or dropped spans. Failures throw a
+   *   {@link DcdrRuntimeError}: 400 / 413 / 415 `VALIDATION`, 401 `UNAUTHORIZED`, 403 `FORBIDDEN`, 404
+   *   `NOT_FOUND` (telemetry not available in that runtime mode), 429 `RATE_LIMITED` and 503 `SERVER_ERROR`
+   *   with `retryAfterSeconds` when the runtime sent `Retry-After`.
+   *
+   * @param request OTLP/JSON request or raw body
+   * @param options compression, timeout
+   * @returns the export result
+   */
+  async exportTelemetryTraces(
+    request: DcdrOtlpExportTraceServiceRequest | DcdrOtlpRawBody,
+    options: DcdrTelemetryExportOptions = {},
+  ): Promise<DcdrTelemetryExportResult> {
+    return this.requestOtlp("/v1/traces", request, options);
+  }
+
+  /**
+   * Calls `POST /v1/logs`: exports OpenTelemetry log records (GenAI events that carry a span's content).
+   * Same auth, options, result and errors as {@link DcdrRuntimeClient.exportTelemetryTraces}.
+   *
+   * @param request OTLP/JSON request or raw body
+   * @param options compression, timeout
+   * @returns the export result
+   */
+  async exportTelemetryLogs(
+    request: DcdrOtlpExportLogsServiceRequest | DcdrOtlpRawBody,
+    options: DcdrTelemetryExportOptions = {},
+  ): Promise<DcdrTelemetryExportResult> {
+    return this.requestOtlp("/v1/logs", request, options);
+  }
+
+  /**
+   * Sends one synthetic GenAI span (no content, see {@link buildTelemetryTestTracesRequest}) to
+   * `POST /v1/traces` and reports the outcome: the end-to-end check of a telemetry setup.
+   *
+   * @param options service identity of the synthetic span, plus export options
+   * @returns the export result with the ids of the span sent
+   */
+  async telemetryTest(options: DcdrTelemetryTestOptions & DcdrTelemetryExportOptions = {}): Promise<DcdrTelemetryTestResult> {
+    const request = buildTelemetryTestTracesRequest(options);
+    const span = request.resourceSpans[0].scopeSpans[0].spans[0];
+    const result = await this.exportTelemetryTraces(request, { gzip: options.gzip, timeoutMs: options.timeoutMs });
+    return { ...result, traceId: span.traceId, spanId: span.spanId, serviceName: options.serviceName || DCDR_TELEMETRY_TEST_SERVICE_NAME };
+  }
+
+  /**
+   * Performs one OTLP/HTTP export and reads the `Export*ServiceResponse` (JSON or protobuf).
+   *
+   * @param path `/v1/traces` or `/v1/logs`
+   * @param request OTLP/JSON request or raw body
+   * @param options compression, timeout
+   * @returns the export result
+   * @throws {@link DcdrRuntimeError} for any non-200 answer or transport failure
+   */
+  private async requestOtlp(
+    path: string,
+    request: DcdrOtlpExportTraceServiceRequest | DcdrOtlpExportLogsServiceRequest | DcdrOtlpRawBody,
+    options: DcdrTelemetryExportOptions,
+  ): Promise<DcdrTelemetryExportResult> {
+    if (!this.bearerToken) {
+      // The receivers accept only `Authorization: Bearer <service token>`; fail before sending anything.
+      throw new DcdrRuntimeError({ code: DcdrRuntimeErrorCode.CONFIGURATION, message: "DcdrRuntimeClient telemetry export needs bearerToken (a service token with traces:write)", method: "POST", path });
+    }
+    const raw = isOtlpRawBody(request);
+    let body: Uint8Array = raw ? request.body : new TextEncoder().encode(JSON.stringify(request));
+    const contentType = raw ? request.contentType : DcdrOtlpContentType.JSON;
+    let contentEncoding = raw ? request.contentEncoding : undefined;
+    if (options.gzip && !contentEncoding) {
+      body = await gzipBytes(body);
+      contentEncoding = DcdrOtlpContentEncoding.GZIP;
+    }
+
+    const headers: Record<string, string> = { ...this.extraHeaders, "Content-Type": contentType };
+    if (contentEncoding) headers["Content-Encoding"] = contentEncoding;
+    headers["Authorization"] = `Bearer ${this.bearerToken}`;
+
+    const timeoutMs = typeof options.timeoutMs === "number" && options.timeoutMs > 0 ? options.timeoutMs : this.timeoutMs;
+    const controller = new AbortController();
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
+
+    try {
+      let resp: Response;
+      try {
+        resp = await this.fetchFn(`${this.baseUrl}${path}`, { method: "POST", headers, body: copyBytes(body), signal: controller.signal });
+      } catch (e) {
+        throw buildTransportError({ error: e, method: "POST", path, timeoutMs, timedOut, cancelled: false });
+      }
+      const bytes = new Uint8Array(await resp.arrayBuffer());
+      const isProtobuf = /application\/(x-)?protobuf/i.test(resp.headers.get("content-type") ?? "");
+      if (!resp.ok) {
+        const text = isProtobuf ? JSON.stringify(decodeOtlpStatusProtobuf(bytes)) : new TextDecoder().decode(bytes);
+        const error = buildRuntimeHttpError({ method: "POST", path, status: resp.status, text, headers: resp.headers });
+        if (resp.status === 413 || resp.status === 415) {
+          // OTLP refusals of the request itself (size, wire format): the caller's to fix, not a surprise.
+          return Promise.reject(withRuntimeErrorCode(error, DcdrRuntimeErrorCode.VALIDATION));
+        }
+        throw error;
+      }
+      const partialSuccess = isProtobuf ? decodeOtlpPartialSuccessProtobuf(bytes, path) : parseOtlpPartialSuccessJson(new TextDecoder().decode(bytes));
+      return partialSuccess ? { status: resp.status, partialSuccess } : { status: resp.status };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  /**
    * Performs an HTTP request and parses a JSON response.
    *
    * @remarks
@@ -1328,6 +1691,179 @@ function mapRuntimeErrorCode(
   if (status === 429) return DcdrRuntimeErrorCode.RATE_LIMITED;
   if (status >= 500) return DcdrRuntimeErrorCode.SERVER_ERROR;
   return DcdrRuntimeErrorCode.UNEXPECTED_RESPONSE;
+}
+
+/**
+ * Whether an export request is a pre-encoded body.
+ * @param request request
+ * @returns true for a {@link DcdrOtlpRawBody}
+ */
+function isOtlpRawBody(
+  request: DcdrOtlpExportTraceServiceRequest | DcdrOtlpExportLogsServiceRequest | DcdrOtlpRawBody,
+): request is DcdrOtlpRawBody {
+  return "body" in request && request.body instanceof Uint8Array;
+}
+
+/**
+ * Gzips bytes with the platform's `CompressionStream`.
+ * @param bytes input
+ * @returns compressed bytes
+ * @throws {@link DcdrRuntimeError} `CONFIGURATION` when the platform has no `CompressionStream`
+ */
+async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
+  if (typeof CompressionStream === "undefined") {
+    throw new DcdrRuntimeError({ code: DcdrRuntimeErrorCode.CONFIGURATION, message: "DcdrRuntimeClient gzip needs CompressionStream (Node 18+ or a current browser)" });
+  }
+  const stream = new Blob([copyBytes(bytes)]).stream().pipeThrough(new CompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/**
+ * Copies bytes into a fresh `ArrayBuffer`-backed array (what `fetch` and `Blob` are typed to take).
+ * @param bytes input
+ * @returns copy
+ */
+function copyBytes(bytes: Uint8Array) {
+  const out = new Uint8Array(bytes.byteLength);
+  out.set(bytes);
+  return out;
+}
+
+/**
+ * Random lowercase hex.
+ * @param bytes number of random bytes
+ * @returns hex string (twice as long)
+ */
+function randomHex(bytes: number): string {
+  const b = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(b);
+  let out = "";
+  for (const x of b) out += x.toString(16).padStart(2, "0");
+  // An all-zero id is invalid in OTLP.
+  return /^0+$/.test(out) ? `${out.slice(0, -1)}1` : out;
+}
+
+/**
+ * Reads `partialSuccess` from an OTLP/JSON export response.
+ * @param text response body
+ * @returns partial success, or undefined (empty body, `{}`)
+ */
+function parseOtlpPartialSuccessJson(text: string): DcdrTelemetryPartialSuccess | undefined {
+  if (!text.trim()) return undefined;
+  let parsed: { partialSuccess?: { rejectedSpans?: string | number; rejectedLogRecords?: string | number; errorMessage?: string } };
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new DcdrRuntimeError({ code: DcdrRuntimeErrorCode.UNEXPECTED_RESPONSE, message: "DcdrRuntimeClient expected an OTLP/JSON export response", bodyPreview: buildBodyPreview(text) });
+  }
+  const ps = parsed?.partialSuccess;
+  if (!ps || typeof ps !== "object") return undefined;
+  const out: DcdrTelemetryPartialSuccess = {};
+  if (ps.rejectedSpans !== undefined) out.rejectedSpans = Number(ps.rejectedSpans);
+  if (ps.rejectedLogRecords !== undefined) out.rejectedLogRecords = Number(ps.rejectedLogRecords);
+  if (typeof ps.errorMessage === "string" && ps.errorMessage) out.errorMessage = ps.errorMessage;
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * Reads `partial_success` from a protobuf export response (`field 1 { int64 rejected = 1; string error_message = 2 }`).
+ * @param bytes response body
+ * @param path request path (traces or logs: which rejected field to fill)
+ * @returns partial success, or undefined
+ */
+function decodeOtlpPartialSuccessProtobuf(bytes: Uint8Array, path: string): DcdrTelemetryPartialSuccess | undefined {
+  const outer = readProtoFields(bytes);
+  const inner = outer.find((f) => f.field === 1 && f.bytes);
+  if (!inner?.bytes) return undefined;
+  const out: DcdrTelemetryPartialSuccess = {};
+  for (const f of readProtoFields(inner.bytes)) {
+    if (f.field === 1 && f.varint !== undefined) {
+      if (path.endsWith("/logs")) out.rejectedLogRecords = f.varint;
+      else out.rejectedSpans = f.varint;
+    }
+    if (f.field === 2 && f.bytes) out.errorMessage = new TextDecoder().decode(f.bytes);
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * Reads a protobuf `google.rpc.Status` (`int32 code = 1; string message = 2`).
+ * @param bytes response body
+ * @returns code and message
+ */
+function decodeOtlpStatusProtobuf(bytes: Uint8Array): { code?: number; message?: string } {
+  const out: { code?: number; message?: string } = {};
+  for (const f of readProtoFields(bytes)) {
+    if (f.field === 1 && f.varint !== undefined) out.code = f.varint;
+    if (f.field === 2 && f.bytes) out.message = new TextDecoder().decode(f.bytes);
+  }
+  return out;
+}
+
+/** One top-level protobuf field (varint or length-delimited only). */
+interface ProtoField {
+  field: number;
+  varint?: number;
+  bytes?: Uint8Array;
+}
+
+/**
+ * Splits a protobuf message into its top-level varint and length-delimited fields (other wire types end
+ * the read). Bounded by the input: never throws.
+ * @param bytes message
+ * @returns fields
+ */
+function readProtoFields(bytes: Uint8Array): ProtoField[] {
+  const out: ProtoField[] = [];
+  let pos = 0;
+  const varint = (): number | undefined => {
+    let v = 0;
+    let mul = 1;
+    for (let i = 0; i < 10 && pos < bytes.length; i += 1) {
+      const b = bytes[pos++];
+      v += (b & 0x7f) * mul;
+      if (!(b & 0x80)) return v;
+      mul *= 128;
+    }
+    return undefined;
+  };
+  while (pos < bytes.length) {
+    const tag = varint();
+    if (tag === undefined) break;
+    const field = Math.floor(tag / 8);
+    const wire = tag & 7;
+    if (wire === 0) {
+      const v = varint();
+      if (v === undefined) break;
+      out.push({ field, varint: v });
+    } else if (wire === 2) {
+      const len = varint();
+      if (len === undefined || pos + len > bytes.length) break;
+      out.push({ field, bytes: bytes.subarray(pos, pos + len) });
+      pos += len;
+    } else break;
+  }
+  return out;
+}
+
+/**
+ * The same error with another transport code (OTLP 413 / 415 are `VALIDATION` for telemetry exports).
+ * @param error original
+ * @param code code to use
+ * @returns new error
+ */
+function withRuntimeErrorCode(error: DcdrRuntimeError, code: DcdrRuntimeErrorCode): DcdrRuntimeError {
+  return new DcdrRuntimeError({
+    code,
+    message: error.message,
+    method: error.method,
+    path: error.path,
+    status: error.status,
+    executionCode: error.executionCode,
+    details: error.details,
+    bodyPreview: error.bodyPreview,
+    retryAfterSeconds: error.retryAfterSeconds,
+  });
 }
 
 /**

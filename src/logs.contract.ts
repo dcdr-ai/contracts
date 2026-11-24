@@ -2,6 +2,7 @@ import { ExecutionError } from "./errors.contract";
 import { ExecutionReport, ExecutionStatus } from "./execution.contract";
 import { Message } from "./messages.contract";
 import { IntentProvider } from "./provider.contract";
+import { TelemetryExecutionLogDetails } from "./telemetry.contract";
 
 /**
  * Execution-log mode emitted by the runtime.
@@ -9,10 +10,14 @@ import { IntentProvider } from "./provider.contract";
  * Notes
  * - `INTENT` covers the classic intent execution pipeline.
  * - `GATEWAY` covers the OpenAI-compatible `/v1/*` proxy surface.
+ * - `TELEMETRY` covers OpenTelemetry spans reported by external AI apps (`POST /v1/traces`, `/v1/logs`);
+ *   since 3.25.0. Those events travel on their own route and queue ({@link DcdrTelemetryIngestRequest}),
+ *   never in the execution-log batches.
  */
 export enum ExecutionLogMode {
   INTENT = "INTENT",
   GATEWAY = "GATEWAY",
+  TELEMETRY = "TELEMETRY",
 }
 
 /**
@@ -96,6 +101,18 @@ export interface GatewayExecutionLogDetails {
   dispatched?: boolean;
   requestSummary?: GatewayLogRequestSummary;
   responseSummary?: GatewayLogResponseSummary;
+  /**
+   * Trace id from the caller's W3C `traceparent` header (32 lowercase hex), since 3.25.0.
+   *
+   * Client-controlled: used only to correlate a gateway call with the caller's telemetry spans **inside one
+   * tenant**, never for authentication or tenancy. Absent when the header is missing or malformed.
+   */
+  traceId?: string;
+  /**
+   * Parent span id from the same `traceparent` (16 lowercase hex): the caller's span that made this call.
+   * A telemetry span with this `traceId` and this id is the one the gateway call served. Since 3.25.0.
+   */
+  parentSpanId?: string;
 }
 
 /**
@@ -114,5 +131,39 @@ export interface ExecutionLogEvent extends Partial<ExecutionReport> {
   output?: unknown;
   error?: ExecutionError;
   gateway?: GatewayExecutionLogDetails;
+  /** Present when `executionMode` is `TELEMETRY` (since 3.25.0). */
+  telemetry?: TelemetryExecutionLogDetails;
   cid?: string;
+}
+
+/**
+ * An execution log event that carries one telemetry span (since 3.25.0).
+ *
+ * The envelope fields it uses are listed on {@link TelemetryExecutionLogDetails}.
+ */
+export interface TelemetryExecutionLogEvent extends ExecutionLogEvent {
+  executionMode: ExecutionLogMode.TELEMETRY;
+  telemetry: TelemetryExecutionLogDetails;
+  cid: string;
+}
+
+/**
+ * Body of the runtime -> control plane telemetry batch (`POST /api/dcdr/telemetry`, same auth as
+ * `/api/dcdr/logs`), since 3.25.0.
+ *
+ * Batches close at `DCDR_TELEMETRY_BATCH_MAX_SPANS` spans or `DCDR_TELEMETRY_BATCH_MAX_BYTES` bytes. The
+ * control plane stores each span once per `telemetrySpanIdempotencyKey(cid, traceId, spanId)`.
+ */
+export interface DcdrTelemetryIngestRequest {
+  spans: TelemetryExecutionLogEvent[];
+}
+
+/**
+ * Whether an execution log event carries a telemetry span.
+ *
+ * @param event Any execution log event.
+ * @returns `true` for `executionMode: TELEMETRY` with a `telemetry` block and a `cid`.
+ */
+export function isTelemetryExecutionLogEvent(event: ExecutionLogEvent | null | undefined): event is TelemetryExecutionLogEvent {
+  return !!event && event.executionMode === ExecutionLogMode.TELEMETRY && !!event.telemetry && typeof event.cid === "string" && event.cid.length > 0;
 }

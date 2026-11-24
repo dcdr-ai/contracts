@@ -34,6 +34,11 @@ export enum ExecutionErrorCode {
   SCHEMA_FAIL = "SCHEMA_FAIL",
   INTERNAL_ERROR = "INTERNAL_ERROR",
   CIRCUIT_OPEN = "CIRCUIT_OPEN",
+  /**
+   * An error the external app reported on a telemetry span (OpenTelemetry status ERROR); DCDR did not
+   * execute anything. The reported type travels in `details.type` (3.25.0).
+   */
+  TELEMETRY_REPORTED_ERROR = "TELEMETRY_REPORTED_ERROR",
 }
 
 export interface ExecutionError {

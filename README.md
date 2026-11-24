@@ -384,6 +384,7 @@ The commands come in three families. Runtime commands are `health`, `run`, `stre
 - [WORKFLOW_CLIENT.md](docs/WORKFLOW_CLIENT.md): running and following workflows, human tasks, evidence and the run lifecycle.
 - [KNOWLEDGE.md](docs/KNOWLEDGE.md): collections, search, grounded answers, refusals, scopes and `knowledge.search`.
 - [GATEWAY.md](docs/GATEWAY.md): the `/v1` AI Gateway, covering endpoints, models, streaming, limits, errors and tool setup.
+- [TELEMETRY.md](docs/TELEMETRY.md): OpenTelemetry from your own AI apps (`/v1/traces`, `/v1/logs`): setup per SDK, privacy and payload levels, Collector redaction, limits and responses.
 - [EXECUTION_ERROR_CODES.md](docs/EXECUTION_ERROR_CODES.md): stable `ExecutionErrorCode` values and what they mean.
 - [CLI.md](docs/CLI.md): the `dcdr` command line.
 - [EXAMPLES.md](docs/EXAMPLES.md): example registries, a workflow definition and runnable client scripts.

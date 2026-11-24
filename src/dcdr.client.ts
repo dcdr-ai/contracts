@@ -26,6 +26,13 @@ import {
   DcdrRuntimeDryRunResponse,
   DcdrRuntimeHealthcheckResponse,
   DcdrRuntimeVersionResponse,
+  DcdrOtlpExportLogsServiceRequest,
+  DcdrOtlpExportTraceServiceRequest,
+  DcdrOtlpRawBody,
+  DcdrTelemetryExportOptions,
+  DcdrTelemetryExportResult,
+  DcdrTelemetryTestOptions,
+  DcdrTelemetryTestResult,
 } from "./runtime.client";
 import {
   DcdrKnowledgeAnswerStreamFinalEvent,
@@ -339,6 +346,23 @@ export class DcdrClient {
   /** @see DcdrRuntimeClient.resetCircuitBreaker */
   async resetCircuitBreaker(provider: string, model?: string, tenantCid?: string): Promise<DcdrRuntimeCircuitBreakerResetResponse> {
     return this.runtime.resetCircuitBreaker(provider, model, tenantCid);
+  }
+
+  // ------------------------------------------------------------------ telemetry (OTLP, since 3.25.0)
+
+  /** @see DcdrRuntimeClient.exportTelemetryTraces */
+  async exportTelemetryTraces(request: DcdrOtlpExportTraceServiceRequest | DcdrOtlpRawBody, options?: DcdrTelemetryExportOptions): Promise<DcdrTelemetryExportResult> {
+    return this.runtime.exportTelemetryTraces(request, options);
+  }
+
+  /** @see DcdrRuntimeClient.exportTelemetryLogs */
+  async exportTelemetryLogs(request: DcdrOtlpExportLogsServiceRequest | DcdrOtlpRawBody, options?: DcdrTelemetryExportOptions): Promise<DcdrTelemetryExportResult> {
+    return this.runtime.exportTelemetryLogs(request, options);
+  }
+
+  /** @see DcdrRuntimeClient.telemetryTest */
+  async telemetryTest(options?: DcdrTelemetryTestOptions & DcdrTelemetryExportOptions): Promise<DcdrTelemetryTestResult> {
+    return this.runtime.telemetryTest(options);
   }
 
   // ------------------------------------------------------------------ workflows

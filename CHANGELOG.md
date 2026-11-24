@@ -4,6 +4,31 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261124.1] — 10:54UTC
+
+<!--
+sourceCommit: 2ccd9ed9a7277ce0ae172b8fa6fe11a17a2458c4
+queuedAtUtc: 
+previousMirroredBuild: 20261116.2 (2026-11-16)
+contractsSubmodule: 0dad5ad6316f..ac0d1756d232
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> **OpenTelemetry ingestion for external AI apps: `POST /v1/traces` and `POST /v1/logs`.** Apps built with LangChain, LlamaIndex, the OpenAI Agents SDK, the Vercel AI SDK, OpenLLMetry, Langfuse or plain OpenTelemetry can point their OTLP/HTTP exporter at the runtime (`OTEL_EXPORTER_OTLP_ENDPOINT`, protobuf or JSON, gzip optional) with a service token holding the new `traces:write` scope. GenAI spans are recognised across the OpenTelemetry GenAI conventions (current and older forms), OpenInference, OpenLLMetry, Langfuse and the Vercel AI SDK, and normalized into one shape (operation, provider and models as reported, tokens, agent, tool, timing, errors) with nothing inferred; other spans are dropped. Spans are sent to the control plane on their own buffer and route, never mixed with execution logs. Answers follow the OTLP specification (`partial_success`, `Retry-After` on `429` / `503`). Available with the control plane only (Cloud, Cloud Pro, Enterprise); see `docs/TELEMETRY.md`.
+- <kbd>RUNTIME</kbd> **Telemetry privacy by default.** Prompts, completions, tool arguments and results are removed inside the runtime before anything is buffered or sent, unless the service's payload level is FULL; by default only a summary leaves the runtime (counts, roles, tool names and keyed hashes), and end-user ids are pseudonymised with a per-workspace key. FULL content passes through the workspace's processors first and is bounded. Host and process details from SDK resource detectors never leave the runtime.
+- <kbd>RUNTIME</kbd> **`dcdr telemetry-test`.** Sends one synthetic GenAI span (no content) to a runtime with a service token and prints the outcome, to check a telemetry setup end to end.
+- <kbd>RUNTIME</kbd> **New Prometheus metrics for telemetry ingestion** (`dcdr_runtime_telemetry_*`): requests by status, spans and log records by outcome, rejections and drops by reason, decode errors, buffer depth, spool drops, flushes and configuration fetches.
+- <kbd>RUNTIME</kbd> **A manual test pipeline, `dcdr-runtime-tests`.** `azure_templates/tests.pipeline.yml` runs, on demand and only what is selected, the typecheck, the changelog check, the contracts tests, the root test suites (every suite as the release pipeline does, the suites a branch changed, or a path) and the install object storage e2e, without building or deploying anything. `tools/ci/ci-run.cjs` queues it on a pushed branch, waits and prints the failed tests and step durations.
+- <kbd>RUNTIME</kbd> **Gateway logs record the caller's trace context.** When a `/v1` gateway request carries a valid W3C `traceparent` header, as OpenTelemetry SDKs send automatically, its trace id and parent span id are added to the call's log, so the call can be matched to the app's own telemetry. Used only for that correlation within the organization; a missing or malformed header changes nothing.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.25.0 - OpenTelemetry telemetry from external AI apps (in progress).** The shapes for spans reported by external AI apps over OpenTelemetry: `ExecutionLogMode.TELEMETRY` with a `telemetry` block (service, operation, provider and models as reported, agent, tool, end user, content summary or bounded content by payload level), the per-tenant telemetry services snapshot, the `traces:write` service-token scope, and `traceId` / `parentSpanId` on gateway logs for correlation. `DcdrRuntimeClient` and `DcdrClient` can export OpenTelemetry to the runtime themselves (`exportTelemetryTraces`, `exportTelemetryLogs`, OTLP/JSON or a pre-encoded body, optional gzip) and check a setup with `telemetryTest()`, one synthetic span with no content; `ExecutionErrorCode.TELEMETRY_REPORTED_ERROR` marks a span the app reported as failed. Additive; see `docs/CONTRACTS.md` and `docs/TELEMETRY.md`.
+### Fixed
+- <kbd>RUNTIME</kbd> **Requests to API paths with unusual letter case (for example `/V1/...`) could hang on a malformed body.** They are now answered with the usual JSON error.
+- <kbd>RUNTIME</kbd> **Hardened service-token snapshot refreshes against repeated lookups for unknown tokens.** Concurrent refreshes for one workspace now share a single request to the control plane, and lookups of unknown tokens refresh at most once per short interval. Results are unchanged.
+- <kbd>RUNTIME</kbd> **PII detection and redaction recognise phone numbers.** Phone numbers in international format (with `+` or `00`, with or without separators) and in common national formats (Spain, US/Canada, France, UK, Germany) are now detected and masked like e-mail addresses, so a text with both has both masked. Amounts, dates, times, versions and ids are not taken for phone numbers.
+- <kbd>RUNTIME</kbd> **PII and secret detection check every field.** A rule that targets several fields could miss sensitive data in one field after finding some in another; each field is now checked on its own.
+### Changed
+- <kbd>CONTRACTS</kbd> **`PROCESSING_RULES.md` says what PII detection and redaction look for**: e-mail addresses, phone numbers in international and common national formats, and long numbers and national id formats. Docs only, no package change.
+
 ## [20261116.2] — 15:41UTC
 
 <!--

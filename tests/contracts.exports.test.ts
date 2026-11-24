@@ -46,6 +46,9 @@ describe("@dcdr/contracts exports", () => {
     expect(IntentProvider.OPEN_AI).toBe("OPEN_AI");
     expect(CapabilityKey.AI_PROMPTS_CANARY).toBe("AI_PROMPTS_CANARY");
     expect(ExecutionErrorCode.BAD_REQUEST).toBe("BAD_REQUEST");
+    // 3.25.0: errors an external app reported on a telemetry span (wire value pinned).
+    expect(ExecutionErrorCode.TELEMETRY_REPORTED_ERROR).toBe("TELEMETRY_REPORTED_ERROR");
+    expect(isExecutionErrorCode("TELEMETRY_REPORTED_ERROR")).toBe(true);
 
     // Classes exist at runtime
     const v = new PromptVariable(PromptVariableType.STRING, true, "name");

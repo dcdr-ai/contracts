@@ -216,6 +216,16 @@ Provider/model governance limits:
 
 Access is two scopes together, published in `service-tokens.contract.ts`: an action (`knowledge:read`, `knowledge:run`; `knowledge:write` reserved) **and** a collection grant (`knowledge:collections:*`, or `knowledgeCollectionScope(key)` = `knowledge:collection:<key>`). `hasDcdrKnowledgeAccess(scopes, action, key)` and `grantedDcdrKnowledgeCollections(scopes)` implement the rule. The same search is the `knowledge.search` workflow capability (see [WORKFLOWS.md](WORKFLOWS.md#capability-catalogue-tool-states)). Full guide: [KNOWLEDGE.md](KNOWLEDGE.md).
 
+## Telemetry contract (3.25.0)
+
+`src/contracts/src/telemetry.contract.ts` defines how OpenTelemetry telemetry from external AI apps (LangChain, the OpenAI Agents SDK, the Vercel AI SDK, in-house code...) is represented once the runtime has received it on `POST /v1/traces` and `POST /v1/logs`. Each GenAI span becomes an `ExecutionLogEvent` with `executionMode: TELEMETRY` and a `TelemetryExecutionLogDetails` block: trace and span ids, the reporting service (`service.name`, environment, version), the normalized `TelemetryOperation` (chat, embeddings, tool call, agent, retrieval...), provider and models as reported, agent and tool identity, the end user, finish reasons, the `TelemetrySourceConvention` the span was mapped from (current OTel GenAI conventions and their older forms, OpenInference, OpenLLMetry, Langfuse, Vercel AI), and what happened to its content. Token usage, duration and status reuse the envelope's `usage`, `timing` and `status`.
+
+Telemetry stores what the app reports and never infers: a value the mapping tables do not recognize stays empty (an unknown operation is `OTHER`), and the reported value is kept next to the normalized one.
+
+Content (prompts, completions, tool arguments and results) is governed by the service's `TelemetryPayloadLevel`: `NONE` sends nothing, `METADATA` (the default) sends only a `TelemetryContentSummary` (counts, roles, tool names, keyed hashes), and `FULL` sends the content after the service's processors, bounded per field (`DCDR_TELEMETRY_CONTENT_MAX_CHARS`). Under `METADATA` the end user id is pseudonymised with a per-tenant key (`TelemetryEndUser.keyVersion` tells a key rotation apart from a new user). `contentReceived` records whether the app sent content at all.
+
+Sending telemetry needs the service-token scope `traces:write` (`DcdrServiceTokenScope.TRACES_WRITE`); `logs:write` does not grant it. The control-plane side (the per-tenant services snapshot, `DcdrTelemetryServicesSnapshot`, and the ingest batch, `DcdrTelemetryIngestRequest`) is an internal surface between the runtime and the DCDR control plane; `telemetrySpanIdempotencyKey`, `findDcdrTelemetryService` and `isDcdrTelemetryServiceAccepted` state the rules both sides apply. Gateway logs gain `traceId` / `parentSpanId` from the caller's W3C `traceparent`, used only to correlate a gateway call with the caller's spans inside one tenant.
+
 ## IntentContract (deep dive)
 
 If you understand intents, you understand the DCDR execution surface. An intent is a versionable, provider-agnostic unit that can be executed consistently.
