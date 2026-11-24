@@ -28,10 +28,21 @@ app does not report stays empty, it is never guessed from a model name.
 | Cloud, Cloud Pro, Enterprise | Yes, within the plan's monthly span quota |
 | Self-hosted runtime with `--registry` (no control plane) | No: `/v1/traces` and `/v1/logs` answer `404` |
 
-The endpoints are on the same host as the AI Gateway:
+The endpoints:
 
 - `POST /v1/traces` (OTLP/HTTP traces)
 - `POST /v1/logs` (OTLP/HTTP log records; only GenAI events are used, see [below](#log-records))
+
+The **telemetry host**, written `<telemetry host>` below:
+
+| Where | Telemetry host |
+|---|---|
+| DCDR Cloud | `telemetry.dcdr.ai` |
+| DCDR install (private cloud, on-premises) | the install's runtime host |
+
+On DCDR Cloud, `runtime.dcdr.ai` and `gateway.dcdr.ai` also answer both paths; `telemetry.dcdr.ai` serves only
+these two paths. The DCDR client and `dcdr telemetry-test` send to `telemetry.dcdr.ai` unless you give them
+another host (since 3.25.1).
 
 Both accept `POST` only (any other method answers `405` with `Allow: POST`), protobuf (`application/x-protobuf`)
 and JSON (`application/json`), uncompressed or with `Content-Encoding: gzip` / `deflate`. gRPC is not supported:
@@ -46,7 +57,7 @@ use the OTLP/HTTP exporter.
 2. **Set the standard OpenTelemetry environment variables** in the app:
 
    ```bash
-   OTEL_EXPORTER_OTLP_ENDPOINT=https://<your runtime host>
+   OTEL_EXPORTER_OTLP_ENDPOINT=https://<telemetry host>
    OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf          # or http/json
    OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20<service token>
    OTEL_SERVICE_NAME=support-assistant
@@ -102,11 +113,11 @@ from traceloop.sdk import Traceloop
 Traceloop.init(app_name="support-assistant")   # honours OTEL_EXPORTER_OTLP_* when TRACELOOP_BASE_URL is unset
 ```
 
-Set `TRACELOOP_BASE_URL=https://<your runtime host>` and `TRACELOOP_HEADERS=Authorization=Bearer <token>` if you
+Set `TRACELOOP_BASE_URL=https://<telemetry host>` and `TRACELOOP_HEADERS=Authorization=Bearer <token>` if you
 prefer Traceloop's own variables.
 
 **Langfuse SDKs**: Langfuse exports OTLP to its own path with Basic auth. Put an OpenTelemetry Collector in
-front (below) or configure the SDK's OTLP exporter to `https://<your runtime host>/v1/traces` with the bearer
+front (below) or configure the SDK's OTLP exporter to `https://<telemetry host>/v1/traces` with the bearer
 header. Langfuse sends no provider, so the provider stays empty in DCDR.
 
 **Vercel AI SDK v7 (`@ai-sdk/otel`)**
@@ -234,7 +245,7 @@ processors:
 
 exporters:
   otlphttp/dcdr:
-    endpoint: https://<your runtime host>
+    endpoint: https://<telemetry host>
     headers:
       Authorization: "Bearer ${env:DCDR_TELEMETRY_TOKEN}"
     compression: gzip
@@ -300,10 +311,17 @@ Spans of a service that is BLOCKED, or PENDING / unknown in strict mode, are ans
 `DcdrRuntimeClient` (and `DcdrClient`) can export OTLP directly, for apps that do not use an OpenTelemetry SDK or
 for tests. The bearer is a `traces:write` service token. See [CLIENT.md](CLIENT.md#telemetry-otlp).
 
+The telemetry methods send to `https://telemetry.dcdr.ai` (`DCDR_DEFAULT_TELEMETRY_URL`) when the client was built
+without a URL. On an install, pass the install's runtime host as `baseUrl` (telemetry follows it) or set
+`telemetryUrl`; `telemetryUrl` always wins and only affects the telemetry methods.
+
 ```ts
 import { DcdrRuntimeClient, DcdrOtlpContentType } from "@dcdr/contracts";
 
-const client = new DcdrRuntimeClient({ baseUrl: "https://<your runtime host>", bearerToken: process.env.DCDR_TELEMETRY_TOKEN });
+// DCDR Cloud: no URL needed, telemetry goes to telemetry.dcdr.ai.
+const client = new DcdrRuntimeClient({ bearerToken: process.env.DCDR_TELEMETRY_TOKEN });
+// DCDR install: new DcdrRuntimeClient({ baseUrl: "https://<runtime host>", bearerToken })
+// or, for a separate telemetry host: new DcdrRuntimeClient({ telemetryUrl: "https://<telemetry host>", bearerToken })
 
 // OTLP/JSON, gzip-compressed on the wire.
 const result = await client.exportTelemetryTraces({ resourceSpans: [/* ... */] }, { gzip: true });
@@ -323,12 +341,13 @@ Failures throw `DcdrRuntimeError` (`UNAUTHORIZED`, `FORBIDDEN`, `VALIDATION`, `R
 ## Check a setup: `dcdr telemetry-test`
 
 ```bash
-dcdr telemetry-test --base-url https://<your runtime host> --bearer <service token> \
+dcdr telemetry-test --bearer <service token> \
   --service-name support-assistant --environment production
 ```
 
 It sends one synthetic GenAI span (no content) and prints whether it was accepted, with its trace id, so you can
-find it in Telemetry Traces. See [CLI.md](CLI.md).
+find it in Telemetry Traces. Without `--base-url` it sends to `telemetry.dcdr.ai` (DCDR Cloud); on an install add
+`--base-url https://<runtime host>`. See [CLI.md](CLI.md).
 
 ## Troubleshooting
 
@@ -346,4 +365,4 @@ find it in Telemetry Traces. See [CLI.md](CLI.md).
 | `openai-v2` instrumentation fails to import | Pin `opentelemetry-util-genai` to the version the instrumentation declares and install `httpx` |
 | Langfuse SDK spans never arrive | Langfuse posts to its own path with Basic auth: use a Collector in front, or point its OTLP exporter at `/v1/traces` with the bearer |
 | Content warning (`CONTENT_RECEIVED`) | The app captures prompts: turn capture off in the instrumentation, or set the service to FULL deliberately |
-| Content sent in log records is missing | Send `/v1/logs` too. With several runtime replicas behind a load balancer without affinity, a span and its log records can land on different replicas and the log-only content is then not merged (the span is still recorded) |
+| Content sent in log records is missing | Send `/v1/logs` too. On an install with several runtime replicas, the load balancer must send `/v1/traces` and `/v1/logs` with the same token to the same replica (for example HAProxy `balance hdr(Authorization)` with `hash-type consistent` for those two paths); otherwise a span and its log records can land on different replicas and the log-only content is not merged (the span is still recorded). DCDR Cloud already routes them this way |

@@ -488,6 +488,18 @@ export interface DcdrTelemetryTestResult extends DcdrTelemetryExportResult {
 export const DCDR_TELEMETRY_TEST_SERVICE_NAME = "dcdr-telemetry-test";
 
 /**
+ * Default origin of the OpenTelemetry receivers (`POST /v1/traces`, `POST /v1/logs`) on DCDR Cloud.
+ *
+ * {@link DcdrRuntimeClient} sends its telemetry exports here when it was given neither
+ * {@link DcdrRuntimeClientConfig.telemetryUrl} nor {@link DcdrRuntimeClientConfig.baseUrl}. An install
+ * keeps its telemetry on its own runtime host: pass its `baseUrl` (or `telemetryUrl`).
+ *
+ * @since 3.25.1
+ * @public
+ */
+export const DCDR_DEFAULT_TELEMETRY_URL = "https://telemetry.dcdr.ai";
+
+/**
  * Builds one synthetic GenAI span with no content (a `chat` call on the OpenTelemetry GenAI conventions:
  * provider, model, token counts), to check a telemetry setup end to end: onboarding live checks,
  * `dcdr telemetry-test`, support.
@@ -544,6 +556,18 @@ export interface DcdrRuntimeClientConfig {
    * Defaults to `https://runtime.dcdr.ai` when omitted.
    */
   baseUrl?: string;
+
+  /**
+   * Origin of the OpenTelemetry receivers used by `exportTelemetryTraces`, `exportTelemetryLogs` and
+   * `telemetryTest`, e.g. `https://telemetry.dcdr.ai`. Every other method uses {@link DcdrRuntimeClientConfig.baseUrl}.
+   *
+   * Resolution: this field when set; otherwise `baseUrl` when one was given (an install serves its
+   * receivers on its own runtime host); otherwise {@link DCDR_DEFAULT_TELEMETRY_URL}. Trimmed, trailing
+   * slash removed; a blank value is a `CONFIGURATION` error at construction.
+   *
+   * @since 3.25.1
+   */
+  telemetryUrl?: string;
 
   /** Customer-mode auth: backend-issued DcdrSessionToken. */
   bearerToken?: string;
@@ -770,6 +794,8 @@ export function isDcdrRuntimeError(value: unknown): value is DcdrRuntimeError {
  */
 export class DcdrRuntimeClient {
   private readonly baseUrl: string;
+  /** Origin of the OTLP receivers (`/v1/traces`, `/v1/logs`); see {@link DcdrRuntimeClientConfig.telemetryUrl}. */
+  private readonly telemetryUrl: string;
   private readonly bearerToken?: string;
   private readonly apiToken?: string;
   private readonly sessionBypassToken?: string;
@@ -796,6 +822,22 @@ export class DcdrRuntimeClient {
     }
 
     this.baseUrl = resolvedBaseUrlTrimmed.replace(/\/$/, "");
+
+    // Telemetry origin: explicit telemetryUrl > the given baseUrl (an install serves its receivers on its
+    // own runtime host) > DCDR Cloud's telemetry host. Only an explicit blank telemetryUrl is an error.
+    if (cfg?.telemetryUrl != null) {
+      const telemetryUrlTrimmed = String(cfg.telemetryUrl).trim();
+      if (!telemetryUrlTrimmed) {
+        throw new DcdrRuntimeError({
+          code: DcdrRuntimeErrorCode.CONFIGURATION,
+          message: `DcdrRuntimeClient telemetryUrl is blank (omit it to use baseUrl or ${DCDR_DEFAULT_TELEMETRY_URL})`,
+        });
+      }
+      this.telemetryUrl = telemetryUrlTrimmed.replace(/\/$/, "");
+    } else {
+      this.telemetryUrl = cfg?.baseUrl != null ? this.baseUrl : DCDR_DEFAULT_TELEMETRY_URL;
+    }
+
     this.bearerToken = cfg.bearerToken
       ? String(cfg.bearerToken).trim()
       : undefined;
@@ -1301,6 +1343,8 @@ export class DcdrRuntimeClient {
    * Calls `POST /v1/traces`: exports OpenTelemetry spans (OTLP/HTTP) as an external AI app would.
    *
    * @remarks
+   * - Host: the telemetry origin, not `baseUrl` (see {@link DcdrRuntimeClientConfig.telemetryUrl}): an
+   *   explicit `telemetryUrl`, else the `baseUrl` given, else {@link DCDR_DEFAULT_TELEMETRY_URL} (since 3.25.1).
    * - Auth: the configured `bearerToken` must be a service token with scope `traces:write`; without one the
    *   call throws `CONFIGURATION` before any request (the receivers accept no other credential).
    * - `request` is OTLP/JSON, or a pre-encoded body ({@link DcdrOtlpRawBody}, protobuf or JSON, compressed
@@ -1323,7 +1367,8 @@ export class DcdrRuntimeClient {
 
   /**
    * Calls `POST /v1/logs`: exports OpenTelemetry log records (GenAI events that carry a span's content).
-   * Same auth, options, result and errors as {@link DcdrRuntimeClient.exportTelemetryTraces}.
+   * Same host (the telemetry origin, see {@link DcdrRuntimeClientConfig.telemetryUrl}), auth, options,
+   * result and errors as {@link DcdrRuntimeClient.exportTelemetryTraces}.
    *
    * @param request OTLP/JSON request or raw body
    * @param options compression, timeout
@@ -1338,7 +1383,9 @@ export class DcdrRuntimeClient {
 
   /**
    * Sends one synthetic GenAI span (no content, see {@link buildTelemetryTestTracesRequest}) to
-   * `POST /v1/traces` and reports the outcome: the end-to-end check of a telemetry setup.
+   * `POST /v1/traces` and reports the outcome: the end-to-end check of a telemetry setup. Goes to the
+   * telemetry origin ({@link DcdrRuntimeClientConfig.telemetryUrl}; {@link DCDR_DEFAULT_TELEMETRY_URL} when
+   * neither `telemetryUrl` nor `baseUrl` was given).
    *
    * @param options service identity of the synthetic span, plus export options
    * @returns the export result with the ids of the span sent
@@ -1351,7 +1398,8 @@ export class DcdrRuntimeClient {
   }
 
   /**
-   * Performs one OTLP/HTTP export and reads the `Export*ServiceResponse` (JSON or protobuf).
+   * Performs one OTLP/HTTP export to the telemetry origin and reads the `Export*ServiceResponse` (JSON or
+   * protobuf).
    *
    * @param path `/v1/traces` or `/v1/logs`
    * @param request OTLP/JSON request or raw body
@@ -1392,7 +1440,7 @@ export class DcdrRuntimeClient {
     try {
       let resp: Response;
       try {
-        resp = await this.fetchFn(`${this.baseUrl}${path}`, { method: "POST", headers, body: copyBytes(body), signal: controller.signal });
+        resp = await this.fetchFn(`${this.telemetryUrl}${path}`, { method: "POST", headers, body: copyBytes(body), signal: controller.signal });
       } catch (e) {
         throw buildTransportError({ error: e, method: "POST", path, timeoutMs, timedOut, cancelled: false });
       }

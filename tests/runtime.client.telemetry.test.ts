@@ -9,6 +9,7 @@ import { gunzipSync } from "zlib";
 
 import { DcdrClient } from "../src/dcdr.client";
 import {
+  DCDR_DEFAULT_TELEMETRY_URL,
   DCDR_TELEMETRY_TEST_SERVICE_NAME,
   DcdrOtlpContentEncoding,
   DcdrOtlpContentType,
@@ -175,5 +176,87 @@ describe("telemetryTest", () => {
     expect(sent.resourceSpans[0].scopeSpans[0].spans[0].traceId).toBe(result.traceId);
     expect(sent.resourceSpans[0].scopeSpans[0].spans[0].spanId).toBe(result.spanId);
     expect(calls[0].url).toBe("https://rt.example/v1/traces");
+  });
+});
+
+describe("telemetry host (3.25.1)", () => {
+  /**
+   * A fake `fetch` that answers 200 `{}` to everything and records each URL.
+   * @returns fetch and the URLs it saw
+   */
+  function okFetch() {
+    const urls: string[] = [];
+    const fetchFn = async (input: string): Promise<Response> => {
+      urls.push(input);
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    };
+    return { fetchFn, urls };
+  }
+
+  it("defaults telemetry to DCDR Cloud's telemetry host when no URL was given; other calls keep runtime.dcdr.ai", async () => {
+    const { fetchFn, urls } = okFetch();
+    const client = new DcdrRuntimeClient({ bearerToken: "t", fetchFn });
+    await client.exportTelemetryTraces({ resourceSpans: [] });
+    await client.exportTelemetryLogs({ resourceLogs: [] });
+    await client.telemetryTest();
+    await client.healthcheck();
+    expect(DCDR_DEFAULT_TELEMETRY_URL).toBe("https://telemetry.dcdr.ai");
+    expect(urls).toEqual([
+      "https://telemetry.dcdr.ai/v1/traces",
+      "https://telemetry.dcdr.ai/v1/logs",
+      "https://telemetry.dcdr.ai/v1/traces",
+      "https://runtime.dcdr.ai/api/system/healthcheck",
+    ]);
+  });
+
+  it("sends telemetry to the given baseUrl (an install keeps its runtime host)", async () => {
+    const { fetchFn, urls } = okFetch();
+    const client = new DcdrRuntimeClient({ baseUrl: " https://dcdr.acme.example/ ", bearerToken: "t", fetchFn });
+    await client.exportTelemetryTraces({ resourceSpans: [] });
+    await client.healthcheck();
+    expect(urls).toEqual(["https://dcdr.acme.example/v1/traces", "https://dcdr.acme.example/api/system/healthcheck"]);
+  });
+
+  it("an explicit telemetryUrl wins (trimmed, trailing slash removed) and leaves the other calls on baseUrl", async () => {
+    const { fetchFn, urls } = okFetch();
+    const client = new DcdrRuntimeClient({ baseUrl: "https://rt.example", telemetryUrl: "  https://otel.example/ ", bearerToken: "t", fetchFn });
+    await client.exportTelemetryLogs({ resourceLogs: [] });
+    await client.healthcheck();
+    expect(urls).toEqual(["https://otel.example/v1/logs", "https://rt.example/api/system/healthcheck"]);
+  });
+
+  it.each(["", "   "])("refuses a blank telemetryUrl (%j) at construction with CONFIGURATION", (telemetryUrl) => {
+    const { fetchFn } = okFetch();
+    let err: unknown;
+    try {
+      new DcdrRuntimeClient({ telemetryUrl, bearerToken: "t", fetchFn });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(DcdrRuntimeError);
+    expect((err as DcdrRuntimeError).code).toBe(DcdrRuntimeErrorCode.CONFIGURATION);
+  });
+
+  it("DcdrClient: no URLs -> telemetry host; runtimeUrl -> that; telemetryUrl -> that; runtime.telemetryUrl override wins", async () => {
+    const cases: Array<{ config: ConstructorParameters<typeof DcdrClient>[0]; telemetry: string; runtime: string }> = [
+      { config: {}, telemetry: "https://telemetry.dcdr.ai/v1/traces", runtime: "https://runtime.dcdr.ai/api/system/healthcheck" },
+      { config: { runtimeUrl: "https://dcdr.acme.example" }, telemetry: "https://dcdr.acme.example/v1/traces", runtime: "https://dcdr.acme.example/api/system/healthcheck" },
+      { config: { runtime: { baseUrl: "https://rt.example" } }, telemetry: "https://rt.example/v1/traces", runtime: "https://rt.example/api/system/healthcheck" },
+      { config: { runtimeUrl: "https://dcdr.acme.example", telemetryUrl: "https://otel.example/" }, telemetry: "https://otel.example/v1/traces", runtime: "https://dcdr.acme.example/api/system/healthcheck" },
+      {
+        config: { telemetryUrl: "https://otel.example", runtime: { telemetryUrl: "https://otel-override.example" } },
+        telemetry: "https://otel-override.example/v1/traces",
+        runtime: "https://runtime.dcdr.ai/api/system/healthcheck",
+      },
+      // An override object carrying an explicit undefined key must not fall back to the runtime host.
+      { config: { runtime: { telemetryUrl: undefined } }, telemetry: "https://telemetry.dcdr.ai/v1/traces", runtime: "https://runtime.dcdr.ai/api/system/healthcheck" },
+    ];
+    for (const c of cases) {
+      const { fetchFn, urls } = okFetch();
+      const dcdr = new DcdrClient({ bearerToken: "t", fetchFn, ...c.config });
+      await dcdr.exportTelemetryTraces({ resourceSpans: [] });
+      await dcdr.healthcheck();
+      expect(urls).toEqual([c.telemetry, c.runtime]);
+    }
   });
 });

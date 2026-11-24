@@ -316,6 +316,19 @@ OpenTelemetry SDK uses (see [TELEMETRY.md](TELEMETRY.md)). The `bearerToken` mus
 `traces:write` scope; without a `bearerToken` the methods throw `CONFIGURATION` before sending anything (the
 receivers accept no other credential). `DcdrClient` exposes the same three methods.
 
+Host (since 3.25.1): the telemetry methods use their own origin, `telemetryUrl`, and every other method keeps
+`baseUrl`. Resolution: an explicit `telemetryUrl`; otherwise the `baseUrl` you gave (an install serves the
+receivers on its runtime host); otherwise `DCDR_DEFAULT_TELEMETRY_URL` (`https://telemetry.dcdr.ai`, DCDR
+Cloud). `telemetryUrl` is trimmed and loses a trailing slash; a blank one throws `CONFIGURATION` at
+construction. On `DcdrClient` the order is `runtime.telemetryUrl`, `telemetryUrl`, `runtime.baseUrl`,
+`runtimeUrl`, then `DCDR_DEFAULT_TELEMETRY_URL`.
+
+```ts
+const cloud = new DcdrRuntimeClient({ bearerToken });                                   // telemetry.dcdr.ai
+const install = new DcdrRuntimeClient({ baseUrl: "https://dcdr.example.com", bearerToken }); // the install's host
+const split = new DcdrRuntimeClient({ baseUrl, telemetryUrl: "https://otel.example.com", bearerToken });
+```
+
 ### `exportTelemetryTraces(request, options?)` / `exportTelemetryLogs(request, options?)`
 
 - Endpoints: `POST /v1/traces`, `POST /v1/logs`

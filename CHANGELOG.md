@@ -4,6 +4,20 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261124.2] — 12:07UTC
+
+<!--
+sourceCommit: 4f8be864e94c5ea05f2f8812087f751f36cf8193
+queuedAtUtc: 
+previousMirroredBuild: 20261124.1 (2026-11-24)
+contractsSubmodule: ac0d1756d232..5c90d212b678
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> **OpenTelemetry ingestion for external AI apps: `POST /v1/traces` and `POST /v1/logs`.** Apps built with LangChain, LlamaIndex, the OpenAI Agents SDK, the Vercel AI SDK, OpenLLMetry, Langfuse or plain OpenTelemetry can point their OTLP/HTTP exporter at the runtime (`OTEL_EXPORTER_OTLP_ENDPOINT`, protobuf or JSON, gzip optional) with a service token holding the new `traces:write` scope. GenAI spans are recognised across the OpenTelemetry GenAI conventions (current and older forms), OpenInference, OpenLLMetry, Langfuse and the Vercel AI SDK, and normalized into one shape (operation, provider and models as reported, tokens, agent, tool, timing, errors) with nothing inferred; other spans are dropped. Spans are sent to the control plane on their own buffer and route, never mixed with execution logs. Answers follow the OTLP specification (`partial_success`, `Retry-After` on `429` / `503`). On DCDR Cloud the endpoint is `https://telemetry.dcdr.ai` (the runtime and gateway hosts answer these paths too). Available with the control plane only (Cloud, Cloud Pro, Enterprise); see `docs/TELEMETRY.md`.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.25.1 - telemetry goes to `telemetry.dcdr.ai` by default.** The official client sends its telemetry exports (`exportTelemetryTraces`, `exportTelemetryLogs`, `telemetryTest`) to `https://telemetry.dcdr.ai` when it is built without a URL, instead of `https://runtime.dcdr.ai`. A client given a runtime URL keeps sending telemetry there, so DCDR installs are unaffected. New optional `telemetryUrl` setting on `DcdrRuntimeClient` and `DcdrClient` to choose the telemetry host, and the constant `DCDR_DEFAULT_TELEMETRY_URL`. Additive.
+- <kbd>RUNTIME</kbd> **`dcdr telemetry-test` works without `--base-url`.** It sends to DCDR Cloud's telemetry host, `https://telemetry.dcdr.ai`, by default; on an install, pass the install's runtime host with `--base-url`. Every other runtime command still requires `--base-url`.
+
 ## [20261124.1] — 10:54UTC
 
 <!--

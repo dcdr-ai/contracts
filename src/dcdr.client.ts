@@ -24,6 +24,7 @@ import {
   DcdrRuntimeClientConfig,
   DcdrRuntimeClientStreamOptions,
   DcdrRuntimeDryRunResponse,
+  DCDR_DEFAULT_TELEMETRY_URL,
   DcdrRuntimeHealthcheckResponse,
   DcdrRuntimeVersionResponse,
   DcdrOtlpExportLogsServiceRequest,
@@ -136,6 +137,14 @@ export interface DcdrClientConfig {
   /** Control-plane origin. Defaults to {@link DCDR_DEFAULT_CONTROL_URL}. */
   controlUrl?: string;
 
+  /**
+   * Origin of the OpenTelemetry receivers used by the telemetry methods (`exportTelemetryTraces`,
+   * `exportTelemetryLogs`, `telemetryTest`). Defaults to {@link DCDR_DEFAULT_TELEMETRY_URL} on DCDR Cloud,
+   * or to {@link DcdrClientConfig.runtimeUrl} when that is set (an install serves its receivers on its own
+   * runtime host). `runtime.telemetryUrl` overrides it. Since 3.25.1.
+   */
+  telemetryUrl?: string;
+
   /** Per-request timeout applied to both halves unless one overrides it. */
   timeoutMs?: number;
 
@@ -200,6 +209,15 @@ export class DcdrClient {
         extraHeaders: overrides.extraHeaders ?? this.config.extraHeaders,
         fetchFn: overrides.fetchFn ?? this.config.fetchFn,
         ...overrides,
+        // After the spread on purpose: `baseUrl` above is always set (it defaults to the runtime host), so
+        // leaving the choice to DcdrRuntimeClient would send telemetry to the runtime host instead of
+        // DCDR Cloud's telemetry host. An override (even an explicit undefined key) must not undo that.
+        telemetryUrl:
+          overrides.telemetryUrl ??
+          this.config.telemetryUrl ??
+          overrides.baseUrl ??
+          this.config.runtimeUrl ??
+          DCDR_DEFAULT_TELEMETRY_URL,
       });
     }
     return this.runtimeClient;

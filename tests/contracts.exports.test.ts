@@ -83,6 +83,13 @@ describe("@dcdr/contracts exports", () => {
     expect(contracts.isDcdrWorkflowError(runtimeError)).toBe(false);
   });
 
+  it("exports the default client origins from the root barrel (telemetry host since 3.25.1)", () => {
+    // Wire-level defaults: a client built without URLs reaches these hosts.
+    expect(contracts.DCDR_DEFAULT_RUNTIME_URL).toBe("https://runtime.dcdr.ai");
+    expect(contracts.DCDR_DEFAULT_CONTROL_URL).toBe("https://dcdr.ai");
+    expect(contracts.DCDR_DEFAULT_TELEMETRY_URL).toBe("https://telemetry.dcdr.ai");
+  });
+
   it("exports the shared condition contract from the root barrel", () => {
     expect(ConditionLogicOp.AND).toBe("AND");
     expect(ConditionOperator.EQUALS).toBe("EQUALS");
