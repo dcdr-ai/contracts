@@ -7,8 +7,10 @@
  * - Backend should keep this snapshot stable & ordered for reproducible ETags.
  */
 import { DcdrAssetScope } from "./asset.contract";
+import { ProcessingProcessor } from "./processing.contract";
 import { IntentProvider } from "./provider.contract";
 import { DcdrProviderLimitsConfig } from "./provider-limits.contract";
+import { TelemetryEndUserIdMode, TelemetryPayloadLevel } from "./telemetry.contract";
 
 export type DcdrServiceTokenStatus = "ACTIVE" | "REVOKED";
 
@@ -519,15 +521,66 @@ export type DcdrServiceTokenSnapshotItem = {
    */
   gatewayBindings?: DcdrServiceTokenGatewayProviderBinding[];
 
+  /**
+   * How much content of this token's gateway calls leaves the runtime (since 3.27.0); same vocabulary as
+   * telemetry services. Absent: no content capture at all, the gateway log is what it was before 3.27.0.
+   *
+   * Parity field: in 3.27 the runtime reads the gateway content settings from the token check
+   * ({@link DcdrGatewayTokenCheckResponse.payloadLevel}), not from the snapshot.
+   */
+  payloadLevel?: TelemetryPayloadLevel;
+
+  /**
+   * How the end user id named on this token's gateway calls leaves the runtime (since 3.27.0). Absent:
+   * pseudonymised. Parity field, read from the token check in 3.27.
+   */
+  endUserIdMode?: TelemetryEndUserIdMode;
+
+  /**
+   * The token's own processors for captured gateway content (since 3.27.0); INPUT stage on `input` and `system`,
+   * OUTPUT stage on `output`. They act on the captured copy only, never on the traffic to the provider or the
+   * client. Parity field, read from the token check in 3.27.
+   */
+  processors?: ProcessingProcessor[];
+
+  /**
+   * Whether the tenant's global processors run on captured gateway content before the token's own (since
+   * 3.27.0). Parity field, read from the token check in 3.27.
+   */
+  applyGlobalProcessors?: boolean;
+
   /** Optional note for operators. */
   note?: string;
 };
+
+/**
+ * Tenant-wide settings for gateway content capture (since 3.27.0).
+ *
+ * The key is the same per-tenant key as telemetry (`DcdrTelemetryTenantSettings.userIdKey`): the gateway's
+ * end user pseudonyms and content hashes use `telemetryEndUserPseudonym` with it, so a gateway call and a telemetry
+ * span of the same user or the same prompt carry the same value.
+ */
+export interface DcdrServiceTokensContentSettings {
+  /** Per-tenant key, 32 random bytes, base64. Never logged on either side. */
+  userIdKey: string;
+  /** Increments on every rotation; carried as `keyVersion` / `hashKeyVersion` next to every pseudonym and hash. */
+  userIdKeyVersion: number;
+}
 
 export type DcdrServiceTokensSnapshotContract = {
   cid: string;
   tokens: DcdrServiceTokenSnapshotItem[];
   /** Snapshot issued at (unix ms). Optional. */
   iat?: number;
+  /**
+   * Tenant settings for gateway content capture (since 3.27.0).
+   *
+   * **Per-tenant snapshot route only** (the tenant's own `service-tokens` snapshot), never on the token check
+   * response and never on any multi-tenant listing: it carries the tenant key. Absent, or a key that does not
+   * decode to at least `DCDR_TELEMETRY_HASH_KEY_MIN_BYTES`: the gateway computes no hash and sends no end user
+   * it would have to pseudonymise (fail closed).
+   */
+  contentSettings?: DcdrServiceTokensContentSettings;
 };
 
 /**
@@ -548,6 +601,18 @@ export interface DcdrGatewayTokenCheckResponse {
   rules?: DcdrServiceTokenLimitRule[];
   /** The token's model allowlist, as on the snapshot item (3.14.0). */
   allowedModels?: DcdrServiceTokenLimitRuleModelRef[] | null;
+  /**
+   * Payload level of the token's gateway calls (since 3.27.0). Absent (a control plane older than 3.27.0): no
+   * content capture, the gateway log is exactly what it was before. `NONE` -> counts; `METADATA` -> counts and
+   * content summary; `FULL` -> also the content after processors.
+   */
+  payloadLevel?: TelemetryPayloadLevel;
+  /** How the end user id named on the token's gateway calls leaves the runtime (since 3.27.0). Absent: pseudonymised. */
+  endUserIdMode?: TelemetryEndUserIdMode;
+  /** The token's processors for captured gateway content, as on the snapshot item (since 3.27.0). */
+  processors?: ProcessingProcessor[];
+  /** Whether the tenant's global processors run on captured content first, as on the snapshot item (since 3.27.0). */
+  applyGlobalProcessors?: boolean;
   token?: {
     id?: string;
     name?: string;
@@ -557,6 +622,14 @@ export interface DcdrGatewayTokenCheckResponse {
     providerLimits?: DcdrProviderLimitsConfig;
     rules?: DcdrServiceTokenLimitRule[];
     allowedModels?: DcdrServiceTokenLimitRuleModelRef[] | null;
+    /** As {@link DcdrGatewayTokenCheckResponse.payloadLevel} (since 3.27.0). */
+    payloadLevel?: TelemetryPayloadLevel;
+    /** As {@link DcdrGatewayTokenCheckResponse.endUserIdMode} (since 3.27.0). */
+    endUserIdMode?: TelemetryEndUserIdMode;
+    /** As {@link DcdrGatewayTokenCheckResponse.processors} (since 3.27.0). */
+    processors?: ProcessingProcessor[];
+    /** As {@link DcdrGatewayTokenCheckResponse.applyGlobalProcessors} (since 3.27.0). */
+    applyGlobalProcessors?: boolean;
   };
 }
 

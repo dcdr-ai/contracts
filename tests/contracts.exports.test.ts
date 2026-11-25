@@ -100,6 +100,16 @@ describe("@dcdr/contracts exports", () => {
     expect(contracts.DCDR_TELEMETRY_END_USER_PSEUDONYM_TEST_VECTORS.length).toBeGreaterThan(0);
   });
 
+  it("exports the captured content contract and the gateway capture capability from the root barrel (3.27.0)", () => {
+    // Wire values the control plane stores and compares.
+    expect(contracts.CapturedChatRole.USER).toBe("user");
+    expect(contracts.CapturedChatRole.OTHER).toBe("other");
+    expect(contracts.CapturedContentWithheldReason.PROCESSORS_UNAVAILABLE).toBe("PROCESSORS_UNAVAILABLE");
+    expect(contracts.DCDR_CAPTURED_CONTENT_MAX_CHARS).toBe(65_536);
+    expect(contracts.DCDR_TELEMETRY_CONTENT_MAX_CHARS).toBe(contracts.DCDR_CAPTURED_CONTENT_MAX_CHARS);
+    expect(contracts.CapabilityKey.AI_GATEWAY_CONTENT_CAPTURE).toBe("AI_GATEWAY_CONTENT_CAPTURE");
+  });
+
   it("exports the shared condition contract from the root barrel", () => {
     expect(ConditionLogicOp.AND).toBe("AND");
     expect(ConditionOperator.EQUALS).toBe("EQUALS");

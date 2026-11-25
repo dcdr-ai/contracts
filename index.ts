@@ -13,6 +13,7 @@ export * from "./src/policies.contract";
 export * from "./src/prompts.contract";
 export * from "./src/session.contract";
 export * from "./src/logs.contract";
+export * from "./src/captured-content.contract";
 export * from "./src/telemetry.contract";
 export * from "./src/provider.contract";
 export * from "./src/provider.catalog.contract";

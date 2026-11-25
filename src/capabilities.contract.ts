@@ -64,6 +64,13 @@ export enum CapabilityKey {
 
   /** `usage.promptTokens` includes cached reads and writes on every surface; cache counters filled. */
   AI_USAGE_PROMPT_TOKENS_INCLUSIVE = "AI_USAGE_PROMPT_TOKENS_INCLUSIVE",
+
+  /**
+   * Gateway content capture (3.27.0): the token's `payloadLevel`, `endUserIdMode`, `processors` and
+   * `applyGlobalProcessors` are applied, and gateway execution logs carry `payloadLevel`, `contentReceived`,
+   * `contentSummary`, `content`, `contentWithheld`, `endUser` and `streamInterrupted` accordingly.
+   */
+  AI_GATEWAY_CONTENT_CAPTURE = "AI_GATEWAY_CONTENT_CAPTURE",
 }
 
 /** Header a runtime sends on its calls to the control plane: comma-separated `CapabilityKey` values (3.14.0). */

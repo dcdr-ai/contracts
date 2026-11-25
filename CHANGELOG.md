@@ -4,6 +4,26 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261125.1] — 21:27UTC
+
+<!--
+sourceCommit: c5559eb45791dbc6b0194bebbc8d0ee797040ee3
+queuedAtUtc: 
+previousMirroredBuild: 20261124.3 (2026-11-24)
+contractsSubmodule: a52f1efcb88b..0f9696ffde4f
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> **Captured conversations come as one normalised list of messages.** At payload level `FULL`, telemetry spans of model calls and agent runs and AI Gateway calls (Chat Completions, Responses and Messages, streamed or not) carry `content.chat`: each message's role, text, tool calls and tool results, read from whatever format the instrumentation or wire used, so consumers no longer parse each SDK's own shape. It is built from the content after processors and is left out when a field was cut or could not be read.
+- <kbd>RUNTIME</kbd> **AI Gateway content capture per service token.** A service token can now carry a payload level for its `/v1/*` calls, the same levels as telemetry services. `NONE` records only that content was received; `METADATA` adds a content summary (message counts, roles, tool names, character counts and keyed hashes with the organization's key, the same hashes telemetry computes); `FULL` adds the prompts and answers themselves - the request's messages or input, the system instructions, and the response object (rebuilt from the stream when the call was streamed) - after the organization's global processors and the token's own, each field bounded. Processors act only on the copy in the log: the provider and the tool always see the traffic unchanged, and a processor never blocks a call. Inline images, audio and files are left out of the captured text. The end user a tool names on the request (`safety_identifier` / `user`, or `metadata.user_id` on Anthropic Messages) is recorded pseudonymised by default, or as sent when the token says so. Streams that do not reach their final event are flagged. Capture never delays a streamed chunk and never holds back the call's log, which carries its usage. A token without a payload level (a control plane that predates this) gets exactly the log it got before. The runtime announces `AI_GATEWAY_CONTENT_CAPTURE`.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.27.0 - captured content for telemetry and the AI Gateway.** One shape for the prompts and answers of an AI call, whether an app reported them over OpenTelemetry or the gateway captured them: the three content fields as reported, with their encoding and cut rules now part of the contract, plus a normalised chat view (messages with roles, text, tool calls) that is present only when the content could be read in full, so consumers never have to parse each SDK's format. Service tokens gain the same content settings as telemetry services (payload level, end user id mode, processors), and gateway logs can carry a content summary, the content itself at `FULL`, why content was withheld, the end user and whether a stream was interrupted. A control plane that sends no payload level for a token gets exactly the gateway log it got before. New capability key `AI_GATEWAY_CONTENT_CAPTURE`. Additive.
+- <kbd>RUNTIME</kbd> **The content format of telemetry at `FULL` is documented, with a reference example for every recorded SDK.** `docs/TELEMETRY.md` describes how the `input`, `output` and `system` strings are built, how a field is cut at 65,536 characters and listed in `truncated`, and which parts are contract and which are each SDK's own shape. Checked-in examples show the exact content the runtime emits for every recorded SDK fixture.
+### Fixed
+- <kbd>RUNTIME</kbd> **A telemetry content field cut at 65,536 characters is now always listed in `truncated`.** On a `FULL` service, a single oversized string attribute such as `gen_ai.input.messages` arrived cut without being listed as truncated.
+### Changed
+- <kbd>RUNTIME</kbd> **Telemetry content at `FULL` goes through the same processing step as the AI Gateway's** (same processor order, same bound and `truncated` rule; no change in behaviour).
+- <kbd>RUNTIME</kbd> **Execution logs are sent in batches bounded by size as well as count.** A batch now closes at 100 events or 4 MiB, whichever comes first (`LOGS_MAX_BATCH_BYTES`). When the control plane refuses a batch for its size, the runtime splits it instead of retrying it, and a single oversized event is resent without its captured content (its summary and usage are kept), so a large gateway call can no longer hold up the log queue.
+
 ## [20261124.3] — 19:21UTC
 
 <!--

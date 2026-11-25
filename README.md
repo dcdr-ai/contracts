@@ -257,8 +257,11 @@ ANTHROPIC_API_KEY=<DCDR service token>
 
 The gateway serves `/v1/chat/completions`, `/v1/responses`, `/v1/embeddings`, `/v1/messages` and `/v1/models`. It
 forwards each request with the provider credential your organization bound to the token, so the provider key never
-leaves DCDR. It applies your limits and logs metadata only: prompts and responses are not stored. For Codex
-setup, model prefixes, limits and error codes, see [GATEWAY.md](docs/GATEWAY.md).
+leaves DCDR. It applies your limits and logs every call's metadata; prompts and responses are stored only when an
+administrator sets the service token's payload level to `FULL` (after your processors, each field cut at 65 536
+characters, with a normalised `chat`), and `METADATA` keeps a summary with counts and keyed hashes, no text. For
+Codex setup, model prefixes, limits, error codes and what is logged at each level, see
+[GATEWAY.md](docs/GATEWAY.md#what-is-logged).
 
 ## Service tokens and scopes
 

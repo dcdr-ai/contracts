@@ -1,6 +1,6 @@
 {
   "name": "@dcdr/contracts",
-  "version": "3.26.0",
+  "version": "3.27.0",
   "homepage": "https://dcdr.ai",
   "description": "TypeScript contracts and runtime client for DCDR intent-based AI execution",
   "private": false,
@@ -174,6 +174,10 @@
       "types": "./dist/telemetry.contract.d.ts",
       "default": "./dist/telemetry.contract.js"
     },
+    "./captured-content.contract": {
+      "types": "./dist/captured-content.contract.d.ts",
+      "default": "./dist/captured-content.contract.js"
+    },
     "./workflow.tool-rating.contract": {
       "types": "./dist/workflow.tool-rating.contract.d.ts",
       "default": "./dist/workflow.tool-rating.contract.js"
@@ -294,6 +298,9 @@
       ],
       "logs.contract": [
         "dist/logs.contract.d.ts"
+      ],
+      "captured-content.contract": [
+        "dist/captured-content.contract.d.ts"
       ],
       "messages.contract": [
         "dist/messages.contract.d.ts"

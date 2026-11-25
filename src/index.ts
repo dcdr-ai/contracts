@@ -10,6 +10,7 @@ export * from "./prompts.contract";
 export * from "./processing.contract";
 export * from "./session.contract";
 export * from "./logs.contract";
+export * from "./captured-content.contract";
 export * from "./telemetry.contract";
 export * from "./provider.contract";
 export * from "./provider-limits.contract";

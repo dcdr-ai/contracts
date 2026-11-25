@@ -25,6 +25,13 @@ interface DistTelemetryModule {
   DCDR_TELEMETRY_END_USER_PSEUDONYM_TEST_VECTORS: Array<{ key: string; value: string; expected: string }>;
 }
 
+/** The part of `dist/captured-content.contract.js` the 3.27.0 surface check reads. */
+interface DistCapturedContentModule {
+  DCDR_CAPTURED_CONTENT_MAX_CHARS: number;
+  CapturedChatRole: Record<string, string>;
+  CapturedContentWithheldReason: Record<string, string>;
+}
+
 /**
  * Load result for a dist module target.
  */
@@ -152,6 +159,21 @@ describe("@dcdr/contracts dist/ exports", () => {
     expect(Array.isArray(mod.DCDR_TELEMETRY_END_USER_PSEUDONYM_TEST_VECTORS)).toBe(true);
     // Bundled for the web too: the HMAC is injected, never required.
     expect(fs.readFileSync(abs, "utf8")).not.toMatch(/require(["'](node:)?crypto["'])/);
+  });
+
+  it("dist captured-content.contract loads on its own and has no run-time import of telemetry.contract (3.27.0)", () => {
+    // telemetry.contract imports captured-content for real; the reverse import is type-only, so there is no cycle
+    // at run time. A value import added later would make the two modules require each other.
+    const target = resolveExportDefault(exportsMap["./captured-content.contract"]);
+    expect(target).toBe("./dist/captured-content.contract.js");
+    const abs = resolveFromPackageRoot(packageRoot, target as string);
+    const mod = nodeLoader(abs) as DistCapturedContentModule;
+    expect(mod.DCDR_CAPTURED_CONTENT_MAX_CHARS).toBe(65_536);
+    expect(mod.CapturedChatRole.ASSISTANT).toBe("assistant");
+    expect(mod.CapturedContentWithheldReason.PROCESSOR_BLOCKED).toBe("PROCESSOR_BLOCKED");
+    expect(fs.readFileSync(abs, "utf8")).not.toMatch(/require\(/);
+    const telemetry = nodeLoader(resolveFromPackageRoot(packageRoot, "./dist/telemetry.contract.js")) as { DCDR_TELEMETRY_CONTENT_MAX_CHARS: number };
+    expect(telemetry.DCDR_TELEMETRY_CONTENT_MAX_CHARS).toBe(65_536);
   });
 
   it("package.json export conditions include types paths pointing to real .d.ts files", () => {

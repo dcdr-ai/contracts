@@ -15,6 +15,7 @@ app does not report stays empty, it is never guessed from a model name.
 - [Snippets per SDK](#snippets-per-sdk)
 - [What is recorded](#what-is-recorded)
 - [Privacy and payload levels](#privacy-and-payload-levels)
+- [Content format at FULL](#content-format-at-full)
 - [Redacting before the data leaves your network (Collector)](#redacting-before-the-data-leaves-your-network-collector)
 - [Limits and responses](#limits-and-responses)
 - [Send with the DCDR client](#send-with-the-dcdr-client)
@@ -226,6 +227,119 @@ results for checking another implementation.
 A runtime that receives no mode for a service (from a control plane older than 3.26.0) keeps the earlier rule:
 kept as sent under FULL, pseudonymised under NONE and METADATA. A service the runtime does not know yet (seen for
 the first time) follows that rule too.
+
+## Content format at FULL
+
+On a FULL service each span with content carries `telemetry.content` with up to three strings, `input`, `output`
+and `system`, plus `truncated`. What each field means depends on the operation: chat and completions -> the
+messages sent, the response, the system instructions; tool execution (`EXECUTE_TOOL`) -> the arguments and the
+result; retrieval -> the query and the documents. The strings are the content **as your instrumentation reported
+it**, after your processors ran on it, encoded by these rules:
+
+| The instrumentation reported | The field holds |
+|---|---|
+| One string attribute (for example `gen_ai.input.messages`, `input.value`) | That string, unchanged: JSON text stays the SDK's JSON text, plain text stays plain |
+| One structured attribute (an OTLP array or map, or indexed attributes such as `gen_ai.prompt.0.role`, `gen_ai.prompt.0.content`, ...) | Its JSON text: maps become objects, arrays stay arrays, indexed attributes become an array |
+| Several attributes for the same field in the same form | One JSON object keyed by attribute name |
+| Per-message events (span events or log records such as `gen_ai.user.message`) | A JSON array of the messages, each with the role its event name implies |
+
+When an SDK reports the same content more than once (for example OpenInference's `llm.input_messages.*` and
+`input.value`), one source is used; which one is an implementation detail.
+
+**The cut.** A field longer than 65 536 characters (UTF-16 code units, `DCDR_TELEMETRY_CONTENT_MAX_CHARS`) is cut to
+its first 65 536 characters (65 535 when the last one would split a surrogate pair). The cut text is a plain prefix,
+so it is **not valid JSON**, and the field is **always** listed in `truncated`. A field not listed in `truncated` was
+not cut. The content summary still counts the characters as received (`inputChars`...).
+
+```jsonc
+"content": {
+  "input": "[{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"xxxx…",   // 65 536 characters, not JSON
+  "output": "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"ok\"}],\"finish_reason\":\"stop\"}]",
+  "truncated": ["input"]
+}
+```
+
+**What you can rely on, and what you cannot.** The meaning of each field, the encoding rules above, the cut and
+`truncated` are part of the contract. The inner shape of the strings is not: it is whatever the SDK sends (`parts`
+arrays or `content` strings, OpenInference's `{"message": {...}}` wrappers, framework serializations, sometimes not
+JSON at all) and it changes with SDK versions.
+
+**Do not parse the strings by `sourceConvention`.** The convention names how the span was classified, not the shape
+of its content: the same convention arrives with different content forms (OpenLLMetry's OpenAI instrumentation
+reports the older indexed `gen_ai.prompt.N` attributes, the Traceloop SDK the current `gen_ai.input.messages`; the
+OTel `openai-v2` instrumentation sends its content as log events). From contracts **3.27.0** the content carries
+`chat`, a normalised list of messages (role, text, tool calls) built by the runtime the same way for every SDK and
+for the AI Gateway; it is present only when every source field could be read and none was cut. Read `chat` when it
+is there and treat the three strings as the raw record.
+
+### The `chat` field
+
+`content.chat` (contracts 3.27.0, `CapturedChatContent`) is the same conversation as `input` / `output` /
+`system`, normalised: one list of messages whatever the SDK or the wire. Read messages from `chat`; never parse
+the three strings by `sourceConvention`.
+
+```jsonc
+"chat": {
+  "messages": [                                    // what was sent, in order; system instructions reported
+    { "role": "system", "text": "You are a concise weather assistant." },   // apart come first
+    { "role": "user", "text": "What is the weather in Sevilla?" },
+    { "role": "assistant", "toolCalls": [{ "id": "call_1", "name": "get_weather", "arguments": "{\"city\":\"Sevilla\"}" }] },
+    { "role": "tool", "toolCallId": "call_1", "text": "Sunny, 24 C in Sevilla." }
+  ],
+  "output": [                                      // what the model produced: one message per choice / output item
+    { "role": "assistant", "text": "The weather in Sevilla is sunny, 24 C." }
+  ]
+}
+```
+
+What a message holds:
+
+| member | meaning |
+|---|---|
+| `role` | `system`, `developer`, `user`, `assistant`, `tool`, or `other`. Aliases are normalised (`human` -> user; `ai`, `model`, `chatbot` -> assistant; `function`, `ipython` -> tool). A reported role the table does not know is `other`; an input message with no role is `other`; an output message with no role is `assistant`; a bare prompt string is `user`. |
+| `text` | The text parts joined with `"\n"`. Absent when the message has no non-empty text. |
+| `toolCalls` | Tool calls the model requested: `id` when reported, `name`, `arguments` as the JSON text the source reported (a structure, as some SDKs and Anthropic send it, is written as compact JSON). |
+| `toolCallId` | On a `tool` message: the call it answers, when the source links them. |
+| `omittedParts` | Non-text parts left out: images, audio, files, documents, refusals, reasoning / thinking, server tool results, Responses items that are neither messages nor function calls, tool calls without a name. Reasoning is never shown and never dropped silently: it is counted here. |
+
+Tool results always become `tool` messages, in the order they appear: an Anthropic user turn with a
+`tool_result` block and a text block is a `tool` message followed by a `user` message; an OTel GenAI assistant
+message carrying a call, its result and the answer (agent spans) is `assistant` (call) / `tool` / `assistant`
+(answer).
+
+How each source maps (telemetry: by the attribute that won the field, never by convention; gateway: by surface):
+
+| source | `messages` | `output` |
+|---|---|---|
+| OTel GenAI `gen_ai.input.messages` / `gen_ai.output.messages` | the `parts` arrays (`text`, `tool_call`, `tool_call_response`; others counted) | same |
+| OTel GenAI `gen_ai.system_instructions` | one leading `system` message (parts or plain text) | - |
+| Legacy flattened `gen_ai.prompt.N.*` / `gen_ai.completion.N.*` | OpenAI-style messages; a `content` that is the JSON text of a parts list is read as parts | same |
+| Legacy attributes `gen_ai.prompt` / `gen_ai.completion` (1.26-1.28) | JSON messages, or the text as one user message | JSON messages, or the text as one assistant message |
+| Legacy per-message events (`gen_ai.*.message`, `gen_ai.choice`) | one message per event, role from the event | the `gen_ai.choice` `message` |
+| OpenInference `llm.input_messages` / `llm.output_messages` | `{message: {...}}` items (`content`, else `contents`; `tool_calls`) | same |
+| OpenInference `llm.prompts` | each prompt a `user` message | - |
+| OpenInference `input.value` / `output.value`, Langfuse observation / trace input and output, OpenLLMetry `traceloop.entity.*` | request objects (`{messages, system}`, `{input, instructions}`, `{prompt, system}`), message lists (OpenAI, Anthropic, Gemini, LangChain serialisations), or the plain text | response objects (`chat.completion`, Responses, Anthropic message, Gemini `candidates`), a message or list, or the plain text |
+| Vercel `ai.prompt` | `{system, prompt}` / `{system, messages}` | - |
+| Vercel `ai.prompt.messages` | content parts (`text`, `tool-call`, `tool-result`; `file`, `reasoning` counted) | - |
+| Vercel `ai.response.text` / `.object` / `.toolCalls` / `.reasoning` | - | one assistant message; several of them (one JSON object keyed by attribute) merge into that one message |
+| Gateway Chat Completions | `messages` | one per `choices[]` |
+| Gateway Responses | `instructions` (leading), then `input` (string = the user's; items: messages, `function_call`, `function_call_output`) | one per `output[]` item (`message`, `function_call`; `reasoning` and other items counted) |
+| Gateway Messages (Anthropic) | `system` (string or text blocks, leading), then `messages` (`tool_use`, `tool_result`; `thinking`, `image`, `document` counted) | the message object |
+
+When `chat` is absent (it is never partial):
+
+- a field was cut at 65 536 characters (it is listed in `truncated`);
+- a field does not parse, including when a processor rewrote it into something that no longer parses;
+- the span is not a conversation: `EXECUTE_TOOL`, `EMBEDDINGS`, `RETRIEVAL`, `INVOKE_WORKFLOW`, `CREATE_AGENT`,
+  `PLAN`, `OTHER` (only `CHAT`, `TEXT_COMPLETION`, `GENERATE_CONTENT` and `INVOKE_AGENT` get one); gateway
+  embeddings;
+- a field came from a source that is not a conversation, or from one whose shape the table does not know: tool
+  arguments and results, retrieval documents, embeddings input, a decorated function's `{"args": [...], "kwargs": {}}`
+  (Langfuse / OpenLLMetry `@observe` spans), a LangGraph state update in `output.value`;
+- there is no message at all (for example an empty list).
+
+The three strings are always the authority: `chat` is built from them as they leave the runtime (after
+processors), so it never shows content the processors removed.
 
 ## Redacting before the data leaves your network (Collector)
 

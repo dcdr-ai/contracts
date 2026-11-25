@@ -15,6 +15,7 @@
  * only for a service whose payload level is {@link TelemetryPayloadLevel.FULL}; otherwise it is removed before
  * buffering and only a {@link TelemetryContentSummary} is sent.
  */
+import { CapturedContent, DCDR_CAPTURED_CONTENT_MAX_CHARS } from "./captured-content.contract";
 import { IntentProvider } from "./provider.contract";
 import { ProcessingProcessor } from "./processing.contract";
 
@@ -86,7 +87,8 @@ export enum TelemetrySourceConvention {
 /**
  * How much content of a telemetry service leaves the runtime.
  *
- * Same vocabulary as workflow payload logging. Default for a new service: {@link METADATA}.
+ * Same vocabulary as workflow payload logging. Default for a new service: {@link METADATA}. Since 3.27.0 it is also
+ * the payload level of a service token's gateway calls (`DcdrGatewayTokenCheckResponse.payloadLevel`).
  */
 export enum TelemetryPayloadLevel {
   /** No content and no content summary. */
@@ -104,6 +106,9 @@ export enum TelemetryPayloadLevel {
  * user id at every payload level. Carried per service by {@link DcdrTelemetryServiceSnapshotEntry.endUserIdMode};
  * when the snapshot entry has no mode (a control plane older than 3.26.0) the runtime keeps the earlier rule:
  * sent as reported under FULL, pseudonymised under METADATA and NONE.
+ *
+ * Since 3.27.0 a service token carries the same setting for the end user named on its gateway calls
+ * (`DcdrGatewayTokenCheckResponse.endUserIdMode`); there, absent means {@link PSEUDONYMISED}.
  */
 export enum TelemetryEndUserIdMode {
   /**
@@ -148,7 +153,7 @@ export enum TelemetryFindingCode {
   UNKNOWN_SERVICE = "UNKNOWN_SERVICE",
 }
 
-/** A content field of {@link TelemetrySpanContent}. */
+/** A content field of {@link TelemetrySpanContent} (and of any `CapturedContent`, since 3.27.0). */
 export enum TelemetryContentField {
   INPUT = "input",
   OUTPUT = "output",
@@ -158,8 +163,13 @@ export enum TelemetryContentField {
 /** Service name used when the app reports none (or the SDK default `unknown_service:*`). */
 export const DCDR_TELEMETRY_UNKNOWN_SERVICE_NAME = "unknown_service";
 
-/** Maximum characters kept per content field (`input`, `output`, `system`) on a FULL service. */
-export const DCDR_TELEMETRY_CONTENT_MAX_CHARS = 65_536;
+/**
+ * Maximum characters (UTF-16 code units) kept per content field (`input`, `output`, `system`) on a FULL service.
+ *
+ * Since 3.27.0 it is {@link DCDR_CAPTURED_CONTENT_MAX_CHARS}, the one bound shared with gateway content; the value
+ * is unchanged (65536).
+ */
+export const DCDR_TELEMETRY_CONTENT_MAX_CHARS = DCDR_CAPTURED_CONTENT_MAX_CHARS;
 
 /** Maximum keys in {@link TelemetryExecutionLogDetails.unmapped}. */
 export const DCDR_TELEMETRY_UNMAPPED_MAX_KEYS = 64;
@@ -273,14 +283,12 @@ export interface TelemetryContentSummary {
  * Meaning per operation: chat and completions -> messages / response / system instructions; `EXECUTE_TOOL`
  * -> arguments / result; `RETRIEVAL` -> query / documents. Values are the reported content serialized as JSON
  * text (a JSON string stays as reported), each cut at {@link DCDR_TELEMETRY_CONTENT_MAX_CHARS}.
+ *
+ * Since 3.27.0 it is a {@link CapturedContent} (the shape gateway content shares), which adds the normalised
+ * `chat` view; `input`, `output`, `system` and `truncated` keep their meaning. The encoding rules of the strings
+ * are documented on `captured-content.contract`.
  */
-export interface TelemetrySpanContent {
-  input?: string;
-  output?: string;
-  system?: string;
-  /** Fields that were cut at the bound. */
-  truncated?: TelemetryContentField[];
-}
+export interface TelemetrySpanContent extends CapturedContent {}
 
 /**
  * Telemetry block of an `ExecutionLogEvent` with `executionMode: TELEMETRY`.

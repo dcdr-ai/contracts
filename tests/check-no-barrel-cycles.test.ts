@@ -30,6 +30,16 @@ describe("check-no-barrel-cycles", () => {
     expect(violations).toEqual([]);
   });
 
+  it("keeps captured-content.contract free of value imports, so telemetry.contract can import it without a cycle (3.27.0)", () => {
+    // telemetry.contract imports DCDR_CAPTURED_CONTENT_MAX_CHARS (a value) from captured-content.contract, which
+    // needs TelemetryContentField back: only as a type, or the two modules would require each other at run time.
+    const source = fs.readFileSync(path.join(SRC_DIR, "captured-content.contract.ts"), "utf8");
+    const valueImports = source
+      .split(/\r?\n/)
+      .filter((line) => /^\s*import\s/.test(line) && !/^\s*import\s+type\s/.test(line));
+    expect(valueImports).toEqual([]);
+  });
+
   it("flags a file that both defines an export and re-exports its own consumer via `export *`", () => {
     const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "no-barrel-cycles-"));
     try {

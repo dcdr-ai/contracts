@@ -4,8 +4,9 @@ This document describes the shared public contract surface for the DCDR intent-p
 
 Scope:
 
-- intent execution only
-- not the OpenAI-compatible `/v1` gateway proxy
+- intent execution
+- the **captured copy** of AI Gateway calls on a `FULL` service token (since contracts 3.27.0, see
+  [Gateway content capture](#gateway-content-capture)); gateway traffic itself is never processed
 - cloud-only feature today; freeware/runtime `--registry` mode should reject registries that require processing processors
 
 ## Why this lives in `@dcdr/contracts`
@@ -421,6 +422,44 @@ Example:
   }
 }
 ```
+
+## Gateway content capture
+
+Since contracts 3.27.0 a service token can carry a payload level for its AI Gateway calls
+(`DcdrGatewayTokenCheckResponse.payloadLevel`, same vocabulary as telemetry services). At `FULL`, the content the
+gateway captured (`GatewayExecutionLogDetails.content`, a `CapturedContent`) goes through processors before it
+leaves the runtime, with the same engine and the same processor shape as intents:
+
+1. the tenant's **global processors** (the registry's `processors`), unless the token sets
+   `applyGlobalProcessors: false` (absent means they run);
+2. the token's own `processors`.
+
+Stages and fields:
+
+| Stage | Sees | Data root |
+| --- | --- | --- |
+| `INPUT` | `vars.input` (the request member as JSON text) and `vars.system` (`instructions` / `system`) | `vars` |
+| `OUTPUT` | `output` (the response object as JSON text) | the whole output object |
+
+Rules that read a field by path use those names (`fieldPaths: ["output"]` on an `OUTPUT` processor). The texts
+are JSON, so a text rule (`REPLACE_REGEX`, `PII_REDACTION`, `MASK_SUBSTRING`...) sees and rewrites the JSON text;
+a rule that parses it (`JSON_PARSE_STRING_FIELD`) leaves a structure that is serialised back to JSON text.
+
+Guarantees:
+
+- **The copy only.** Processors never change what reaches the provider or the client, and never block or slow
+  the call: they run after the client has the whole answer.
+- **A blocking stage withholds its own fields.** An `INPUT` stage that blocks (a `DENY`-style outcome, a policy
+  check that fails) drops `input` and `system` from the captured copy; an `OUTPUT` stage that blocks drops
+  `output`. When every captured field is dropped the log carries `contentWithheld: "PROCESSOR_BLOCKED"`. The
+  processors' report travels on the event's `processing`, as for intents.
+- **Never unprocessed.** When the global processors are needed and cannot be loaded, the content is withheld
+  (`contentWithheld: "PROCESSORS_UNAVAILABLE"`) rather than sent without them; the content summary and the usage
+  are still sent.
+- **The cut comes last.** Each field is cut at `DCDR_CAPTURED_CONTENT_MAX_CHARS` (65 536 UTF-16 units) after the
+  processors, and a cut field is listed in `content.truncated`.
+- The content summary's hashes are computed on the captured text **before** processors, so the same prompt
+  hashes the same with or without processors, and in telemetry.
 
 ## Frontend preview use cases
 

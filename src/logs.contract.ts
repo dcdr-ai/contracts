@@ -1,8 +1,14 @@
+import { CapturedContent, CapturedContentWithheldReason } from "./captured-content.contract";
 import { ExecutionError } from "./errors.contract";
 import { ExecutionReport, ExecutionStatus } from "./execution.contract";
 import { Message } from "./messages.contract";
 import { IntentProvider } from "./provider.contract";
-import { TelemetryExecutionLogDetails } from "./telemetry.contract";
+import {
+  TelemetryContentSummary,
+  TelemetryEndUser,
+  TelemetryExecutionLogDetails,
+  TelemetryPayloadLevel,
+} from "./telemetry.contract";
 
 /**
  * Execution-log mode emitted by the runtime.
@@ -113,6 +119,46 @@ export interface GatewayExecutionLogDetails {
    * A telemetry span with this `traceId` and this id is the one the gateway call served. Since 3.25.0.
    */
   parentSpanId?: string;
+  /**
+   * Payload level the gateway applied to this call, from the service token (since 3.27.0).
+   *
+   * Absent when the token check carried no payload level (a control plane older than 3.27.0): the event is then
+   * exactly what it was before, with none of the content fields below. `NONE` -> counts only (no
+   * {@link contentSummary}); `METADATA` -> counts and {@link contentSummary}; `FULL` -> also {@link content}.
+   */
+  payloadLevel?: TelemetryPayloadLevel;
+  /**
+   * Whether the request carried content the gateway could capture (messages, input, instructions), whatever was
+   * kept (since 3.27.0). Present whenever {@link payloadLevel} is.
+   */
+  contentReceived?: boolean;
+  /**
+   * Counts, roles, tool names and keyed hashes of the captured content (since 3.27.0), the same shape and the same
+   * tenant key as telemetry. `METADATA` and `FULL` only. Hashes are absent when the tenant key is unavailable
+   * (never computed with a weak or missing key).
+   */
+  contentSummary?: TelemetryContentSummary;
+  /**
+   * The call's content after processors, bounded per field (since 3.27.0). `FULL` only, and only for a dispatched
+   * call; an upstream HTTP error leaves `input` only. Encoding per surface: `JSON.stringify` of the request member
+   * (`messages`, `input`) and of the response object (assembled from the stream when streamed); see
+   * `captured-content.contract`.
+   */
+  content?: CapturedContent;
+  /** Why {@link content} is absent although {@link payloadLevel} is `FULL` (since 3.27.0). */
+  contentWithheld?: CapturedContentWithheldReason;
+  /**
+   * End user the client named on the request (since 3.27.0): `safety_identifier` or else `user` on chat completions
+   * and responses, `user` on embeddings, `metadata.user_id` on messages. Pseudonymised or sent as reported per the
+   * token's `endUserIdMode` (`TelemetryEndUserIdMode`; absent means pseudonymised), sent as reported cut at 256
+   * characters; dropped when it should be pseudonymised and the tenant key is unavailable. The upstream provider always receives the raw value.
+   */
+  endUser?: TelemetryEndUser;
+  /**
+   * The streamed response did not reach its terminal event (client gone, upstream error mid-stream, early end)
+   * (since 3.27.0). Always together with `content.truncated` containing `output` when content is attached.
+   */
+  streamInterrupted?: boolean;
 }
 
 /**

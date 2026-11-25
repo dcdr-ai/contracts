@@ -4,7 +4,8 @@ The DCDR AI Gateway lets tools and code that already speak the **OpenAI** or **A
 their traffic through DCDR by changing two settings: the **base URL** and the **API key**. Nothing
 else changes in the tool. Every call is authenticated with a DCDR service token, routed to a provider
 credential your organization bound to that token, checked against your governance limits, and logged
-as metadata for usage, cost and audit.
+for usage, cost and audit - with the call's content only when an administrator chose a payload level that
+keeps it (see [What is logged](#what-is-logged)).
 
 Apps that do not call through the gateway can still be observed: they export OpenTelemetry to the same host
 (`POST /v1/traces`, `POST /v1/logs`). See [TELEMETRY.md](TELEMETRY.md).
@@ -274,7 +275,11 @@ On the Anthropic routes `error.type` follows Anthropic's error types (`authentic
 
 ## What is logged
 
-Every gateway request produces an execution log with **metadata only**:
+Every gateway request produces an execution log. What it holds about the **content** of the call (prompts,
+answers, system instructions) depends on the service token's **payload level**, set by an administrator in
+DCDR - the same levels as telemetry services ([TELEMETRY.md](TELEMETRY.md)).
+
+Always, at every level:
 
 - who: organization, service token, request id;
 - what: route, requested model, resolved provider and model, whether it was streamed;
@@ -287,8 +292,81 @@ Every gateway request produces an execution log with **metadata only**:
   (see [TELEMETRY.md](TELEMETRY.md)). They are used only for that correlation inside your organization; a
   missing or malformed header changes nothing.
 
-**Prompts and responses are not stored.** No message text, tool arguments or generated content is
-kept. Token usage is used for budgets and cost reporting in DCDR.
+### Payload levels
+
+| Payload level | Content in the log |
+| --- | --- |
+| not set (a control plane that predates content capture) | None. The log is exactly the metadata above. |
+| `NONE` | None. The log also says which level applied (`payloadLevel`), whether the request carried content (`contentReceived`) and, for streams, whether the stream was interrupted (`streamInterrupted`). |
+| `METADATA` | A **content summary** (`contentSummary`): message counts, roles, tool names, character counts and keyed hashes of the input, output and system text. No text. |
+| `FULL` | The summary, plus the **content itself** (`content`) after your processors, each field cut at 65 536 characters. |
+
+Below `FULL`, no prompt, answer, system or tool-argument text leaves the gateway in any field. The hashes
+are HMAC-SHA256 with your organization's key - the same key and the same rule as telemetry, so the same
+prompt has the same hash in a gateway call and in a telemetry span - and are left out when the key is not
+available (never computed with a weak or missing key).
+
+### What is captured, per endpoint
+
+Only calls the gateway sent to the provider are captured. Each field is `JSON.stringify` of a member of the
+request or the response, so it is valid JSON unless it was cut (a cut field is listed in
+`content.truncated`). Tool **definitions** (`tools`) are counted, never captured.
+
+| Endpoint | `input` | `system` | `output` |
+| --- | --- | --- | --- |
+| `POST /v1/chat/completions` | `messages` | - | the `chat.completion` object |
+| `POST /v1/responses` | `input` | `instructions` | the `response` object (from `response.completed` when streamed) |
+| `POST /v1/messages` | `messages` | `system` | the `message` object |
+| `POST /v1/embeddings` | `input` | - | - |
+| `GET /v1/models`, `POST /v1/messages/count_tokens` | nothing | nothing | nothing |
+
+- **Streamed calls**: the gateway rebuilds the object a non-streamed call would have returned from the events
+  as they pass (text per choice, tool calls merged by index, finish reason and usage; Responses items by
+  output index; Messages content blocks by index). It never holds an event back to do it: every chunk
+  reaches your tool as soon as the provider sends it.
+- **Provider HTTP errors** (`4xx`/`5xx` from the provider): the `input` only; the error body is not content.
+- **Inline media** - base64 images, audio and files sent inline (data URLs, Anthropic `base64` sources,
+  `input_audio`), and generated images - are replaced by `"[omitted: <mime>, <n> chars]"` before anything is
+  kept. URLs to media are kept as sent.
+- **Interrupted streams**: when a stream does not reach its final event (your tool disconnected, the provider
+  failed mid-stream, or the stream just ended), the log says `streamInterrupted: true` and, at `FULL`, keeps
+  the output received so far with `output` listed in `content.truncated`.
+- **Normalised messages** (contracts 3.27.0): next to the three strings, `content.chat` holds the same
+  conversation as one list of messages (role, text, tool calls, tool results), built from the fields as they
+  are logged (after processors) by endpoint, the same shape as telemetry's: Chat Completions `messages` in and
+  one message per choice out; Responses `instructions` first, then `input`, one message per output item;
+  Messages `system` first, then `messages`, the message object out. Streamed and non-streamed calls give the
+  same `chat`. It is absent for embeddings, when a field was cut (an interrupted stream included) and when a
+  processor left a field that no longer parses. See [The `chat` field](TELEMETRY.md#the-chat-field).
+
+### Processors
+
+At `FULL` the captured copy goes through your organization's **global processors** first (unless the token
+turns them off) and then the **token's own processors**: the `INPUT` stage on `input` and `system`, the
+`OUTPUT` stage on `output` - the same processors as intents ([PROCESSING_RULES.md](PROCESSING_RULES.md#gateway-content-capture)).
+They act **only on the copy in the log**: what reaches the provider and your tool is never changed, and a
+processor never blocks a call. A processor that denies a stage removes that stage's fields from the log; when
+every field is removed the log says `contentWithheld: "PROCESSOR_BLOCKED"`. When the global processors cannot
+be loaded the content is not sent at all (`contentWithheld: "PROCESSORS_UNAVAILABLE"`); the summary and the
+usage still are. The processors run after your tool has the whole answer, so they never slow it down.
+
+### End user
+
+When your tool names an end user on the request, the log records it in `endUser`:
+
+| Endpoint | Field read |
+| --- | --- |
+| `chat/completions`, `responses` | `safety_identifier`, else `user` |
+| `embeddings` | `user` |
+| `messages` | `metadata.user_id` |
+
+The token's **end user id mode** decides how it is recorded, at every payload level: **pseudonymised** (the
+default; an HMAC of the id with your organization's key, plus the key version - dropped, never sent in clear,
+when the key is not available) or **as sent** (cut at 256 characters). The provider always receives the id
+exactly as your tool sent it.
+
+Token usage is used for budgets and cost reporting in DCDR; the log is never dropped or delayed because of
+content capture.
 
 ## Tool setup
 
