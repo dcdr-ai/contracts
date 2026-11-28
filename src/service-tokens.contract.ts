@@ -8,6 +8,7 @@
  */
 import { DcdrAssetScope } from "./asset.contract";
 import { ProcessingProcessor } from "./processing.contract";
+import { IntentType } from "./intent.contract";
 import { IntentProvider } from "./provider.contract";
 import { DcdrProviderLimitsConfig } from "./provider-limits.contract";
 import { TelemetryEndUserIdMode, TelemetryPayloadLevel } from "./telemetry.contract";
@@ -227,17 +228,252 @@ export enum DcdrServiceTokenLimitType {
 }
 
 /**
+ * One model an `OPEN_AI_COMPATIBLE` gateway binding exposes (3.28.0). There is no catalog behind these:
+ * the binding's owner says what the server serves.
+ */
+export interface DcdrServiceTokenGatewayCompatibleModel {
+  /** Exact model id sent upstream. */
+  id: string;
+  /**
+   * `IntentType.CHAT` (default) or `IntentType.EMBEDDING`; any other value is ignored and the model is
+   * `CHAT`. Decides which gateway routes accept the model (`/v1/embeddings` only takes `EMBEDDING`).
+   */
+  type?: IntentType;
+}
+
+/**
  * Gateway binding for one provider.
  *
  * Notes
  * - `credentialRef` uses the same reference concept already used elsewhere in
  *   DCDR contracts.
  * - Runtime/backend should treat `provider` as unique within one token's
- *   `gatewayBindings` array.
+ *   `gatewayBindings` array, **except `OPEN_AI_COMPATIBLE`** (3.28.0): a token may carry several
+ *   `OPEN_AI_COMPATIBLE` bindings, one per `alias`, and at most one without `alias`. Validate them with
+ *   {@link validateDcdrGatewayCompatibleBinding}.
+ * - `baseUrl`, `alias` and `models` are read on `OPEN_AI_COMPATIBLE` bindings only; on any other
+ *   provider they are ignored.
  */
 export interface DcdrServiceTokenGatewayProviderBinding {
   provider: IntentProvider;
   credentialRef: string;
+  /**
+   * 3.28.0, `OPEN_AI_COMPATIBLE` only: server base URL (`http(s)://host[:port][/path]`, no credentials,
+   * query or fragment); the runtime appends `/v1` unless it already ends in `/v1`. Without it the runtime's
+   * env `DCDR_GATEWAY_OPENAI_COMPATIBLE_BASE_URL` applies (installs); a blank string counts as absent. A binding URL whose host resolves to
+   * a private, loopback, link-local or metadata address is refused unless the runtime operator allows it.
+   */
+  baseUrl?: string;
+  /**
+   * 3.28.0, `OPEN_AI_COMPATIBLE` only: model prefix, so callers name `<alias>/<model>`. Matches
+   * {@link DCDR_GATEWAY_COMPATIBLE_ALIAS_PATTERN}, unique per token, never a provider prefix
+   * ({@link DCDR_GATEWAY_RESERVED_MODEL_PREFIXES}). Without it (or blank) the binding answers `openai-compatible/<model>`.
+   */
+  alias?: string;
+  /**
+   * 3.28.0, `OPEN_AI_COMPATIBLE` only: models this binding exposes (no catalog). Absent or `null`: the
+   * runtime's env `DCDR_GATEWAY_OPENAI_COMPATIBLE_MODEL_IDS` applies. `[]` exposes no model.
+   */
+  models?: DcdrServiceTokenGatewayCompatibleModel[];
+}
+
+/**
+ * Shape of an `OPEN_AI_COMPATIBLE` binding alias (3.28.0): lower case letters, digits and `-`, starting with
+ * a letter or digit, at most 32 characters.
+ */
+export const DCDR_GATEWAY_COMPATIBLE_ALIAS_PATTERN = /^[a-z0-9][a-z0-9-]{0,31}$/;
+
+/**
+ * Model prefixes the gateway already reads as a provider (3.28.0); an `OPEN_AI_COMPATIBLE` binding alias can
+ * never be one of them. `openai-compatible` names the binding without alias; `dcdr` is the DCDR virtual
+ * provider.
+ */
+export const DCDR_GATEWAY_RESERVED_MODEL_PREFIXES: readonly string[] = [
+  "openai",
+  "anthropic",
+  "gemini",
+  "grok",
+  "xai",
+  "mistral",
+  "office",
+  "openai-compatible",
+  "dcdr",
+];
+
+/** Why an `OPEN_AI_COMPATIBLE` gateway binding is not valid (3.28.0). */
+export enum DcdrGatewayCompatibleBindingIssueCode {
+  /** `alias` is not a string matching {@link DCDR_GATEWAY_COMPATIBLE_ALIAS_PATTERN}. */
+  ALIAS_INVALID = "ALIAS_INVALID",
+  /** `alias` is one of {@link DCDR_GATEWAY_RESERVED_MODEL_PREFIXES}. */
+  ALIAS_RESERVED = "ALIAS_RESERVED",
+  /** Another `OPEN_AI_COMPATIBLE` binding on the token has the same `alias`. */
+  ALIAS_DUPLICATE = "ALIAS_DUPLICATE",
+  /** Another `OPEN_AI_COMPATIBLE` binding on the token has no `alias` either. */
+  UNALIASED_DUPLICATE = "UNALIASED_DUPLICATE",
+  /** `baseUrl` is not an absolute `http(s)` URL without credentials, query or fragment. */
+  BASE_URL_INVALID = "BASE_URL_INVALID",
+  /** `models` is not an array, or an entry has no non-empty string `id`. */
+  MODEL_INVALID = "MODEL_INVALID",
+  /** Two entries of `models` share an `id` and a type. */
+  MODEL_DUPLICATE = "MODEL_DUPLICATE",
+}
+
+/** One problem {@link validateDcdrGatewayCompatibleBinding} found (3.28.0). */
+export interface DcdrGatewayCompatibleBindingIssue {
+  code: DcdrGatewayCompatibleBindingIssueCode;
+  /** The binding field at fault: `alias`, `baseUrl` or `models[<index>]`. */
+  field: string;
+  /** Human readable, safe to show to the token's owner. */
+  message: string;
+}
+
+/**
+ * The model type an `OPEN_AI_COMPATIBLE` binding model is served as (3.28.0): `EMBEDDING` when it says so,
+ * `CHAT` otherwise (absent or any other value).
+ *
+ * @param model The binding model entry.
+ * @returns `IntentType.EMBEDDING` or `IntentType.CHAT`.
+ */
+export function dcdrGatewayCompatibleModelType(model: Pick<DcdrServiceTokenGatewayCompatibleModel, "type">): IntentType {
+  return model?.type === IntentType.EMBEDDING ? IntentType.EMBEDDING : IntentType.CHAT;
+}
+
+/**
+ * Normalises an `OPEN_AI_COMPATIBLE` binding `baseUrl` into the upstream base the gateway calls (3.28.0):
+ * trailing slashes dropped and `/v1` appended unless the path already ends in `/v1`.
+ *
+ * Pure (WHATWG `URL` only), so the control plane can validate on write with the runtime's exact rule.
+ *
+ * @param baseUrl The binding's `baseUrl`.
+ * @returns The normalised base (`https://host[:port][/path]/v1`), or null when it is not an absolute
+ *          `http(s)` URL without credentials, query or fragment.
+ */
+export function normalizeDcdrGatewayCompatibleBaseUrl(baseUrl: string | null | undefined): string | null {
+  if (typeof baseUrl !== "string") return null;
+  const raw = baseUrl.trim();
+  if (!raw) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  if (!url.hostname || url.username || url.password || url.search || url.hash) return null;
+  // `raw.includes("?"/"#")` catches an empty query or fragment, which `URL` reports as "".
+  if (raw.includes("?") || raw.includes("#")) return null;
+  const base = `${url.protocol}//${url.host}${url.pathname}`.replace(/\/+$/, "");
+  return /\/v1$/i.test(base) ? base : `${base}/v1`;
+}
+
+/**
+ * Whether an optional `OPEN_AI_COMPATIBLE` binding field (`alias`, `baseUrl`) is set (3.28.0). Absent, `null` and a
+ * blank string all mean "not set", so a form that sends `""` for an empty field means the same as one that omits it.
+ *
+ * @param value The field's value.
+ * @returns False for `undefined`, `null` and blank strings; true for anything else (a non-string is set, and invalid).
+ */
+export function hasDcdrGatewayCompatibleField(value: string | null | undefined): boolean {
+  if (value === undefined || value === null) return false;
+  return typeof value !== "string" || value.trim().length > 0;
+}
+
+/**
+ * Validates one `OPEN_AI_COMPATIBLE` gateway binding against the token's whole `gatewayBindings` (3.28.0).
+ *
+ * Checks `alias` (shape, reserved prefixes, unique among the token's `OPEN_AI_COMPATIBLE` bindings, at most one
+ * binding without alias), `baseUrl` (see {@link normalizeDcdrGatewayCompatibleBaseUrl}) and `models` (array of
+ * entries with a non-empty `id`, no repeated `id` within one type). A binding of any other provider has no
+ * issues: these fields are ignored there. Duplicates are reported on every binding involved.
+ *
+ * The runtime ignores a binding with an alias issue (`ALIAS_*`, `UNALIASED_DUPLICATE`) and answers
+ * `upstream_base_url_invalid` for one with `BASE_URL_INVALID`; invalid `models` entries are skipped. The
+ * control plane should refuse all of them on write.
+ *
+ * @param binding The binding to check.
+ * @param allBindings Every binding on the token, `binding` included (compared by identity).
+ * @returns The issues found; empty when the binding is valid.
+ */
+export function validateDcdrGatewayCompatibleBinding(
+  binding: DcdrServiceTokenGatewayProviderBinding,
+  allBindings: readonly DcdrServiceTokenGatewayProviderBinding[],
+): DcdrGatewayCompatibleBindingIssue[] {
+  const issues: DcdrGatewayCompatibleBindingIssue[] = [];
+  if (!binding || binding.provider !== IntentProvider.OPEN_AI_COMPATIBLE) return issues;
+
+  const others = (Array.isArray(allBindings) ? allBindings : []).filter(
+    (other) => other !== binding && Boolean(other) && other.provider === IntentProvider.OPEN_AI_COMPATIBLE,
+  );
+  const alias = binding.alias;
+  if (!hasDcdrGatewayCompatibleField(alias)) {
+    if (others.some((other) => !hasDcdrGatewayCompatibleField(other.alias))) {
+      issues.push({
+        code: DcdrGatewayCompatibleBindingIssueCode.UNALIASED_DUPLICATE,
+        field: "alias",
+        message: "Only one OPEN_AI_COMPATIBLE binding per token may have no alias.",
+      });
+    }
+  } else if (typeof alias !== "string" || !DCDR_GATEWAY_COMPATIBLE_ALIAS_PATTERN.test(alias)) {
+    issues.push({
+      code: DcdrGatewayCompatibleBindingIssueCode.ALIAS_INVALID,
+      field: "alias",
+      message: "Alias must be 1-32 lower case letters, digits or '-', starting with a letter or digit.",
+    });
+  } else if (DCDR_GATEWAY_RESERVED_MODEL_PREFIXES.includes(alias)) {
+    issues.push({
+      code: DcdrGatewayCompatibleBindingIssueCode.ALIAS_RESERVED,
+      field: "alias",
+      message: `Alias '${alias}' is a provider prefix and cannot name a binding.`,
+    });
+  } else if (others.some((other) => other.alias === alias)) {
+    issues.push({
+      code: DcdrGatewayCompatibleBindingIssueCode.ALIAS_DUPLICATE,
+      field: "alias",
+      message: `Alias '${alias}' is used by another OPEN_AI_COMPATIBLE binding of this token.`,
+    });
+  }
+
+  if (hasDcdrGatewayCompatibleField(binding.baseUrl) && !normalizeDcdrGatewayCompatibleBaseUrl(binding.baseUrl)) {
+    issues.push({
+      code: DcdrGatewayCompatibleBindingIssueCode.BASE_URL_INVALID,
+      field: "baseUrl",
+      message: "Base URL must be an absolute http(s) URL without credentials, query or fragment.",
+    });
+  }
+
+  const models = binding.models;
+  if (models !== undefined && models !== null) {
+    if (!Array.isArray(models)) {
+      issues.push({
+        code: DcdrGatewayCompatibleBindingIssueCode.MODEL_INVALID,
+        field: "models",
+        message: "Models must be a list of { id, type }.",
+      });
+    } else {
+      const seen = new Set<string>();
+      models.forEach((model, index) => {
+        const id = model && typeof model.id === "string" ? model.id.trim() : "";
+        if (!id) {
+          issues.push({
+            code: DcdrGatewayCompatibleBindingIssueCode.MODEL_INVALID,
+            field: `models[${index}]`,
+            message: "Each model needs a non-empty id.",
+          });
+          return;
+        }
+        const key = `${dcdrGatewayCompatibleModelType(model)}:${id}`;
+        if (seen.has(key)) {
+          issues.push({
+            code: DcdrGatewayCompatibleBindingIssueCode.MODEL_DUPLICATE,
+            field: `models[${index}]`,
+            message: `Model '${id}' is listed twice.`,
+          });
+        }
+        seen.add(key);
+      });
+    }
+  }
+  return issues;
 }
 
 /**

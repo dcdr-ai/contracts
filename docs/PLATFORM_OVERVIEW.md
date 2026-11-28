@@ -73,7 +73,7 @@ In Cloud:
 
 - You don’t manage `registry.json` files.
 - You don’t run Docker.
-- You call a managed runtime endpoint using `Authorization: Bearer <token>`: a `DcdrSessionToken`, or a managed service token whose scopes say what it may do (`execute:*`, `assets:*`, `workflows:*`, `knowledge:*`, `gateway`).
+- You call a managed runtime endpoint using `Authorization: Bearer <token>`: a `DcdrSessionToken`, or a managed service token whose scopes say what it may do (`execute:*`, `assets:*`, `workflows:*`, `knowledge:*`, `gateway`, `traces:write`, or `*` for Full Access).
 - Workflows and knowledge are called on the control plane (`https://dcdr.ai`) with the same kind of service token; `DcdrClient` covers both origins.
 
 Typical flow:

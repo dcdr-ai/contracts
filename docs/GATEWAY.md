@@ -28,6 +28,7 @@ is already shaped as vendor API calls.
 - [Authentication](#authentication)
 - [Endpoints](#endpoints)
 - [Choosing a model](#choosing-a-model)
+- [OpenAI-compatible servers](#openai-compatible-servers)
 - [Streaming](#streaming)
 - [Limits](#limits)
 - [Errors](#errors)
@@ -39,8 +40,9 @@ is already shaped as vendor API calls.
 
 ## How it works
 
-1. An administrator creates a **service token** in DCDR with the `gateway` scope and binds one
-   **provider credential** per provider it may use (for example an OpenAI key and an Anthropic key).
+1. An administrator creates a **service token** in DCDR with the `gateway` scope (or Full Access,
+   `*`) and binds one **provider credential** per provider it may use (for example an OpenAI key and
+   an Anthropic key).
 2. The tool sends a normal OpenAI or Anthropic request to the gateway, with the service token as its
    API key.
 3. The gateway validates the token, resolves the requested model to a bound provider, applies your
@@ -66,7 +68,7 @@ checked there.
 
 ## Authentication
 
-Send your DCDR service token (scope `gateway`) in either header:
+Send your DCDR service token (scope `gateway`, or Full Access `*`) in either header:
 
 ```http
 Authorization: Bearer <DCDR service token>
@@ -81,7 +83,9 @@ x-api-key: <DCDR service token>
 - The token is **never** accepted in the URL query string.
 - Do not send provider API keys to the gateway. The gateway adds the bound provider credential itself.
 
-A token without the `gateway` scope, or without any provider binding, is refused with `403`.
+A token without the `gateway` scope (or Full Access, `*`) is refused with `401`
+(`invalid_gateway_token`); a token with it but without any provider binding is refused with `403`
+(`missing_gateway_bindings`).
 
 ## Endpoints
 
@@ -116,7 +120,10 @@ The gateway validates only what it needs to route the call:
 `/v1/models` lists the models your token can reach: the models of every bound provider that the
 route set can serve (chat models, plus embeddings models for providers that serve `/v1/embeddings`),
 minus any provider or model your organization disabled, and - when the token is restricted to a list
-of models - only the models on that list. It does not call the providers: a model can be listed and
+of models - only the models on that list. Models of [OpenAI-compatible servers](#openai-compatible-servers)
+bound with an alias are listed as `<alias>/<model>`, and every model id is also listed bare unless
+another listed model shares it (then only the prefixed ids are listed, so every listed id can be called
+as listed). It does not call the providers: a model can be listed and
 still be refused by the provider if your provider account cannot use it.
 
 ## Choosing a model
@@ -127,8 +134,9 @@ Use the provider's own model id, as you would against the provider:
 { "model": "gpt-4.1-nano", "messages": [{ "role": "user", "content": "hi" }] }
 ```
 
-The gateway finds the bound provider that serves that id. When two bound providers serve the same id
-the request is refused as `ambiguous_model`; name the provider explicitly with a prefix:
+The gateway finds the bound provider that serves that id. When two bound providers (or two
+OpenAI-compatible bindings) serve the same id the request is refused as `ambiguous_model`, and the error
+message lists the prefixed ids that would work; name the provider explicitly with a prefix:
 
 | Prefix | Provider |
 | --- | --- |
@@ -137,7 +145,10 @@ the request is refused as `ambiguous_model`; name the provider explicitly with a
 | `gemini/` | Google Gemini |
 | `grok/` or `xai/` | xAI |
 | `mistral/` | Mistral |
-| `openai-compatible/` | the OpenAI-compatible endpoint configured on the runtime |
+| `openai-compatible/` | the token's OpenAI-compatible binding without alias, or the endpoint configured on the runtime |
+| `<alias>/` | the token's OpenAI-compatible binding with that alias (see [OpenAI-compatible servers](#openai-compatible-servers)) |
+
+The prefix is routing only: the provider receives the model id without it.
 
 ```json
 { "model": "anthropic/claude-haiku-4-5", "max_tokens": 256, "messages": [{ "role": "user", "content": "hi" }] }
@@ -154,6 +165,60 @@ model cannot answer `/v1/embeddings` (`model_not_found`). A route the provider d
 example `/v1/responses` with a Mistral model - is refused with `route_not_supported_for_provider`.
 
 The list of models DCDR knows per provider is in [SUPPORTED_MODELS.md](SUPPORTED_MODELS.md).
+
+## OpenAI-compatible servers
+
+Any server that speaks the OpenAI API - vLLM, Ollama, LM Studio, TGI, a hosted inference endpoint - can
+sit behind the gateway as provider `OPEN_AI_COMPATIBLE`. Since contracts 3.28.0 each service token
+binding describes its own server, so one token can reach several of them, each with its own credential:
+
+| Binding field | Meaning |
+| --- | --- |
+| `baseUrl` | The server's base URL, `http(s)://host[:port][/path]`. The gateway appends `/v1` unless the path already ends in `/v1`. No credentials, query or fragment. |
+| `alias` | Optional model prefix: callers send `<alias>/<model>`. 1-32 lower case letters, digits or `-`, starting with a letter or digit; unique per token; never a provider prefix (`openai`, `anthropic`, `gemini`, `grok`, `xai`, `mistral`, `office`, `openai-compatible`, `dcdr`). |
+| `models` | The models this server exposes: `{ "id": "<exact id sent upstream>", "type": "CHAT" }` or `"type": "EMBEDDING"` (absent or any other value means `CHAT`). There is no catalog behind them. `[]` exposes no model. |
+
+```json
+{
+  "provider": "OPEN_AI_COMPATIBLE",
+  "credentialRef": "lab-vllm-key",
+  "alias": "lab",
+  "baseUrl": "https://models.lab.example.com",
+  "models": [{ "id": "llama-3.1-8b-instruct" }, { "id": "bge-m3", "type": "EMBEDDING" }]
+}
+```
+
+- A token can carry several `OPEN_AI_COMPATIBLE` bindings, one per alias, and at most one without
+  alias. A binding with an invalid, reserved or repeated alias (or a second one without alias) is
+  ignored. An empty string counts as absent for `alias` and `baseUrl`. `@dcdr/contracts` exports the
+  exact checks as `validateDcdrGatewayCompatibleBinding`.
+- `lab/llama-3.1-8b-instruct` goes to that binding; a prefix that names no binding of the token is
+  refused as `provider_not_bound` (`403`); a model not in that binding's `models` is `model_not_found`
+  (`404`). A `CHAT` model answers the chat and responses routes, an `EMBEDDING` model `/v1/embeddings`
+  only.
+- The bare id (`llama-3.1-8b-instruct`) works too, as long as no other bound provider or binding serves
+  it; otherwise it is `ambiguous_model` (`400`) and the message lists the prefixed ids.
+- The binding without alias answers `openai-compatible/<model>` (and the bare id).
+- Without `baseUrl` a binding uses the runtime's `DCDR_GATEWAY_OPENAI_COMPATIBLE_BASE_URL`, and without
+  `models` the runtime's `DCDR_GATEWAY_OPENAI_COMPATIBLE_MODEL_IDS` (see
+  [Operating a runtime](#operating-a-runtime)); with neither base URL the call is `provider_not_supported`.
+- **Public addresses only.** A binding's `baseUrl` must point at a host whose addresses are all public:
+  one that is (or resolves to) a private, loopback, link-local, unique-local, carrier-grade NAT or cloud
+  metadata address is refused as `upstream_address_forbidden` (`403`) before the call is sent, and the
+  address is checked again when the connection is made. Redirects are never followed: a `3xx` from the
+  server is returned to the tool as it is. The operator of a self-hosted runtime can allow private
+  addresses with `DCDR_GATEWAY_ALLOW_PRIVATE_UPSTREAMS=true`; the runtime's own
+  `DCDR_GATEWAY_OPENAI_COMPATIBLE_BASE_URL` may always be on the private network.
+- An invalid `baseUrl` answers `upstream_base_url_invalid` (`502`); a host that does not resolve,
+  `upstream_host_unresolved` (`502`).
+- **Model restrictions, limits and logs use the upstream model id.** An `allowedModels` entry or a limit
+  scoped to a model names `{ "provider": "OPEN_AI_COMPATIBLE", "modelId": "llama-3.1-8b-instruct" }`, without
+  the alias, so it applies to that id on every OpenAI-compatible binding of the token. The log records the
+  provider `OPEN_AI_COMPATIBLE`, that model id, and the binding's alias (`compatibleAlias`).
+- Provider Limits for `OPEN_AI_COMPATIBLE` (enabled, calls, budget) apply to all of the token's
+  OpenAI-compatible bindings together.
+
+A runtime that applies these bindings announces the capability `AI_GATEWAY_OPENAI_COMPATIBLE_BINDINGS`.
 
 ## Streaming
 
@@ -233,8 +298,8 @@ On the Anthropic routes `error.type` follows Anthropic's error types (`authentic
 | HTTP | Code | Meaning |
 | --- | --- | --- |
 | 401 | `missing_gateway_token` | No token in `Authorization` or `x-api-key`. |
-| 401 | `invalid_gateway_token` | The token is unknown, expired or revoked. |
-| 403 | `gateway_scope_forbidden` | The token does not have the `gateway` scope. |
+| 401 | `invalid_gateway_token` | The token is unknown, expired or revoked, or has neither the `gateway` scope nor Full Access (`*`). |
+| 403 | `gateway_scope_forbidden` | The token check accepted the token but returned scopes without `gateway` or `*`. A token without the scope normally gets `401 invalid_gateway_token`. |
 | 403 | `missing_gateway_bindings` | The token has no provider credential bound. |
 | 403 | `missing_gateway_cid` | The token is not attached to an organization. |
 | 400 | `invalid_request_body` | The body is not a JSON object. |
@@ -244,9 +309,10 @@ On the Anthropic routes `error.type` follows Anthropic's error types (`authentic
 | 404 | `model_not_found` | No bound provider serves this model for this route. |
 | 403 | `model_forbidden` | The model exists but your organization disabled it. |
 | 403 | `model_not_allowed_for_token` | This service token is restricted to other models. |
-| 403 | `provider_not_bound` | The prefixed provider is not bound to this token. |
+| 403 | `provider_not_bound` | The prefixed provider, or the OpenAI-compatible binding alias, is not bound to this token. |
 | 400 | `provider_not_supported` | The provider cannot be used through the gateway. |
-| 400 | `ambiguous_model` | Several bound providers serve this id; use a provider prefix. |
+| 400 | `ambiguous_model` | Several bound providers or OpenAI-compatible bindings serve this id; use one of the prefixed ids the message lists. |
+| 403 | `upstream_address_forbidden` | The OpenAI-compatible binding's `baseUrl` points at a private, loopback, link-local or metadata address. |
 | 400 | `route_not_supported_for_provider` | The provider does not serve this route (for example `/v1/responses` on Mistral). |
 | 403 | `credential_not_found` | The provider credential bound to the token no longer exists. |
 | 403 | `subscription_inactive` | Your organization's subscription is not active. |
@@ -259,7 +325,9 @@ On the Anthropic routes `error.type` follows Anthropic's error types (`authentic
 | 503 | `entitlements_unavailable` | Your organization's plan could not be checked; retry shortly. |
 | 502 | `gateway_credentials_resolve_failed` | The provider credential could not be loaded; retry. |
 | 502 | `gateway_upstream_failed` | The provider could not be reached, or its response was too large. |
-| 502 | `upstream_address_refused` | The configured OpenAI-compatible endpoint is not reachable from the runtime. |
+| 502 | `upstream_address_refused` | The OpenAI-compatible endpoint resolved to an address the gateway does not call when the connection was made. |
+| 502 | `upstream_base_url_invalid` | The OpenAI-compatible binding's `baseUrl` is not a valid `http(s)` URL. |
+| 502 | `upstream_host_unresolved` | The host of the OpenAI-compatible binding's `baseUrl` does not resolve. |
 | 502 | `upstream_aborted` | The call to the provider was aborted. |
 | 504 | `upstream_timeout` | The provider did not start answering in time, or went silent mid-response. |
 
@@ -282,7 +350,8 @@ DCDR - the same levels as telemetry services ([TELEMETRY.md](TELEMETRY.md)).
 Always, at every level:
 
 - who: organization, service token, request id;
-- what: route, requested model, resolved provider and model, whether it was streamed;
+- what: route, requested model, resolved provider and model (and, for an OpenAI-compatible binding,
+  its alias), whether it was streamed;
 - outcome: HTTP status, gateway or provider error code, whether the call reached the provider;
 - size and cost inputs: token usage reported by the provider (prompt, completion, cached and
   cache-write tokens), number of messages/inputs, character counts, tool-call counts, finish reason,
@@ -485,8 +554,9 @@ variables shape the gateway:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `DCDR_GATEWAY_OPENAI_COMPATIBLE_BASE_URL` | unset | Base URL of one OpenAI-compatible server (vLLM, Ollama, LM Studio, a hosted endpoint) served as provider `OPEN_AI_COMPATIBLE`. It may be on your private network. |
-| `DCDR_GATEWAY_OPENAI_COMPATIBLE_MODEL_IDS` | unset | Comma-separated model ids that server serves; they appear on `/v1/models` and are routable with or without the `openai-compatible/` prefix. |
+| `DCDR_GATEWAY_OPENAI_COMPATIBLE_BASE_URL` | unset | Base URL of one OpenAI-compatible server (vLLM, Ollama, LM Studio, a hosted endpoint) served as provider `OPEN_AI_COMPATIBLE` to bindings without their own `baseUrl`. It may be on your private network. |
+| `DCDR_GATEWAY_OPENAI_COMPATIBLE_MODEL_IDS` | unset | Comma-separated model ids that server serves, for bindings without their own `models`; they appear on `/v1/models` and are routable with or without the `openai-compatible/` prefix. |
+| `DCDR_GATEWAY_ALLOW_PRIVATE_UPSTREAMS` | `false` | `true` lets a service token binding's own `baseUrl` reach private, loopback and link-local addresses (a model server on your network). Leave it off when tokens are issued to people who should not reach your internal network. |
 | `DCDR_GATEWAY_UPSTREAM_TIMEOUT_MS` | `240000` | How long to wait for a provider to start answering. A non-streamed request waits for the whole generation within this time. |
 | `DCDR_GATEWAY_UPSTREAM_IDLE_TIMEOUT_MS` | `120000` | How long a response may stay silent once it has started. |
 

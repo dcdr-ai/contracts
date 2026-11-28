@@ -71,6 +71,13 @@ export enum CapabilityKey {
    * `contentSummary`, `content`, `contentWithheld`, `endUser` and `streamInterrupted` accordingly.
    */
   AI_GATEWAY_CONTENT_CAPTURE = "AI_GATEWAY_CONTENT_CAPTURE",
+
+  /**
+   * Gateway `OPEN_AI_COMPATIBLE` bindings per token (3.28.0): `baseUrl`, `alias` and `models` on
+   * `DcdrServiceTokenGatewayProviderBinding` are applied (several `OPEN_AI_COMPATIBLE` bindings per token, one per
+   * alias), and gateway execution logs carry `compatibleAlias`. A runtime without it uses only its env configuration.
+   */
+  AI_GATEWAY_OPENAI_COMPATIBLE_BINDINGS = "AI_GATEWAY_OPENAI_COMPATIBLE_BINDINGS",
 }
 
 /** Header a runtime sends on its calls to the control plane: comma-separated `CapabilityKey` values (3.14.0). */

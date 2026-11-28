@@ -12,9 +12,9 @@ Rules
 - Provider tables summarize only the additional multimodal input/output surfaces that have been explicitly validated so far.
 - Generated from the contracts catalog; do not edit by hand.
 
-Generated: **2026-11-11**
+Generated: **2026-11-27**
 
-> Total officially supported models: **125**
+> Total officially supported models: **113**
 
 ## OpenAI
 
@@ -22,6 +22,12 @@ Every model in this table is supported for standard text chat and structured JSO
 
 | Model | Validated multimodal input | Input source kinds | Validated multimodal output | Output source kinds |
 | --- | --- | --- | --- | --- |
+| `gpt-6.2-astra` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-6.2-sol` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-6.2-astra-healthcare` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-6.2-sol-healthcare` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-6.1-sol-healthcare` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gpt-6-astra-healthcare` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-6.1-sol` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-6.1-terra` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-6-sol` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
@@ -62,34 +68,15 @@ Every model in this table is supported for standard text chat and structured JSO
 | `gpt-4.1-2025-04-14` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4.1-mini` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4.1-mini-2025-04-14` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `gpt-4.1-nano` ⚠ retiring - detected 2026-10-27 | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `gpt-4.1-nano-2025-04-14` ⚠ retiring - detected 2026-10-27 | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o-2024-08-06` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o-2024-11-20` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o-mini` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gpt-4o-mini-2024-07-18` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `gpt-4o-2024-05-13` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `gpt-4-turbo` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `gpt-4-turbo-2024-04-09` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `gpt-4` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `gpt-4-0613` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `gpt-3.5-turbo` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `gpt-3.5-turbo-0125` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `gpt-3.5-turbo-1106` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `gpt-3.5-turbo-16k` ⚠ retiring - detected 2026-10-27 | not validated | none | not curated | - |
-| `o4-mini` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o4-mini-2025-04-16` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `o3-pro` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `o3-pro-2025-06-10` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `o3` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 | `o3-2025-04-16` | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o3-mini` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o3-mini-2025-01-31` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o1-pro` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o1-pro-2025-03-19` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o1` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
-| `o1-2024-12-17` ⚠ retiring - detected 2026-10-27 | validation in progress (<kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd>) | INLINE/URL/ASSET | not curated | - |
 
 ## Anthropic
 
@@ -105,7 +92,6 @@ Every model in this table is supported for standard text chat and structured JSO
 | `claude-opus-4-7` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-opus-4-6` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-opus-4-5-20251101` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `claude-opus-4-1-20250805` ⚠ retiring - detected 2026-10-27 | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-4-6` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-4-5-20250929` | <kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `claude-sonnet-5` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
@@ -122,6 +108,8 @@ Every model in this table is supported for standard text chat and structured JSO
 | Model | Validated multimodal input | Input source kinds | Validated multimodal output | Output source kinds |
 | --- | --- | --- | --- | --- |
 | `gemini-2.5-flash` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gemini-4-neon` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `gemini-4-hydrogen` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gemini-4-carbon` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gemini-4-argon` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>audio</kbd>/<kbd>video</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `gemini-3.8-flash` | not curated | - | not curated | - |
@@ -152,7 +140,7 @@ Every model in this table is supported for standard text chat and structured JSO
 | `grok-4.3` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `grok-4.20-0309-non-reasoning` | <kbd>text</kbd>/<kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 | `grok-4.20-0309-reasoning` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
-| `grok-build-0.1` | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
+| `grok-build-0.1` ⚠ retiring - detected 2026-11-27 | <kbd>image</kbd>/<kbd>document</kbd> | INLINE/URL/ASSET | not curated | - |
 
 ## Mistral
 
@@ -178,10 +166,12 @@ Every model in this table is supported for standard text chat and structured JSO
 
 ## Retired models
 
-Models their vendor has retired, more than 30 days after the retirement was detected, as of **2026-11-11**. They stay in the catalog so existing registries keep loading, but they are no longer listed above. A retirement detected less than 30 days ago keeps its row above, marked "retiring".
+Models their vendor has retired, more than 30 days after the retirement was detected, as of **2026-11-27**. They stay in the catalog so existing registries keep loading, but they are no longer listed above. A retirement detected less than 30 days ago keeps its row above, marked "retiring".
 
 | Provider | Model | Detected | Reason |
 | --- | --- | --- | --- |
+| OPEN_AI | `gpt-3.5-turbo-instruct` | 2026-10-28 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-3.5-turbo-instruct-0914` | 2026-10-28 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
 | OPEN_AI | `gpt-5.3-chat-latest` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
 | OPEN_AI | `gpt-5.2-chat-latest` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
 | OPEN_AI | `gpt-5.2-codex` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
@@ -191,3 +181,33 @@ Models their vendor has retired, more than 30 days after the retirement was dete
 | OPEN_AI | `gpt-5.1-codex-mini` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
 | OPEN_AI | `gpt-5-chat-latest` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
 | OPEN_AI | `gpt-5-codex` | 2026-09-06 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-4.1-nano` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-4.1-nano-2025-04-14` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-4o-2024-05-13` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-4-turbo` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-4-turbo-2024-04-09` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-4` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-4-0613` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-3.5-turbo` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-3.5-turbo-0125` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-3.5-turbo-1106` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `gpt-3.5-turbo-16k` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `o4-mini` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `o4-mini-2025-04-16` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `o3-mini` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `o3-mini-2025-01-31` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `o1-pro` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `o1-pro-2025-03-19` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `o1` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `o1-2024-12-17` | 2026-10-27 | Retired by OpenAI: calls return 404 model_not_found ('has been deprecated'). |
+| OPEN_AI | `dall-e-3` | 2026-10-28 | Retired by OpenAI: calls answer that the model does not exist. |
+| OPEN_AI | `dall-e-2` | 2026-10-28 | Retired by OpenAI: calls answer that the model does not exist. |
+| OPEN_AI | `gpt-realtime-mini-2025-10-06` | 2026-10-28 | Retired by OpenAI: calls answer that the model does not exist. |
+| GEMINI | `gemini-3-pro-preview` | 2026-10-28 | Retired by Google: calls return 404 ('This model ... is no longer available'). |
+| GEMINI | `gemini-2.0-flash` | 2026-10-28 | Retired by Google: calls return 404 ('This model ... is no longer available'). |
+| GEMINI | `gemini-2.0-flash-001` | 2026-10-28 | Retired by Google: calls return 404 ('This model ... is no longer available'). |
+| GEMINI | `gemini-2.0-flash-lite` | 2026-10-28 | Retired by Google: calls return 404 ('This model ... is no longer available'). |
+| GEMINI | `gemini-2.0-flash-lite-001` | 2026-10-28 | Retired by Google: calls return 404 ('This model ... is no longer available'). |
+| GEMINI | `gemini-robotics-er-1.6-preview` | 2026-10-28 | Retired by Google: the Gemini API returns 404 NOT_FOUND for the model id. |
+| GEMINI | `gemini-robotics-er-1.5-preview` | 2026-10-28 | Retired by Google: the Gemini API returns 404 NOT_FOUND for the model id. |
+| ANTHROPIC | `claude-opus-4-1-20250805` | 2026-10-27 | Retired by Anthropic on its own API (still served on some partner clouds): calls return 404 not_found_error. |

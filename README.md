@@ -243,7 +243,7 @@ been validated for image and document input, check [SUPPORTED_MODELS.md](docs/SU
 ## AI Gateway
 
 If a tool or SDK already speaks the OpenAI or Anthropic API, you only need to change its base URL and its API key.
-The key is a DCDR service token with the `gateway` scope:
+The key is a DCDR service token with the `gateway` scope (or Full Access, `*`):
 
 ```bash
 # OpenAI SDKs and OpenAI-compatible tools (Cursor, LangChain, n8n, ...)
@@ -272,6 +272,7 @@ You create service tokens in the DCDR web UI. Each call needs the matching scope
 | `execute:*`, or an intent key | Execute any intent, or that intent only |
 | `assets:read` / `assets:write` / `assets:delete` | Managed assets |
 | `gateway` | The `/v1` AI Gateway |
+| `traces:write` | Telemetry export (`/v1/traces`, `/v1/logs`). `logs:write` does not grant it |
 | `workflows:read` | Workflow catalogue, runs, steps, evidence, reports and tasks |
 | `workflows:run` | Run, cancel and resume workflows |
 | `knowledge:read` | List and read collections and documents |
@@ -279,7 +280,7 @@ You create service tokens in the DCDR web UI. Each call needs the matching scope
 | `knowledge:write` | Reserved. No endpoint uses it yet |
 | `knowledge:collections:*` | Grant: every knowledge collection, including ones created later |
 | `knowledge:collection:<key>` | Grant: one knowledge collection |
-| `*` | Everything |
+| `*` | Full Access: everything, including the AI Gateway and telemetry |
 
 A knowledge call needs an action scope **and** a collection grant: either one alone allows nothing. Scopes are
 matched exactly, never by prefix. The same rules are published as functions:

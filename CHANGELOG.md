@@ -4,6 +4,25 @@ This changelog is automatically generated from the runtime release process.
 Entries show the changes introduced in each published build.
 Labels indicate the affected area: <kbd>RUNTIME</kbd> or <kbd>CONTRACTS</kbd>.
 
+## [20261128.1] — 01:43UTC
+
+<!--
+sourceCommit: 5d749e3145ce6603e3525a305a29486959ab59a1
+queuedAtUtc: 
+previousMirroredBuild: 20261125.1 (2026-11-25)
+contractsSubmodule: 0f9696ffde4f..424aa4ae50ac
+-->
+
+### Added
+- <kbd>RUNTIME</kbd> **AI Gateway: several OpenAI-compatible servers per service token.** A service token's OpenAI-compatible binding can now carry its own server URL, an alias and the list of models it serves (chat or embeddings), so one token can reach several self-hosted or hosted OpenAI-compatible servers, each with its own credential. Callers name `<alias>/<model>`, or the bare model id when only one server serves it; an id served by more than one bound provider or server is refused with a message listing the prefixed ids that work, and `/v1/models` lists the prefixed ids (and the bare ones that are unique). Model restrictions, limits and logs use the model id as the server knows it, and the log records the alias. A server URL set on a token must point at a public address; operators of self-hosted runtimes can allow private addresses with `DCDR_GATEWAY_ALLOW_PRIVATE_UPSTREAMS=true`. Without the new fields a binding uses the runtime's `DCDR_GATEWAY_OPENAI_COMPATIBLE_BASE_URL` and `DCDR_GATEWAY_OPENAI_COMPATIBLE_MODEL_IDS` exactly as before. The runtime announces `AI_GATEWAY_OPENAI_COMPATIBLE_BINDINGS`.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.28.0 - OpenAI-compatible bindings per service token.** `DcdrServiceTokenGatewayProviderBinding` gains optional `baseUrl`, `alias` and `models` (`DcdrServiceTokenGatewayCompatibleModel`), read on `OPEN_AI_COMPATIBLE` bindings only, plus `validateDcdrGatewayCompatibleBinding` and its constants so the control plane validates with the runtime's rules. Gateway logs gain `compatibleAlias`; new capability key `AI_GATEWAY_OPENAI_COMPATIBLE_BINDINGS`. Additive.
+### Fixed
+- <kbd>RUNTIME</kbd> **AI Gateway: a prefixed model id reaches the provider without its prefix.** A request for `openai/<model>`, `openai-compatible/<model>` (or any provider prefix) was routed correctly but forwarded with the prefix still in `model`, which the provider does not recognise. The provider now receives its own model id.
+- <kbd>CONTRACTS</kbd> **`@dcdr/contracts` 3.28.0 - model catalog refresh and Full Access documentation.** New models: OpenAI `gpt-6.2-astra`, `gpt-6.2-sol`, the `gpt-*-healthcare` line and `gpt-live-1.1`; Gemini `gemini-4-neon`, `gemini-4-hydrogen` and the Gemini research and agent models (listed, not supported); Mistral `magistral-medium-latest` and `magistral-small-latest` (listed, curation pending). DCDR managed profiles: OpenAI Best is now `gpt-6.2-sol`, Gemini Smart and the global default are now `gemini-4-hydrogen`, and Grok has no Fast profile; `gpt-6.1-sol`, `gpt-5-nano` and `gemini-3.5-flash` remain selectable under their provider. `grok-build-0.1` is marked retired by its vendor. `gemini-embedding-001` is now priced. The docs now say that a Full Access (`*`) service token grants the AI Gateway and telemetry, and which status a token without the `gateway` scope gets (`401 invalid_gateway_token`). (#5249)
+- <kbd>RUNTIME</kbd> **The model catalog drift check works again.** `npm run catalog:drift-check` compared vendor model listings against a file that no longer holds the catalog, so it reported every vendor model as missing. It now reads the curated catalog itself and reports both models a vendor added and catalogued models a vendor stopped listing; models already marked legacy or retired do not count as drift. The provider models diff also watches Mistral's `magistral-` and `voxtral-` families and leaves non-chat models out of the chat list. The model listing tools make their HTTP calls through axios, so they no longer fail with "fetch is not defined" on older Node.
+- <kbd>RUNTIME</kbd> **The AI Gateway no longer lists or routes models retired by their vendor.** Models the catalog marks as retired (past their 30-day notice) are left out of `GET /v1/models`, and calls to them are answered by the gateway with `404 model_not_found` instead of reaching the provider. Models inside the notice period stay listed and callable.
+- <kbd>RUNTIME</kbd> **A Full Access service token now grants the AI Gateway.** Like every other scope, the gateway's scope check now honours Full Access (`*`); before, it required the explicit `gateway` scope. Gateway logs report the token's scope as allowed accordingly. (#5249)
+
 ## [20261125.1] — 21:27UTC
 
 <!--

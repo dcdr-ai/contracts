@@ -24,9 +24,9 @@ Quick map (method → HTTP surface):
 | `deleteAsset(request)`                               | `DELETE /api/assets`                        | required                    | Delete a managed asset                   |
 | `circuitBreakerStatus(provider, model?, tenantCid?)` | `GET /api/execution/circuit-breakers`       | required                    | Observe breaker state (tenant-scoped)    |
 | `resetCircuitBreaker(provider, model?, tenantCid?)`  | `PUT /api/execution/circuit-breakers/reset` | internal only               | Reset breaker state (ops)                |
-| `exportTelemetryTraces(request, options?)`           | `POST /v1/traces`                           | `traces:write` token        | Export OpenTelemetry spans (OTLP/HTTP)   |
-| `exportTelemetryLogs(request, options?)`             | `POST /v1/logs`                             | `traces:write` token        | Export GenAI log events (OTLP/HTTP)      |
-| `telemetryTest(options?)`                            | `POST /v1/traces`                           | `traces:write` token        | Check a telemetry setup end to end       |
+| `exportTelemetryTraces(request, options?)`           | `POST /v1/traces`                           | `traces:write` or `*` token | Export OpenTelemetry spans (OTLP/HTTP)   |
+| `exportTelemetryLogs(request, options?)`             | `POST /v1/logs`                             | `traces:write` or `*` token | Export GenAI log events (OTLP/HTTP)      |
+| `telemetryTest(options?)`                            | `POST /v1/traces`                           | `traces:write` or `*` token | Check a telemetry setup end to end       |
 
 What “auth required” means:
 
@@ -313,7 +313,7 @@ Notes:
 
 Since 3.25.0. The client exports OpenTelemetry data to the runtime's OTLP/HTTP receivers, the same endpoints an
 OpenTelemetry SDK uses (see [TELEMETRY.md](TELEMETRY.md)). The `bearerToken` must be a service token with the
-`traces:write` scope; without a `bearerToken` the methods throw `CONFIGURATION` before sending anything (the
+`traces:write` scope (or Full Access, `*`); without a `bearerToken` the methods throw `CONFIGURATION` before sending anything (the
 receivers accept no other credential). `DcdrClient` exposes the same three methods.
 
 Host (since 3.25.1): the telemetry methods use their own origin, `telemetryUrl`, and every other method keeps
@@ -341,7 +341,7 @@ const split = new DcdrRuntimeClient({ baseUrl, telemetryUrl: "https://otel.examp
   and an `errorMessage` (also used for warnings such as non-GenAI spans dropped). The runtime answers in the
   request's format; the client reads both JSON and protobuf responses.
 - Failures throw `DcdrRuntimeError`: `400`, `413`, `415` → `VALIDATION`; `401` → `UNAUTHORIZED`; `403` →
-  `FORBIDDEN` (no `traces:write`, plan without telemetry); `404` → `NOT_FOUND` (runtime in `--registry` mode);
+  `FORBIDDEN` (neither `traces:write` nor `*`, plan without telemetry); `404` → `NOT_FOUND` (runtime in `--registry` mode);
   `429` → `RATE_LIMITED`; `503` → `SERVER_ERROR`. `retryAfterSeconds` is set when the runtime sent
   `Retry-After`; `details` carries the `google.rpc.Status` body (`{ code, message }`), decoded from protobuf when
   the request was protobuf.

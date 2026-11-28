@@ -342,22 +342,10 @@ export function buildGrokProviderModelDefinitions(
       id: "grok-build-0.1",
       types: [IntentType.CHAT],
       parameterSupport: GROK_CHAT_PARAMETER_SUPPORT,
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-11-27): retired by xAI, 404 not-found on 2026-11-27. Grok's DCDR Fast
+      // slot stays empty.
+      publicForCustomers: false,
       tokenUsageCovered: true,
-      publicName: "DCDR Fast",
-      badge: "Grok",
-      primaryCategory: args.catalogEnums.publicModelCategory.FAST,
-      categories: [
-        args.catalogEnums.publicModelCategory.FAST,
-        args.catalogEnums.publicModelCategory.ECONOMY,
-      ],
-      qualityTier: 3,
-      speedTier: 5,
-      costTier: 4,
-      recommendedUseCases: ["interactive_chat", "classification", "support"],
-      isRecommended: false,
-      isGlobalDefault: false,
-      isCategoryDefault: false,
       pricing: args.pricingPerMillionTokens({
         input: 1.0,
         cachedInput: 0.2,
@@ -462,6 +450,13 @@ export function buildGrokProviderModelE2EOverrides(
   args: ProviderCatalogModuleBuildArgs,
 ): Record<string, ProviderModelE2EOverride> {
   return {
+    // No longer returned by xAI /v1/models (2026-11-27 sync) and gone from the pricing page; a real
+    // call answers 404. Recorded in PROVIDER_MODEL_RETIREMENTS; entry and evidence are preserved.
+    "grok-build-0.1": {
+      status: args.catalogEnums.e2eStatus.LEGACY,
+      reason:
+        "No longer listed by xAI /v1/models (2026-11-27 sync); /v1/chat/completions returns 404 not-found ('does not exist or your team does not have access to it'), measured 2026-11-27.",
+    },
     // No longer returned by xAI /v1/models (2026-11-11 sync) and gone from the pricing page.
     // The catalog entry and its last observed runtimeSupport are preserved.
     "grok-imagine-image-quality": {

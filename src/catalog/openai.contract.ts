@@ -17,6 +17,12 @@ const OPENAI_PRICING_UPDATED_AT_20260905 = Date.UTC(2026, 8, 5);
 const OPENAI_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
 const OPENAI_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
 const OPENAI_PRICING_UPDATED_AT_20261111 = Date.UTC(2026, 10, 11);
+/** 2026-11-27 wave: gpt-6.2 pair and healthcare configurations priced, every priced entry re-checked. */
+const OPENAI_PRICING_UPDATED_AT_20261127 = Date.UTC(2026, 10, 27);
+
+/** Healthcare configurations are priced in the 'Specialized models' table, not the flagship one. */
+const OPENAI_HEALTHCARE_PRICING_NOTE =
+  "OpenAI pricing table, 'Specialized models' -> 'Healthcare model configurations' row (Standard; short context <= 272K input tokens, long context above). Promotional pricing available at least through 2026-12-31 per the page footnote. Snapshot 2026-11-27.";
 
 /** Embeddings bill input tokens only; the output rate is the vendor's zero, not an estimate. */
 const OPENAI_EMBEDDINGS_PRICING_NOTE =
@@ -57,10 +63,59 @@ export function buildOpenAIProviderModelDefinitions(
     // Model IDs below are kept in roughly "newest first" order.
     // Discovered aliases are sourced from OpenAI `GET /v1/models` (snapshot 2026-04-27).
 
-    // --- Discovered on the 2026-10-27 /v1/models sync ---
+    // --- Discovered on the 2026-11-27 /v1/models sync ---
     {
-      id: "gpt-6.1-sol",
+      id: "gpt-6.2-astra",
       types: [IntentType.CHAT],
+      // Not public (owner, 2026-11-27): curated; not a DCDR profile: 4x the Best price, like gpt-6-astra.
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 8.0,
+        cachedInput: 0.4,
+        output: 40.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 16.0,
+            cachedInput: 0.8,
+            output: 60.0,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261127,
+        notes:
+          "OpenAI pricing table, flagship Standard row (short context <= 272K input tokens, long context above). The 30m/12h cache-write columns are not stored. Snapshot 2026-11-27.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-27 (text + structured + SSE streaming on the Responses API; token usage reported). The model rejects temperature and top_p (400 'Unsupported parameter', measured 2026-11-27), hence DEFAULT_ONLY sampling.",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-27 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO fail on every source kind (the answer misses the fixture cue).",
+          updatedAt: "2026-11-27",
+        },
+        updatedAt: "2026-11-27",
+      },
+    },
+    {
+      id: "gpt-6.2-sol",
+      types: [IntentType.CHAT],
+      // OpenAI's DCDR Best (owner, 2026-11-27): takes the slot from gpt-6.1-sol, same price, newer.
       publicForCustomers: true,
       publicName: "DCDR Best",
       badge: "OpenAI",
@@ -73,6 +128,272 @@ export function buildOpenAIProviderModelDefinitions(
       isRecommended: false,
       isGlobalDefault: false,
       isCategoryDefault: true,
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        cachedInput: 0.1,
+        output: 10.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 4.0,
+            cachedInput: 0.2,
+            output: 15.0,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261127,
+        notes:
+          "OpenAI pricing table, flagship Standard row (short context <= 272K input tokens, long context above). The 30m/12h cache-write columns are not stored. Snapshot 2026-11-27.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-27 (text + structured + SSE streaming on the Responses API; token usage reported). The model rejects temperature and top_p (400 'Unsupported parameter', measured 2026-11-27), hence DEFAULT_ONLY sampling.",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-27 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. IMAGE and DOCUMENT pass on every source kind. TEXT fails on every source kind (the model reports not seeing the text part: sawProvidedInput=false, empty comprehensionEcho). AUDIO and VIDEO fail on every source kind (inline audio reported as 'metadata only'; video and URL/ASSET audio miss the fixture cue).",
+          updatedAt: "2026-11-27",
+        },
+        updatedAt: "2026-11-27",
+      },
+    },
+    {
+      id: "gpt-6.2-astra-healthcare",
+      types: [IntentType.CHAT],
+      // Not public (owner, 2026-11-27): curated; specialised healthcare configuration, not a general DCDR profile.
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 8.0,
+        cachedInput: 0.4,
+        output: 40.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 16.0,
+            cachedInput: 0.8,
+            output: 60.0,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261127,
+        notes: OPENAI_HEALTHCARE_PRICING_NOTE,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-27 (text + structured + SSE streaming on the Responses API; token usage reported). The model rejects temperature and top_p (400 'Unsupported parameter', measured 2026-11-27), hence DEFAULT_ONLY sampling.",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-27 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO fail on every source kind (the answer misses the fixture cue).",
+          updatedAt: "2026-11-27",
+        },
+        updatedAt: "2026-11-27",
+      },
+    },
+    {
+      id: "gpt-6.2-sol-healthcare",
+      types: [IntentType.CHAT],
+      // Not public (owner, 2026-11-27): curated; specialised healthcare configuration, not a general DCDR profile.
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        cachedInput: 0.1,
+        output: 10.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 4.0,
+            cachedInput: 0.2,
+            output: 15.0,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261127,
+        notes: OPENAI_HEALTHCARE_PRICING_NOTE,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-27 (text + structured + SSE streaming on the Responses API; token usage reported). The model rejects temperature and top_p (400 'Unsupported parameter', measured 2026-11-27), hence DEFAULT_ONLY sampling.",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-27 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. IMAGE and DOCUMENT pass on every source kind. TEXT passes URL but fails INLINE and ASSET (sawProvidedInput=false), so it is excluded rather than published as a partial rectangle. AUDIO and VIDEO fail on every source kind (the answer misses the fixture cue).",
+          updatedAt: "2026-11-27",
+        },
+        updatedAt: "2026-11-27",
+      },
+    },
+    {
+      id: "gpt-6.1-sol-healthcare",
+      types: [IntentType.CHAT],
+      // Not public (owner, 2026-11-27): curated; specialised healthcare configuration, not a general DCDR profile.
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 2.0,
+        cachedInput: 0.1,
+        output: 10.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 4.0,
+            cachedInput: 0.2,
+            output: 15.0,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261127,
+        notes: OPENAI_HEALTHCARE_PRICING_NOTE,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-27 (text + structured + SSE streaming on the Responses API; token usage reported). The model rejects temperature and top_p (400 'Unsupported parameter', measured 2026-11-27), hence DEFAULT_ONLY sampling.",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-27 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO fail on every source kind (the answer misses the fixture cue).",
+          updatedAt: "2026-11-27",
+        },
+        updatedAt: "2026-11-27",
+      },
+    },
+    {
+      id: "gpt-6-astra-healthcare",
+      types: [IntentType.CHAT],
+      // Not public (owner, 2026-11-27): curated; specialised healthcare configuration, not a general DCDR profile.
+      tokenUsageCovered: true,
+      parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
+      pricing: args.pricingPerMillionTokens({
+        input: 10.0,
+        cachedInput: 1.0,
+        output: 50.0,
+        tiers: [
+          {
+            name: "long_context",
+            condition: "Long context",
+            input: 20.0,
+            cachedInput: 2.0,
+            output: 75.0,
+          },
+        ],
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261127,
+        notes: OPENAI_HEALTHCARE_PRICING_NOTE,
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-27 (text + structured + SSE streaming on the Responses API; token usage reported). The model rejects temperature and top_p (400 'Unsupported parameter', measured 2026-11-27), hence DEFAULT_ONLY sampling.",
+        preferredApi: args.catalogEnums.preferredApi.RESPONSES,
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-27 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. TEXT, IMAGE and DOCUMENT pass on every source kind. AUDIO and VIDEO fail on every source kind (the answer misses the fixture cue).",
+          updatedAt: "2026-11-27",
+        },
+        updatedAt: "2026-11-27",
+      },
+    },
+    {
+      id: "gpt-live-1.1",
+      types: [IntentType.MULTIMODAL],
+      pricing: args.pricingAudioMinutesPerMinute({
+        input: 0.05,
+        sourceUrl: OPENAI_PRICING_URL,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261127,
+        notes:
+          "OpenAI pricing table: GPT-Live voice sessions at $0.05 / minute active rate ($0.02 / minute standby, not expressible here), billed per second; backend model and tool usage are billed separately.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via OpenAI /v1/models on 2026-11-27; this family is outside the current runtime CHAT surface and has no adapter yet.",
+        updatedAt: "2026-11-27",
+      },
+    },
+
+    // --- Discovered on the 2026-10-27 /v1/models sync ---
+    {
+      id: "gpt-6.1-sol",
+      types: [IntentType.CHAT],
+      // Out of the public set (owner, 2026-11-27): superseded as OpenAI's DCDR Best by gpt-6.2-sol (same price, newer).
+      // Still selectable under OpenAI.
+      publicForCustomers: false,
+      publicName: "DCDR Best",
+      badge: "OpenAI",
+      primaryCategory: args.catalogEnums.publicModelCategory.BEST,
+      categories: [args.catalogEnums.publicModelCategory.BEST],
+      qualityTier: 5,
+      speedTier: 3,
+      costTier: 3,
+      recommendedUseCases: ["reasoning", "agentic_coding"],
+      isRecommended: false,
+      isGlobalDefault: false,
+      isCategoryDefault: false,
       tokenUsageCovered: true,
       parameterSupport: OPENAI_GPT5_PARAMETER_SUPPORT,
       pricing: args.pricingPerMillionTokens({
@@ -338,9 +659,9 @@ export function buildOpenAIProviderModelDefinitions(
       pricing: args.pricingAudioMinutesPerMinute({
         input: 0.05,
         sourceUrl: OPENAI_PRICING_URL,
-        updatedAt: OPENAI_PRICING_UPDATED_AT_20261027,
+        updatedAt: OPENAI_PRICING_UPDATED_AT_20261127,
         notes:
-          "OpenAI pricing table: GPT-Live voice sessions at $0.05 / minute, billed per second; backend model and tool usage are billed separately.",
+          "OpenAI pricing table: GPT-Live voice sessions at $0.05 / minute active rate ($0.02 / minute standby, published by 2026-11-27 and not expressible here), billed per second; backend model and tool usage are billed separately.",
       }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
@@ -1963,18 +2284,10 @@ export function buildOpenAIProviderModelDefinitions(
         IntentType.MULTIMODAL,
         IntentType.IMAGE_ANALYSIS,
       ],
-      publicForCustomers: true,
-      publicName: "DCDR Economy",
-      badge: "OpenAI",
-      primaryCategory: args.catalogEnums.publicModelCategory.ECONOMY,
-      categories: [args.catalogEnums.publicModelCategory.ECONOMY],
-      qualityTier: 2,
-      speedTier: 5,
-      costTier: 5,
-      recommendedUseCases: ["high_volume_chat", "classification", "extraction"],
-      isRecommended: false,
-      isGlobalDefault: false,
-      isCategoryDefault: false,
+      // Out of the public set (owner, 2026-11-27): shut down by OpenAI on 2026-12-11 (shutdown_date in OpenAI's
+      // /v1/models listing; the pricing page marks it deprecated). OpenAI's Economy is now gpt-6-luna (it lists
+      // ECONOMY among its categories). Still selectable under OpenAI until the shutdown.
+      publicForCustomers: false,
       pricing: args.pricingPerMillionTokens({
         input: 0.05,
         cachedInput: 0.005,

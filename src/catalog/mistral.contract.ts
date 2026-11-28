@@ -331,6 +331,30 @@ export function buildMistralProviderModelDefinitions(
         updatedAt: "2026-06-29",
       },
     },
+    // Discovered on the 2026-11-27 /v1/models sync. Mistral's models endpoint lists them as aliases of
+    // mistral-medium-3-5 / mistral-small-2603 (billing_model_name), and the docs mark the Magistral
+    // native-reasoning ids deprecated in favour of reasoning_effort on those models. No pricing row
+    // names them and no inheritance rule covers the Magistral family, so they stay unpriced.
+    {
+      id: "magistral-medium-latest",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models on 2026-11-27 (alias of mistral-medium-3-5, deprecated by Mistral as a native-reasoning id); pending provider E2E curation. Not yet curatable: on 2026-11-27 the E2E Mistral key answers 402 billing_no_api_budget_configured for every model (ministral-3b-latest included), an account entitlement rather than a model fact. Unpriced: no pricing row names it.",
+        updatedAt: "2026-11-27",
+      },
+    },
+    {
+      id: "magistral-small-latest",
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.IN_PROGRESS,
+        reason:
+          "Discovered via Mistral /v1/models on 2026-11-27 (alias of mistral-small-2603, deprecated by Mistral as a native-reasoning id); pending provider E2E curation. Not yet curatable: on 2026-11-27 the E2E Mistral key answers 402 billing_no_api_budget_configured for every model (ministral-3b-latest included), an account entitlement rather than a model fact. Unpriced: no pricing row names it.",
+        updatedAt: "2026-11-27",
+      },
+    },
     {
       id: "codestral-2508",
       types: [IntentType.CHAT],

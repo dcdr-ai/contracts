@@ -13,6 +13,9 @@ const GEMINI_NO_LONGER_AVAILABLE_REASON =
 /** Gemini's answer when the exact model id is gone from the API. */
 const GEMINI_NOT_FOUND_REASON =
   "Retired by Google: the Gemini API returns 404 NOT_FOUND for the model id.";
+/** xAI's answer for a model id it no longer serves. */
+const GROK_NOT_FOUND_REASON =
+  "Retired by xAI: calls return 404 not-found ('The model ... does not exist or your team ... does not have access to it').";
 /** Anthropic's answer for a model retired on its own API. */
 const ANTHROPIC_NOT_FOUND_REASON =
   "Retired by Anthropic on its own API (still served on some partner clouds): calls return 404 not_found_error.";
@@ -134,6 +137,14 @@ export const PROVIDER_MODEL_RETIREMENTS: ProviderModelRetirementRecord[] = [
     detectedAt: "2026-10-28",
     reason: GEMINI_NOT_FOUND_REASON,
   })),
+
+  // --- Grok: measured 2026-11-27 (gone from /v1/models and the pricing page; one minimal call) ---
+  {
+    provider: IntentProvider.GROK,
+    modelId: "grok-build-0.1",
+    detectedAt: "2026-11-27",
+    reason: GROK_NOT_FOUND_REASON,
+  },
 
   // --- Anthropic: measured 2026-10-27 ---
   {

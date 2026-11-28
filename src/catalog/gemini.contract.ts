@@ -18,6 +18,12 @@ const GEMINI_PRICING_UPDATED_AT_20260914 = Date.UTC(2026, 8, 14);
 const GEMINI_PRICING_UPDATED_AT_20261027 = Date.UTC(2026, 9, 27);
 /** 2026-11-11 drift pass: new model ids priced and every priced entry re-checked. */
 const GEMINI_PRICING_UPDATED_AT_20261111 = Date.UTC(2026, 10, 11);
+/** 2026-11-27 wave: gemini-4-hydrogen/neon priced, gemini-embedding-001 row found, every priced entry re-checked. */
+const GEMINI_PRICING_UPDATED_AT_20261127 = Date.UTC(2026, 10, 27);
+
+/** Agent models (Deep Research, Antigravity): no per-model row; inference is billed at the underlying model's list rates. */
+const GEMINI_AGENT_UNPRICED_REASON =
+  "Unpriced: the pricing page ('Pricing for agents') has no token row for this id; all inference is charged at the standard list rates of the models the agent runs, plus tool fees.";
 
 /**
  * Builds Gemini token pricing from the paid-tier standard table.
@@ -160,6 +166,128 @@ export function buildGeminiProviderModelDefinitions(
         updatedAt: "2026-05-04",
       },
     },
+
+    // --- Discovered on the 2026-11-27 Gemini Models API sync ---
+    {
+      id: "gemini-4-neon",
+      types: [IntentType.CHAT],
+      // Curated; not a DCDR profile (owner, 2026-11-27): priced above the Smart slot (3/15) and Gemini's Best is
+      // gemini-4-carbon. Selectable under Gemini.
+      publicForCustomers: false,
+      tokenUsageCovered: true,
+      maxOutputTokens: 65536,
+      pricing: pricingGemini({
+        input: 3.0,
+        cachedInput: 0.15,
+        output: 15.0,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261127,
+        notes: "Published standard rate (2026-11-27): 3.00 in / 0.15 cached / 15.00 out, thinking included; implicit caching only; no long-context tier.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-27 (text + structured + SSE streaming; token usage reported).",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.AUDIO,
+            AssetType.VIDEO,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-27 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. Full 5/5 rectangle on every source kind, including genuine AUDIO and VIDEO comprehension.",
+          updatedAt: "2026-11-27",
+        },
+        updatedAt: "2026-11-27",
+      },
+    },
+    {
+      id: "gemini-4-hydrogen",
+      types: [IntentType.CHAT],
+      tokenUsageCovered: true,
+      maxOutputTokens: 65536,
+      // Gemini's DCDR Smart and the global default (owner, 2026-11-27), replacing gemini-3.5-flash.
+      publicForCustomers: true,
+      publicName: "DCDR Smart",
+      badge: "Fast",
+      primaryCategory: args.catalogEnums.publicModelCategory.SMART,
+      categories: [
+        args.catalogEnums.publicModelCategory.SMART,
+        args.catalogEnums.publicModelCategory.FAST,
+      ],
+      qualityTier: 4,
+      speedTier: 5,
+      costTier: 4,
+      recommendedUseCases: ["production_chat", "interactive_chat", "support"],
+      isRecommended: true,
+      isGlobalDefault: true,
+      isCategoryDefault: true,
+      pricing: pricingGemini({
+        input: 1.5,
+        cachedInput: 0.075,
+        output: 7.5,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261127,
+        notes: "Published standard rate (2026-11-27): 1.50 in / 0.075 cached / 7.50 out, thinking included; implicit caching only; no long-context tier.",
+      }),
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+        reason:
+          "Validated via provider E2E on 2026-11-27 (text + structured + SSE streaming; token usage reported).",
+        inputParts: {
+          status: args.catalogEnums.runtimeSupportStatus.SUPPORTED,
+          supportedAssetTypes: [
+            AssetType.TEXT,
+            AssetType.IMAGE,
+            AssetType.AUDIO,
+            AssetType.VIDEO,
+            AssetType.DOCUMENT,
+          ],
+          supportedSourceKinds: [
+            ExecutionPartSourceKind.INLINE,
+            ExecutionPartSourceKind.URL,
+            ExecutionPartSourceKind.ASSET,
+          ],
+          notes:
+            "Measured on 2026-11-27 with the unified comprehension-grade curator (RM-050/RM-051), one model, INLINE -> URL -> ASSET with real signed-URL rows and a 1024-token budget. Full 5/5 rectangle on every source kind, including genuine AUDIO and VIDEO comprehension.",
+          updatedAt: "2026-11-27",
+        },
+        updatedAt: "2026-11-27",
+      },
+    },
+    // Agent models: listed with generateContent, but they run agentic loops (research, sandboxed
+    // environments) the runtime does not wire. Catalogued like OpenAI's deep-research family.
+    ...[
+      "deep-research-max-preview-04-2026",
+      "deep-research-preview-04-2026",
+    ].map((id): ProviderModelDefinitionInput => ({
+      id,
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
+        reason: `Gemini Deep Research agent: requires specialized agent/tool wiring (not supported in runtime v1). ${GEMINI_AGENT_UNPRICED_REASON}`,
+        updatedAt: "2026-11-27",
+      },
+    })),
+    ...[
+      "antigravity-preview-latest",
+      "antigravity-preview-09-2026",
+      "antigravity-preview-05-2026",
+    ].map((id): ProviderModelDefinitionInput => ({
+      id,
+      types: [IntentType.CHAT],
+      runtimeSupport: {
+        status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
+        reason: `Antigravity Agent: a managed agent with its own sandboxed environment (not supported in runtime v1). ${GEMINI_AGENT_UNPRICED_REASON}`,
+        updatedAt: "2026-11-27",
+      },
+    })),
 
     // --- Discovered on the 2026-11-11 Gemini Models API sync ---
     {
@@ -548,22 +676,10 @@ export function buildGeminiProviderModelDefinitions(
       id: "gemini-3.5-flash",
       types: [IntentType.CHAT],
       maxOutputTokens: 65536,
-      publicForCustomers: true,
+      // Out of the public set (owner, 2026-11-27): superseded as Gemini's DCDR Smart (and global default) by
+      // gemini-4-hydrogen. Still selectable under Gemini.
+      publicForCustomers: false,
       tokenUsageCovered: true,
-      publicName: "DCDR Smart",
-      badge: "Fast",
-      primaryCategory: args.catalogEnums.publicModelCategory.SMART,
-      categories: [
-        args.catalogEnums.publicModelCategory.SMART,
-        args.catalogEnums.publicModelCategory.FAST,
-      ],
-      qualityTier: 4,
-      speedTier: 5,
-      costTier: 4,
-      recommendedUseCases: ["production_chat", "interactive_chat", "support"],
-      isRecommended: true,
-      isGlobalDefault: true,
-      isCategoryDefault: true,
       pricing: pricingGemini({
         input: 1.5,
         output: 9.0,
@@ -1634,7 +1750,7 @@ export function buildGeminiProviderModelDefinitions(
       id: "gemini-embedding-2",
       types: [IntentType.EMBEDDING],
       // Paid tier, per 1M input tokens by modality; output rate 0 (input-only pricing). The
-      // preview id and `gemini-embedding-001` have no row on the page and stay unpriced.
+      // preview id has no row on the page and stays unpriced.
       pricing: args.pricingPerMillionTokens({
         input: 0.2,
         output: 0,
@@ -1658,6 +1774,15 @@ export function buildGeminiProviderModelDefinitions(
     {
       id: "gemini-embedding-001",
       types: [IntentType.EMBEDDING],
+      // The pricing page carries a 'Gemini Embedding' row naming this exact id (found 2026-11-27).
+      pricing: args.pricingPerMillionTokens({
+        input: 0.15,
+        output: 0,
+        sourceUrl: GEMINI_PRICING_URL,
+        updatedAt: GEMINI_PRICING_UPDATED_AT_20261127,
+        notes:
+          "Input-only pricing: embeddings produce no billable output tokens, so the output rate is 0 by the vendor's table. 'Gemini Embedding' row (gemini-embedding-001, text only), paid tier, snapshot 2026-11-27.",
+      }),
       runtimeSupport: {
         status: args.catalogEnums.runtimeSupportStatus.NOT_SUPPORTED,
         reason: "Gemini embedding adapter not implemented in runtime v1",

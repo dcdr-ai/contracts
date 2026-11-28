@@ -14,11 +14,12 @@ const PRICED_EMBEDDINGS: Array<{ provider: IntentProvider; modelId: string; inpu
   { provider: IntentProvider.MISTRAL, modelId: "mistral-embed", input: 0.1 },
   { provider: IntentProvider.MISTRAL, modelId: "codestral-embed", input: 0.15 },
   { provider: IntentProvider.GEMINI, modelId: "gemini-embedding-2", input: 0.2 },
+  // 2026-11-27: the page gained a "Gemini Embedding" row naming this exact id.
+  { provider: IntentProvider.GEMINI, modelId: "gemini-embedding-001", input: 0.15 },
 ];
 
 /** Ids with no row on the vendor page: they must not be priced, by inheritance or otherwise. */
 const UNPRICED_EMBEDDINGS: Array<{ provider: IntentProvider; modelId: string }> = [
-  { provider: IntentProvider.GEMINI, modelId: "gemini-embedding-001" },
   { provider: IntentProvider.GEMINI, modelId: "gemini-embedding-2-preview" },
   { provider: IntentProvider.MISTRAL, modelId: "mistral-embed-2312" },
   { provider: IntentProvider.MISTRAL, modelId: "codestral-embed-2505" },

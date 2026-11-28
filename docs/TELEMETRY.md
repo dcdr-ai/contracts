@@ -51,8 +51,8 @@ use the OTLP/HTTP exporter.
 
 ## Set up an app
 
-1. **Create a service token with the `traces:write` scope** (AI / Admin → Tokens). The scope covers both
-   endpoints and nothing else; `logs:write` does not grant it. The token travels **only** in
+1. **Create a service token with the `traces:write` scope** (AI / Admin → Tokens), or use a Full Access (`*`)
+   token. The scope covers both endpoints and nothing else; `logs:write` does not grant it. The token travels **only** in
    `Authorization: Bearer <token>` (the scheme is case-insensitive): the `token`, `x-api-key` and other headers
    the rest of the runtime accepts are not read on these two endpoints.
 2. **Set the standard OpenTelemetry environment variables** in the app:
@@ -434,7 +434,7 @@ and use the request's format (protobuf or JSON):
 | `200` | Accepted. `partialSuccess` is present when spans or records were rejected (`rejectedSpans` / `rejectedLogRecords`) or dropped (non-GenAI spans, non-GenAI log records: a warning in `errorMessage`) | No |
 | `400` | Malformed OTLP body | No |
 | `401` | Missing or invalid token (only `Authorization: Bearer` is read) | No |
-| `403` | Token without `traces:write`, workspace without telemetry in its plan, or blocked | No |
+| `403` | Token without `traces:write` (or Full Access, `*`), workspace without telemetry in its plan, or blocked | No |
 | `404` | Telemetry not available in this runtime mode (`--registry`) | No |
 | `405` | Not a `POST` | No |
 | `408` | The body did not arrive in time; the connection is closed | Yes |
@@ -449,7 +449,7 @@ Spans of a service that is BLOCKED, or PENDING / unknown in strict mode, are ans
 ## Send with the DCDR client
 
 `DcdrRuntimeClient` (and `DcdrClient`) can export OTLP directly, for apps that do not use an OpenTelemetry SDK or
-for tests. The bearer is a `traces:write` service token. See [CLIENT.md](CLIENT.md#telemetry-otlp).
+for tests. The bearer is a `traces:write` (or Full Access, `*`) service token. See [CLIENT.md](CLIENT.md#telemetry-otlp).
 
 The telemetry methods send to `https://telemetry.dcdr.ai` (`DCDR_DEFAULT_TELEMETRY_URL`) when the client was built
 without a URL. On an install, pass the install's runtime host as `baseUrl` (telemetry follows it) or set
@@ -494,7 +494,7 @@ find it in Telemetry Traces. Without `--base-url` it sends to `telemetry.dcdr.ai
 | Symptom | Cause and fix |
 |---|---|
 | `401` | The token is wrong, revoked, or not a service token, or it was sent in another header than `Authorization`. `OTEL_EXPORTER_OTLP_HEADERS` must read `Authorization=Bearer%20<token>` |
-| `403 ... traces:write` | Create a token with the `traces:write` scope |
+| `403 ... traces:write` | Create a token with the `traces:write` scope (or Full Access, `*`) |
 | `403` plan | Telemetry is available on Cloud, Cloud Pro and Enterprise |
 | `404` | You are pointing at a self-hosted runtime in `--registry` mode, or at the wrong host |
 | `200` with `dropped N non-GenAI span(s)` | Expected when the app also traces HTTP or database calls: only GenAI spans (and their ancestors) are kept |

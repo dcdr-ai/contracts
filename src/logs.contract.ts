@@ -91,6 +91,12 @@ export interface GatewayExecutionLogDetails {
   resolvedProvider?: IntentProvider;
   resolvedModel?: string;
   credentialRef?: string;
+  /**
+   * Alias of the `OPEN_AI_COMPATIBLE` binding the call resolved to (since 3.28.0), with `resolvedProvider`
+   * `OPEN_AI_COMPATIBLE` and `resolvedModel` the upstream model id. Absent for every other provider and for the
+   * binding without alias (or the runtime's env configuration).
+   */
+  compatibleAlias?: string;
   resolutionKind?: GatewayLogResolutionKind;
   tokenScopeAllowed?: boolean;
   providerAllowed?: boolean;
